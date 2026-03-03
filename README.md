@@ -150,22 +150,4 @@ refactor: optimize database queries
 
 ---
 
-## 📜 License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
----
-
-## 👥 Contributors
-
-We welcome contributions! Please read our [CONTRIBUTING.md](CONTRIBUTING.md) for details on our code of conduct and the process for submitting pull requests.
-
----
-
-## 📞 Support
-
-For support, email support@ayurcure.com or open an issue in the repository.
-
----
-
 **Built with ❤️ for Ayurvedic Healthcare**
