@@ -3,18 +3,28 @@ const router = express.Router();
 const doctorController = require('../controllers/doctorController');
 const { requireAuth, requireRole } = require('../middlewares/authMiddleware');
 
-// Public route for finding doctors
+// ==========================================
+// PUBLIC ROUTES
+// ==========================================
 router.get('/', doctorController.searchDoctors);
 
-// Protected routes for doctors
+// ==========================================
+// PROTECTED ROUTES (Doctor Role Only)
+// ==========================================
 router.use(requireAuth);
 router.use(requireRole('doctor'));
 
+// Profile & Verification
 router.post('/apply', doctorController.submitProfile);
-router.put('/availability', doctorController.updateAvailability);
 router.get('/profile', doctorController.getProfile);
-router.get('/patient-profile/:id', doctorController.getPatientProfile);
+
+// Availability & Content
+router.post('/availability', doctorController.updateAvailability);
+router.post('/articles', doctorController.addArticle);
+
+// Clinical Operations
 router.get('/all-appointments', doctorController.getAllAppointments);
 router.get('/appointments/:id', doctorController.getAppointment);
+router.get('/patient-profile/:id', doctorController.getPatientProfile);
 
 module.exports = router;

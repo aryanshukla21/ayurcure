@@ -2,42 +2,53 @@ const db = require('../config/db');
 
 class UserModel {
     static async createUser(userData) {
-        const { role, full_name, email, phone, auth_provider, password_hash } = userData;
+        const { role, full_name, email, phone, auth_provider, password_hash, otp_hash, otp_expires_at, google_id } = userData;
         const query = `
-            INSERT INTO Users (role, full_name, email, phone, auth_provider, password_hash)
-            VALUES ($1, $2, $3, $4, $5, $6)
-            RETURNING id, role, full_name, email, account_status, created_at;
+            INSERT INTO Users (role, full_name, email, phone, auth_provider, password_hash, otp_hash, otp_expires_at, google_id)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+            RETURNING id, role, full_name, email, account_status;
         `;
-        const values = [role, full_name, email, phone, auth_provider, password_hash];
-        const { rows } = await db.query(query, values);
-        return rows[0];
+        const values = [role, full_name, email, phone, auth_provider, password_hash, otp_hash, otp_expires_at, google_id || null];
+        const result = await db.query(query, values);
+        return result.rows[0];
     }
 
     static async getUserByEmail(email) {
         const query = `SELECT * FROM Users WHERE email = $1;`;
-        const { rows } = await db.query(query, [email]);
-        return rows[0];
+        const result = await db.query(query, [email]);
+        return result.rows[0];
     }
 
-    static async updateUserStatus(userId, status, banReason = null) {
-        const query = `
-            UPDATE Users 
-            SET account_status = $1, ban_reason = $2 
-            WHERE id = $3 
-            RETURNING id, account_status;
-        `;
-        const { rows } = await db.query(query, [status, banReason, userId]);
-        return rows[0];
+    static async getUserByGoogleId(googleId) {
+        const query = `SELECT * FROM Users WHERE google_id = $1;`;
+        const result = await db.query(query, [googleId]);
+        return result.rows[0];
+    }
+
+    static async linkGoogleAccount(userId, googleId) {
+        // Updates the record to include the google_id, allowing the user to log in via both methods
+        const query = `UPDATE Users SET google_id = $1, is_email_verified = true WHERE id = $2 RETURNING *;`;
+        const result = await db.query(query, [googleId, userId]);
+        return result.rows[0];
+    }
+
+    static async updateVerificationStatus(userId, isVerified) {
+        const query = `UPDATE Users SET is_email_verified = $1 WHERE id = $2;`;
+        await db.query(query, [isVerified, userId]);
+    }
+
+    static async updateOtp(userId, otpHash, expiryDate) {
+        const query = `UPDATE Users SET otp_hash = $1, otp_expires_at = $2 WHERE id = $3;`;
+        await db.query(query, [otpHash, expiryDate, userId]);
+    }
+
+    static async updatePasswordAndClearOtp(userId, newPasswordHash) {
+        const query = `UPDATE Users SET password_hash = $1, otp_hash = NULL, otp_expires_at = NULL WHERE id = $2;`;
+        await db.query(query, [newPasswordHash, userId]);
     }
 
     static async clearExpiredOtps() {
-        // This query finds any OTP where the expiration time is strictly in the past
-        // and safely resets the columns to NULL.
-        const query = `
-            UPDATE Users 
-            SET otp_hash = NULL, otp_expires_at = NULL 
-            WHERE otp_expires_at < CURRENT_TIMESTAMP;
-        `;
+        const query = `UPDATE Users SET otp_hash = NULL, otp_expires_at = NULL WHERE otp_expires_at < CURRENT_TIMESTAMP;`;
         await db.query(query);
     }
 }
