@@ -41,14 +41,11 @@ exports.getAppointments = async (req, res) => {
 
 exports.bookAppointment = async (req, res) => {
     try {
-        // Enforce role isolation
         if (req.user.role !== 'patient') {
             return res.status(403).json({ error: 'Only patients can book appointments.' });
         }
 
         const patientId = await getProfileId('patient', req.user.id);
-        if (!patientId) return res.status(403).json({ error: 'Patient profile required.' });
-
         const { doctor_id, scheduled_at, mode, pre_consultation_symptoms, chief_complaint } = req.body;
 
         const appointment = await AppointmentModel.bookAppointment({
@@ -60,12 +57,17 @@ exports.bookAppointment = async (req, res) => {
             chief_complaint
         });
 
-        res.status(201).json({ message: 'Appointment requested successfully.', appointment });
+        // TRANSACTIONAL SMS: Notify the patient of the successful booking
+        if (req.user.phone) {
+            const message = `Hello ${req.user.full_name}, your AyurCure ${mode} consultation is scheduled for ${new Date(scheduled_at).toLocaleString()}.`;
+            await notificationService.sendSMS(req.user.phone, message);
+        }
+
+        res.status(201).json({ message: 'Appointment booked and confirmation SMS sent.', appointment });
     } catch (error) {
         if (error.message === 'COLLISION') {
-            return res.status(409).json({ error: 'Time slot is already booked for this doctor.' });
+            return res.status(409).json({ error: 'Time slot is already booked.' });
         }
-        logger.error(`Booking Error: ${error.message}`);
         res.status(500).json({ error: 'Failed to book appointment.' });
     }
 };

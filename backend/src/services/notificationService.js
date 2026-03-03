@@ -1,77 +1,60 @@
-const nodemailer = require('nodemailer');
+const twilio = require('twilio');
 const logger = require('../utils/logger');
 
 class NotificationService {
     constructor() {
-        // Initialize the SMTP transport. 
-        // Analytical Note: In production, use managed services like SendGrid, AWS SES, or Mailgun 
-        // rather than standard SMTP for higher deliverability rates and bounce tracking.
-        this.transporter = nodemailer.createTransport({
-            host: process.env.SMTP_HOST,
-            port: process.env.SMTP_PORT,
-            secure: process.env.SMTP_PORT === '465', // true for 465, false for other ports
-            auth: {
-                user: process.env.SMTP_USER,
-                pass: process.env.SMTP_PASS,
-            },
-        });
+        this.client = twilio(
+            process.env.TWILIO_ACCOUNT_SID,
+            process.env.TWILIO_AUTH_TOKEN
+        );
+        this.verifySid = process.env.TWILIO_VERIFY_SERVICE_SID;
     }
 
     /**
-     * Dispatches a standardized HTML email.
-     * @param {string} to - Recipient email address.
-     * @param {string} subject - Email subject line.
-     * @param {string} htmlContent - Rendered HTML body.
+     * Sends an OTP via Twilio Verify.
+     * @param {string} phoneNumber - Recipient phone in E.164 format (e.g., +919876543210).
      */
-    async sendEmail(to, subject, htmlContent) {
+    async sendOTP(phoneNumber) {
         try {
-            const info = await this.transporter.sendMail({
-                from: `"AyurCure Support" <${process.env.SMTP_USER}>`,
-                to,
-                subject,
-                html: htmlContent,
-            });
-            logger.debug(`Email dispatched to ${to} | MessageId: ${info.messageId}`);
-            return true;
+            const verification = await this.client.verify.v2
+                .services(this.verifySid)
+                .verifications.create({ to: phoneNumber, channel: 'sms' });
+            return verification.status;
         } catch (error) {
-            logger.error(`SMTP Dispatch Failure for ${to}: ${error.message}`);
-            // Do not throw the error to prevent blocking the main execution thread (e.g., user registration)
+            logger.error(`Twilio OTP Send Error: ${error.message}`);
+            throw new Error('Failed to send verification code.');
+        }
+    }
+
+    /**
+     * Verifies an OTP entered by the user.
+     */
+    async verifyOTP(phoneNumber, code) {
+        try {
+            const check = await this.client.verify.v2
+                .services(this.verifySid)
+                .verificationChecks.create({ to: phoneNumber, code });
+            return check.status === 'approved';
+        } catch (error) {
+            logger.error(`Twilio OTP Verify Error: ${error.message}`);
             return false;
         }
     }
 
     /**
-     * Domain-specific wrapper for OTP delivery.
+     * Sends transactional SMS (e.g., appointment reminders).
      */
-    async sendOTP(email, otp) {
-        const subject = 'Your AyurCure Verification Code';
-        const html = `
-            <div style="font-family: Arial, sans-serif; padding: 20px;">
-                <h2>AyurCure Verification</h2>
-                <p>Your One-Time Password (OTP) is:</p>
-                <h1 style="color: #2E8B57; letter-spacing: 5px;">${otp}</h1>
-                <p>This code will expire in 5 minutes. Do not share it with anyone.</p>
-            </div>
-        `;
-        return this.sendEmail(email, subject, html);
-    }
-
-    /**
-     * Dispatches an SMS message.
-     * @param {string} phone - Recipient phone number in E.164 format.
-     * @param {string} message - Plain text message.
-     */
-    async sendSMS(phone, message) {
+    async sendSMS(phoneNumber, message) {
         try {
-            // Mock implementation. Replace with Twilio/AWS SNS SDK.
-            // const client = require('twilio')(process.env.TWILIO_SID, process.env.TWILIO_TOKEN);
-            // await client.messages.create({ body: message, from: process.env.TWILIO_PHONE, to: phone });
-
-            logger.debug(`[MOCK SMS] Sent to ${phone}: ${message}`);
-            return true;
+            const response = await this.client.messages.create({
+                body: message,
+                from: process.env.TWILIO_PHONE_NUMBER,
+                to: phoneNumber
+            });
+            return response.sid;
         } catch (error) {
-            logger.error(`SMS Dispatch Failure for ${phone}: ${error.message}`);
-            return false;
+            logger.error(`Twilio Transactional SMS Error: ${error.message}`);
+            return null;
         }
     }
 }

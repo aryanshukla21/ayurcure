@@ -71,6 +71,12 @@ class AppointmentModel {
         const { rows } = await db.query(query, [appointmentId, rating, review_text]);
         return rows[0];
     }
+
+    static async getById(appointmentId) {
+        const query = `SELECT * FROM Appointments WHERE id = $1;`;
+        const { rows } = await db.query(query, [appointmentId]);
+        return rows[0];
+    }
 }
 
 module.exports = AppointmentModel;
