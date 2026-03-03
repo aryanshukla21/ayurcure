@@ -81,4 +81,10 @@ router.post('/setup-sso-password',
     authController.setupSsoPassword
 );
 
+router.put('/fcm-token',
+    requireAuth,
+    validateBodyFields(['fcm_token']),
+    authController.updateFcmToken
+);
+
 module.exports = router;

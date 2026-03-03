@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const appointmentController = require('../controllers/appointmentController');
 const { requireAuth } = require('../middlewares/authMiddleware');
-const { validateBodyFields } = require('../middlewares/validateRequest');
+const { validateBodyFields } = require('../middlewares/validationMiddleware');
 
 router.use(requireAuth);
 

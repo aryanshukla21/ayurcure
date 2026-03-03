@@ -11,6 +11,12 @@ class AgoraService {
         try {
             const appId = process.env.AGORA_APP_ID;
             const appCertificate = process.env.AGORA_APP_CERTIFICATE;
+
+            if (!appId || !appCertificate) {
+                logger.warn('Agora credentials missing. Video consultations disabled.');
+                throw new Error('Agora integration is not configured.');
+            }
+
             const role = RtcRole.PUBLISHER; // Both doctor and patient publish audio/video
 
             // Token expires in 1 hour
@@ -18,7 +24,8 @@ class AgoraService {
             const currentTimestamp = Math.floor(Date.now() / 1000);
             const privilegeExpiredTs = currentTimestamp + expirationTimeInSeconds;
 
-            const token = RtcTokenBuilder.buildTokenWithUint(
+            // `buildTokenWithUid` is the official method signature for the `agora-token` library.
+            const token = RtcTokenBuilder.buildTokenWithUid(
                 appId,
                 appCertificate,
                 channelName,

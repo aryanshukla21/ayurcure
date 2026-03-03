@@ -20,6 +20,11 @@ exports.register = async (req, res) => {
 
         const password_hash = await authService.hashData(password);
 
+        // FIX: Re-integrated DB OTP storage for SendGrid
+        const otp = authService.generateOTP();
+        const otp_hash = await authService.hashData(otp);
+        const otp_expires_at = new Date(Date.now() + 5 * 60000); // 5 minutes
+
         const newUser = await UserModel.createUser({
             role: role || 'patient',
             full_name,
@@ -27,15 +32,15 @@ exports.register = async (req, res) => {
             phone,
             auth_provider: 'local',
             password_hash,
-            otp_hash: null, // No longer stored locally
-            otp_expires_at: null,
+            otp_hash,
+            otp_expires_at,
             google_id: null
         });
 
-        // THIRD-PARTY VERIFICATION: Trigger Twilio Verify for Email
-        await notificationService.sendEmailVerification(email);
+        // THIRD-PARTY VERIFICATION: Trigger SendGrid Verify for Email
+        await notificationService.sendEmailVerification(email, otp);
 
-        res.status(201).json({ message: 'Verification email sent via third-party service.', userId: newUser.id });
+        res.status(201).json({ message: 'Verification email sent via SendGrid.', userId: newUser.id });
     } catch (error) {
         if (error.code === '23505') return res.status(409).json({ error: 'User exists.' });
         logger.error(`Register Error: ${error.message}`);
@@ -69,24 +74,45 @@ exports.login = async (req, res) => {
     }
 };
 
-exports.verifyEmail = async (req, res) => {
+exports.requestEmailVerification = async (req, res) => {
     try {
-        const { email, otp } = req.body;
+        const { email } = req.body;
+        const user = await UserModel.getUserByEmail(email);
+        if (!user) return res.status(404).json({ error: 'User not found.' });
 
-        // Use third-party service to verify the code
-        const isApproved = await notificationService.verifyEmailOTP(email, otp);
+        const otp = authService.generateOTP();
+        const otpHash = await authService.hashData(otp);
+        const expiryDate = new Date(Date.now() + 5 * 60000);
 
-        if (!isApproved) {
-            return res.status(401).json({ error: 'Invalid or expired verification code.' });
-        }
+        await UserModel.updateOtp(user.id, otpHash, expiryDate);
+        await notificationService.sendEmailVerification(email, otp);
+
+        res.status(200).json({ message: 'Verification email sent.' });
+    } catch (error) {
+        logger.error(`Request Email Verification Error: ${error.message}`);
+        res.status(500).json({ error: 'Failed to send verification email.' });
+    }
+};
+
+exports.verifyEmailToken = async (req, res) => {
+    try {
+        const { email, token } = req.body;
 
         const user = await UserModel.getUserByEmail(email);
         if (!user) return res.status(404).json({ error: 'User not found.' });
 
-        await UserModel.updateVerificationStatus(user.id, true, 'email');
-        const token = authService.generateToken(user);
+        if (!user.otp_hash || new Date() > user.otp_expires_at) {
+            return res.status(401).json({ error: 'OTP expired or invalid.' });
+        }
 
-        res.status(200).json({ message: 'Email verified successfully.', token });
+        const isValid = await authService.verifyHash(token, user.otp_hash);
+        if (!isValid) return res.status(401).json({ error: 'Invalid verification code.' });
+
+        await UserModel.updateVerificationStatus(user.id, true, 'email');
+        await UserModel.updatePasswordAndClearOtp(user.id, user.password_hash); // Clears OTP
+
+        const jwtToken = authService.generateToken(user);
+        res.status(200).json({ message: 'Email verified successfully.', token: jwtToken });
     } catch (error) {
         logger.error(`Email Verify Error: ${error.message}`);
         res.status(500).json({ error: 'Verification failed.' });
@@ -128,7 +154,46 @@ exports.verifyPhoneOTP = async (req, res) => {
 };
 
 // ==========================================
-// 3. SSO & PASSWORD MANAGEMENT
+// 3. LEGACY OTP & RESEND ROUTES
+// ==========================================
+
+// FIX: Added missing resendOtp
+exports.resendOtp = async (req, res) => {
+    try {
+        const { email, phone } = req.body;
+
+        if (email) {
+            return await exports.requestEmailVerification(req, res);
+        } else if (phone) {
+            return await exports.requestPhoneOTP(req, res);
+        } else {
+            return res.status(400).json({ error: 'Provide either email or phone to resend OTP.' });
+        }
+    } catch (error) {
+        res.status(500).json({ error: 'Failed to resend OTP.' });
+    }
+};
+
+// FIX: Added missing verifyOtp legacy route 
+exports.verifyOtp = async (req, res) => {
+    try {
+        const { email, phone } = req.body;
+        if (email) {
+            req.body.token = req.body.otp; // map payload
+            return await exports.verifyEmailToken(req, res);
+        } else if (phone) {
+            // Faking auth dependency for legacy fallback if required
+            if (!req.user) req.user = await UserModel.getUserByEmail(email);
+            return await exports.verifyPhoneOTP(req, res);
+        }
+        res.status(400).json({ error: 'Email or Phone required.' });
+    } catch (error) {
+        res.status(500).json({ error: 'Verification failed.' });
+    }
+};
+
+// ==========================================
+// 4. SSO & PASSWORD MANAGEMENT
 // ==========================================
 
 exports.ssoLogin = async (req, res) => {
@@ -195,11 +260,16 @@ exports.forgotPassword = async (req, res) => {
         const user = await UserModel.getUserByEmail(email);
 
         if (user && user.auth_provider === 'local') {
-            // Trigger third-party verification for password reset
-            await notificationService.sendEmailVerification(email);
+            const otp = authService.generateOTP();
+            const otpHash = await authService.hashData(otp);
+            const expiryDate = new Date(Date.now() + 5 * 60000); // 5 mins
+
+            await UserModel.updateOtp(user.id, otpHash, expiryDate);
+            await notificationService.sendEmailVerification(email, otp);
         }
 
-        res.status(200).json({ message: 'If registered, a reset code has been sent via third-party service.' });
+        // Always return 200 to prevent user enumeration attacks
+        res.status(200).json({ message: 'If registered, a reset code has been sent via email.' });
     } catch (error) {
         res.status(500).json({ error: 'Error processing request.' });
     }
@@ -208,16 +278,33 @@ exports.forgotPassword = async (req, res) => {
 exports.resetPassword = async (req, res) => {
     try {
         const { email, otp, newPassword } = req.body;
-        const isApproved = await notificationService.verifyEmailOTP(email, otp);
-
-        if (!isApproved) return res.status(401).json({ error: 'Invalid or expired code.' });
 
         const user = await UserModel.getUserByEmail(email);
+        if (!user) return res.status(404).json({ error: 'User not found.' });
+
+        if (!user.otp_hash || new Date() > user.otp_expires_at) {
+            return res.status(401).json({ error: 'OTP expired or invalid.' });
+        }
+
+        const isValid = await authService.verifyHash(otp, user.otp_hash);
+        if (!isValid) return res.status(401).json({ error: 'Invalid verification code.' });
+
         const new_password_hash = await authService.hashData(newPassword);
         await UserModel.updatePasswordAndClearOtp(user.id, new_password_hash);
 
         res.status(200).json({ message: 'Password reset successfully.' });
     } catch (error) {
         res.status(500).json({ error: 'Error resetting password.' });
+    }
+};
+
+exports.updateFcmToken = async (req, res) => {
+    try {
+        const { fcm_token } = req.body;
+        await UserModel.updateFcmToken(req.user.id, fcm_token);
+        res.status(200).json({ message: 'FCM token updated.' });
+    } catch (error) {
+        logger.error(`FCM Update Error: ${error.message}`);
+        res.status(500).json({ error: 'Failed to update token.' });
     }
 };

@@ -1,6 +1,10 @@
 const AdminModel = require('../models/adminModel');
+const notificationService = require('../services/notificationService');
 const logger = require('../utils/logger');
 
+/**
+ * Fetches high-level system statistics for the admin dashboard.
+ */
 exports.getStats = async (req, res, next) => {
     try {
         const stats = await AdminModel.getDashboardStats();
@@ -10,6 +14,9 @@ exports.getStats = async (req, res, next) => {
     }
 };
 
+/**
+ * Retrieves a list of all users, with optional filtering by role or account status.
+ */
 exports.getAllUsers = async (req, res, next) => {
     try {
         const { role, status } = req.query;
@@ -20,6 +27,9 @@ exports.getAllUsers = async (req, res, next) => {
     }
 };
 
+/**
+ * Bans or deactivates a user account.
+ */
 exports.banUser = async (req, res, next) => {
     try {
         const { status, reason } = req.body;
@@ -30,6 +40,7 @@ exports.banUser = async (req, res, next) => {
 
         const updatedUser = await AdminModel.updateUserStatus(req.params.id, status, reason);
 
+        // Audit Logging
         await AdminModel.logAction({
             admin_id: req.user.id,
             action_type: 'UPDATE_USER_STATUS',
@@ -43,6 +54,9 @@ exports.banUser = async (req, res, next) => {
     }
 };
 
+/**
+ * Lists all doctors who have submitted their profiles but are not yet verified.
+ */
 exports.getPendingDoctors = async (req, res, next) => {
     try {
         const doctors = await AdminModel.getPendingDoctorApplications();
@@ -52,6 +66,9 @@ exports.getPendingDoctors = async (req, res, next) => {
     }
 };
 
+/**
+ * Verifies or rejects a doctor's professional credentials.
+ */
 exports.verifyDoctor = async (req, res, next) => {
     try {
         const doctorId = req.params.id;
@@ -63,6 +80,7 @@ exports.verifyDoctor = async (req, res, next) => {
 
         const updatedProfile = await AdminModel.verifyDoctor(doctorId, req.user.id, status, comments);
 
+        // Audit Logging
         await AdminModel.logAction({
             admin_id: req.user.id,
             action_type: 'VERIFY_DOCTOR',
@@ -73,5 +91,33 @@ exports.verifyDoctor = async (req, res, next) => {
         res.status(200).json({ message: `Doctor profile ${status.toLowerCase()}.`, profile: updatedProfile });
     } catch (error) {
         next(error);
+    }
+};
+
+/**
+ * Broadcasts a push notification to all users subscribed to a specific topic.
+ * Topics: 'offers', 'health_reminders', 'general'.
+ */
+exports.sendBroadcastNotification = async (req, res) => {
+    try {
+        const { topic, title, body, data } = req.body;
+
+        const allowedTopics = ['offers', 'health_reminders', 'general'];
+        if (!allowedTopics.includes(topic)) {
+            return res.status(400).json({ error: 'Invalid topic. Allowed topics: offers, health_reminders, general.' });
+        }
+
+        const payloadData = data || {};
+
+        const response = await notificationService.sendTopicNotification(topic, title, body, payloadData);
+
+        if (response) {
+            res.status(200).json({ message: `Broadcast sent successfully to topic: ${topic}` });
+        } else {
+            res.status(500).json({ error: 'Failed to dispatch broadcast. Ensure Firebase Admin is correctly configured.' });
+        }
+    } catch (error) {
+        logger.error(`Broadcast Error: ${error.message}`);
+        res.status(500).json({ error: 'Internal server error during broadcast.' });
     }
 };

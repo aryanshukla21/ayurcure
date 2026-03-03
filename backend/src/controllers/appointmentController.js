@@ -1,11 +1,10 @@
 const AppointmentModel = require('../models/appointmentModel');
 const DoctorModel = require('../models/doctorModel');
 const PatientModel = require('../models/patientModel');
+const UserModel = require('../models/userModel');
+const notificationService = require('../services/notificationService');
 const logger = require('../utils/logger');
 
-/**
- * Utility function to translate an Auth User ID into a domain-specific Profile ID.
- */
 const getProfileId = async (userRole, userId) => {
     if (userRole === 'patient') {
         const profile = await PatientModel.getProfileByUserId(userId);
@@ -18,31 +17,10 @@ const getProfileId = async (userRole, userId) => {
     return null;
 };
 
-exports.getAppointments = async (req, res) => {
-    try {
-        const profileId = await getProfileId(req.user.role, req.user.id);
-        if (!profileId) return res.status(403).json({ error: 'Profile not found.' });
-
-        let appointments;
-        if (req.user.role === 'patient') {
-            appointments = await PatientModel.getAllAppointments(profileId);
-        } else if (req.user.role === 'doctor') {
-            appointments = await DoctorModel.getAllAppointments(profileId);
-        } else {
-            return res.status(403).json({ error: 'Invalid role.' });
-        }
-
-        res.status(200).json({ appointments });
-    } catch (error) {
-        logger.error(`Get Appointments Error: ${error.message}`);
-        res.status(500).json({ error: 'Failed to fetch appointments.' });
-    }
-};
-
 exports.bookAppointment = async (req, res) => {
     try {
         if (req.user.role !== 'patient') {
-            return res.status(403).json({ error: 'Only patients can book appointments.' });
+            return res.status(403).json({ error: 'Only patients can book.' });
         }
 
         const patientId = await getProfileId('patient', req.user.id);
@@ -57,18 +35,26 @@ exports.bookAppointment = async (req, res) => {
             chief_complaint
         });
 
-        // TRANSACTIONAL SMS: Notify the patient of the successful booking
+        // 1. Transactional SMS
         if (req.user.phone) {
-            const message = `Hello ${req.user.full_name}, your AyurCure ${mode} consultation is scheduled for ${new Date(scheduled_at).toLocaleString()}.`;
+            const message = `AyurCure: Your ${mode} consultation is scheduled for ${new Date(scheduled_at).toLocaleString()}.`;
             await notificationService.sendSMS(req.user.phone, message);
         }
 
-        res.status(201).json({ message: 'Appointment booked and confirmation SMS sent.', appointment });
-    } catch (error) {
-        if (error.message === 'COLLISION') {
-            return res.status(409).json({ error: 'Time slot is already booked.' });
+        // 2. Push Notification to Patient
+        if (req.user.fcm_token) {
+            await notificationService.sendPushNotification(
+                req.user.fcm_token,
+                'Appointment Confirmed',
+                `Your ${mode} consultation is confirmed for ${new Date(scheduled_at).toLocaleString()}.`,
+                { appointmentId: appointment.id.toString(), type: 'CONFIRMATION' }
+            );
         }
-        res.status(500).json({ error: 'Failed to book appointment.' });
+
+        res.status(201).json({ message: 'Appointment booked.', appointment });
+    } catch (error) {
+        logger.error(`Booking Error: ${error.message}`);
+        res.status(500).json({ error: 'Booking failed.' });
     }
 };
 
@@ -77,16 +63,36 @@ exports.updateStatus = async (req, res) => {
         const { status } = req.body;
         const appointmentId = req.params.id;
 
-        // Security Check: Only doctors can confirm or complete. Patients can only cancel.
-        if (req.user.role === 'patient' && status !== 'Cancelled') {
-            return res.status(403).json({ error: 'Patients can only cancel appointments.' });
+        const updated = await AppointmentModel.updateStatus(appointmentId, status);
+        const appointmentDetails = await AppointmentModel.getById(appointmentId);
+
+        if (appointmentDetails) {
+            const patientProfile = await PatientModel.getProfileById(appointmentDetails.patient_id);
+            if (patientProfile) {
+                const patientUser = await UserModel.getUserById(patientProfile.user_id);
+
+                // Trigger notification for critical status changes
+                if (patientUser && patientUser.fcm_token) {
+                    let title = 'Consultation Update';
+                    let body = `Your appointment status is now: ${status}.`;
+
+                    if (status === 'Cancelled') title = 'Appointment Cancelled';
+                    if (status === 'Confirmed') title = 'Appointment Confirmed';
+
+                    await notificationService.sendPushNotification(
+                        patientUser.fcm_token,
+                        title,
+                        body,
+                        { appointmentId: appointmentId.toString(), status, type: 'STATUS_CHANGE' }
+                    );
+                }
+            }
         }
 
-        const updated = await AppointmentModel.updateStatus(appointmentId, status);
-        res.status(200).json({ message: `Appointment ${status}.`, appointment: updated });
+        res.status(200).json({ message: `Status updated to ${status}.`, appointment: updated });
     } catch (error) {
         logger.error(`Status Update Error: ${error.message}`);
-        res.status(500).json({ error: 'Failed to update status.' });
+        res.status(500).json({ error: 'Update failed.' });
     }
 };
 

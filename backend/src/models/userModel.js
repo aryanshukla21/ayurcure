@@ -19,6 +19,12 @@ class UserModel {
         return result.rows[0];
     }
 
+    static async getUserById(id) {
+        const query = `SELECT * FROM Users WHERE id = $1;`;
+        const result = await db.query(query, [id]);
+        return result.rows[0];
+    }
+
     static async getUserByGoogleId(googleId) {
         const query = `SELECT * FROM Users WHERE google_id = $1;`;
         const result = await db.query(query, [googleId]);
@@ -26,7 +32,6 @@ class UserModel {
     }
 
     static async linkGoogleAccount(userId, googleId) {
-        // Updates the record to include the google_id, allowing the user to log in via both methods
         const query = `UPDATE Users SET google_id = $1, is_email_verified = true WHERE id = $2 RETURNING *;`;
         const result = await db.query(query, [googleId, userId]);
         return result.rows[0];
@@ -50,6 +55,20 @@ class UserModel {
     static async clearExpiredOtps() {
         const query = `UPDATE Users SET otp_hash = NULL, otp_expires_at = NULL WHERE otp_expires_at < CURRENT_TIMESTAMP;`;
         await db.query(query);
+    }
+
+    /**
+     * Updates the FCM token for a specific user to enable push notifications.
+     */
+    static async updateFcmToken(userId, fcmToken) {
+        const query = `
+            UPDATE Users 
+            SET fcm_token = $1 
+            WHERE id = $2 
+            RETURNING id, fcm_token;
+        `;
+        const result = await db.query(query, [fcmToken, userId]);
+        return result.rows[0];
     }
 }
 
