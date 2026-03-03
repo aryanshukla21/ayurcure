@@ -3,9 +3,19 @@ const express = require('express');
 const cors = require('cors');
 const db = require('./src/config/db');
 
+// Import routes and error handler
+const indexRoutes = require('./src/routes/index');
+const errorHandler = require('./src/middlewares/errorHandler');
+
 const app = express();
 app.use(cors());
 app.use(express.json());
+
+// API Routes
+app.use('/api', indexRoutes);
+
+// Global Error Handler MUST be the last middleware
+app.use(errorHandler);
 
 // Bootstrapping function
 async function startServer() {
@@ -20,7 +30,7 @@ async function startServer() {
         });
     } catch (error) {
         console.error('Failed to initialize application. Database connection rejected:', error.message);
-        process.exit(1); // Force exit if DB fails
+        process.exit(1);
     }
 }
 
