@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
+import { searchDoctors } from '../../api/doctorApi';
 import { Link } from 'react-router-dom';
 import { Button } from '../common/Button';
-import { getExpertPractitioners } from '../../api/doctorApi';
 
 export const ExpertPractitioners = () => {
     const [practitioners, setPractitioners] = useState([]);
@@ -9,10 +9,15 @@ export const ExpertPractitioners = () => {
 
     useEffect(() => {
         const fetchDoctors = async () => {
-            setIsLoading(true);
-            const data = await getExpertPractitioners();
-            setPractitioners(data);
-            setIsLoading(false);
+            try {
+                // calls apiClient.get('/doctors') as defined in backend doctorRoutes
+                const data = await searchDoctors();
+                setPractitioners(data);
+            } catch (error) {
+                console.error("Failed to load practitioners", error);
+            } finally {
+                setIsLoading(false);
+            }
         };
         fetchDoctors();
     }, []);

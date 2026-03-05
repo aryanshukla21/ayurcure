@@ -15,6 +15,7 @@ import { Settings } from './pages/user-portal/Settings';
 // Booking Flow
 import { BookingFlow } from './pages/booking/BookingFlow';
 import { Payment } from './pages/booking/Payment';
+import { DoctorProfile } from './pages/booking/DoctorProfile';
 
 // Shop
 import { Marketplace } from './pages/shop/Marketplace';
@@ -45,10 +46,13 @@ function App() {
         <Route path="/book" element={<BookingFlow />} />
         <Route path="/book/payment" element={<Payment />} />
 
+
         {/* E-Commerce Routes */}
         <Route path="/shop" element={<Marketplace />} />
         <Route path="/shop/product" element={<ProductDetail />} />
         <Route path="/shop/checkout" element={<Checkout />} />
+
+        <Route path="/doctor-profile" element={<DoctorProfile />} />
 
         {/* Admin Dashboard Routes */}
         <Route path="/admin" element={<Analytics />} />
