@@ -1,14 +1,16 @@
 {
-  "name": "backend",
+  "name": "ayurcure-backend",
   "version": "1.0.0",
-  "main": "index.js",
+  "description": "Backend for AyurCure Digital Ayurveda Platform",
+  "main": "src/app.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "start": "node src/app.js",
+    "dev": "nodemon src/app.js",
+    "migrate": "node database/migrate.js"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
-  "description": "",
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1000.0",
     "@aws-sdk/s3-request-presigner": "^3.1000.0",

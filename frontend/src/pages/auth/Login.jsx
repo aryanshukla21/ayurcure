@@ -5,7 +5,7 @@ export const Login = () => {
   return (
     <div className="min-h-screen bg-ayur-beige flex items-center justify-center p-6">
       <div className="bg-white w-full max-w-md rounded-[32px] p-10 shadow-xl shadow-ayur-green/5">
-        
+
         {/* Header */}
         <div className="text-center mb-10">
           <div className="flex justify-center items-center gap-2 mb-8 text-3xl font-bold text-ayur-green">
@@ -27,9 +27,9 @@ export const Login = () => {
             <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">
               Email or Phone Number
             </label>
-            <input 
-              type="text" 
-              placeholder="name@example.com" 
+            <input
+              type="text"
+              placeholder="name@example.com"
               className="w-full p-4 rounded-xl border border-gray-200 focus:ring-2 focus:ring-ayur-green focus:border-transparent outline-none transition-all"
             />
           </div>
@@ -39,9 +39,9 @@ export const Login = () => {
               Password
             </label>
             <div className="relative">
-              <input 
-                type="password" 
-                placeholder="••••••••" 
+              <input
+                type="password"
+                placeholder="••••••••"
                 className="w-full p-4 rounded-xl border border-gray-200 focus:ring-2 focus:ring-ayur-green focus:border-transparent outline-none transition-all"
               />
               <button type="button" className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400">

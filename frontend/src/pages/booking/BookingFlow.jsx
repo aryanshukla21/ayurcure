@@ -1,42 +1,36 @@
-import React, { useState } from 'react';
-import { Button } from '../../components/common/Button';
+import React from 'react';
+import { BookingHeader } from '../../components/booking/flow/BookingHeader';
+import { DoctorSelectionStep } from '../../components/booking/flow/DoctorSelectionStep';
+import { BookingFooter } from '../../components/booking/flow/BookingFooter';
 
 export const BookingFlow = () => {
-  const [currentStep, setCurrentStep] = useState(2); // Mocking Step 2: Select Date & Time
-
-  const steps = ["Doctor", "Schedule", "Patient Info", "Symptoms", "Review", "Confirm"];
-
   return (
-    <div className="min-h-screen bg-gray-50 py-12 px-6">
-      <div className="max-w-4xl mx-auto bg-white rounded-3xl shadow-xl overflow-hidden">
-        {/* Progress Header */}
-        <div className="bg-white border-b border-gray-100 p-8">
-          <div className="flex justify-between items-center mb-8">
-            <h2 className="text-2xl font-bold text-gray-800">Select Date & Time</h2>
-            <span className="text-ayur-orange font-bold">Step {currentStep} of 6</span>
-          </div>
-          
-          {/* Progress Bar */}
-          <div className="h-2 w-full bg-gray-100 rounded-full overflow-hidden">
-            <div 
-              className="h-full bg-ayur-orange transition-all duration-500" 
-              style={{ width: `${(currentStep / 6) * 100}%` }}
-            ></div>
-          </div>
+    <div className="min-h-screen bg-[#F8F9FA] font-sans flex flex-col">
+      {/* Global Top Bar (Simplified for booking flow to reduce distraction) */}
+      <header className="bg-white px-8 py-4 flex justify-between items-center border-b border-gray-100">
+        <div className="text-2xl font-bold text-ayur-green flex items-center gap-2">
+          <span>🌿</span> AyurCure
         </div>
+        <div className="flex gap-4">
+          <button className="w-10 h-10 bg-gray-50 rounded-full flex items-center justify-center text-gray-500">
+            🔔
+          </button>
+          <button className="w-10 h-10 bg-orange-100 rounded-full flex items-center justify-center text-ayur-orange font-bold">
+            JD
+          </button>
+        </div>
+      </header>
 
-        {/* Content Area (Step 2 Content) */}
-        <div className="p-8">
-           {/* Step content will be rendered here */}
-           <p className="text-gray-500 mb-8">Almost there! Your wellness journey is just a few clicks away[cite: 354].</p>
-        </div>
+      <main className="flex-1 max-w-6xl w-full mx-auto p-8 flex flex-col">
+        <BookingHeader />
 
-        {/* Footer Navigation */}
-        <div className="p-8 bg-gray-50 flex justify-between items-center">
-          <Button variant="outline">← Back to Services</Button>
-          <Button variant="primary">Review Details →</Button>
+        <div className="flex-1 py-8">
+          {/* This is where we would conditionally render steps. For now, it's Step 1 */}
+          <DoctorSelectionStep />
         </div>
-      </div>
+      </main>
+
+      <BookingFooter />
     </div>
   );
 };

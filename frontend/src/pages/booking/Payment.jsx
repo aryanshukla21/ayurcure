@@ -5,7 +5,7 @@ export const Payment = () => {
   return (
     <div className="min-h-screen bg-gray-50 py-12 px-6 flex items-center justify-center">
       <div className="max-w-5xl w-full bg-white rounded-[32px] shadow-xl overflow-hidden">
-        
+
         {/* Header & Progress */}
         <div className="p-8 border-b border-gray-100">
           <div className="flex justify-between items-center mb-6">
@@ -16,9 +16,9 @@ export const Payment = () => {
               ✕
             </button>
           </div>
-          
+
           <div className="flex justify-between items-center mb-4">
-            <span className="text-sm font-bold text-gray-500">Step 5 of 5: Payment</span>
+            <span className="text-sm font-bold text-gray-500">Step 4 of 4: Payment</span>
             <span className="text-sm font-bold text-ayur-orange">100%</span>
           </div>
           <div className="h-2 w-full bg-gray-100 rounded-full overflow-hidden">
@@ -28,11 +28,11 @@ export const Payment = () => {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2">
-          
+
           {/* Left: Booking Summary */}
           <div className="p-10 bg-gray-50/50 border-r border-gray-100">
             <h3 className="text-xl font-bold text-gray-800 mb-8">Booking Summary</h3>
-            
+
             <div className="bg-white p-6 rounded-2xl border border-gray-100 mb-8">
               <div className="flex items-center gap-4 mb-6 pb-6 border-b border-gray-50">
                 <div className="w-16 h-16 bg-ayur-green-light rounded-2xl flex-shrink-0"></div>
@@ -42,7 +42,7 @@ export const Payment = () => {
                   <p className="text-sm text-gray-500">Ayurvedic Practitioner (MD)</p>
                 </div>
               </div>
-              
+
               <div className="flex justify-between items-center text-sm font-bold text-gray-600">
                 <div className="flex items-center gap-2">
                   <span className="text-ayur-orange">📅</span> Oct 24, 2023
@@ -72,7 +72,7 @@ export const Payment = () => {
           {/* Right: Payment Method */}
           <div className="p-10">
             <h3 className="text-xl font-bold text-gray-800 mb-8">Payment Method</h3>
-            
+
             <div className="space-y-4 mb-10">
               {/* Credit Card Option (Active) */}
               <div className="border-2 border-ayur-orange rounded-2xl p-6 bg-orange-50/30">
@@ -80,22 +80,22 @@ export const Payment = () => {
                   <input type="radio" checked readOnly className="w-5 h-5 accent-ayur-orange" />
                   <span className="font-bold text-gray-800">Credit / Debit Card</span>
                 </div>
-                
+
                 <div className="space-y-4">
-                  <input 
-                    type="text" 
-                    placeholder="Card Number" 
+                  <input
+                    type="text"
+                    placeholder="Card Number"
                     className="w-full p-4 rounded-xl border border-gray-200 focus:ring-2 focus:ring-ayur-orange outline-none"
                   />
                   <div className="flex gap-4">
-                    <input 
-                      type="text" 
-                      placeholder="MM / YY" 
+                    <input
+                      type="text"
+                      placeholder="MM / YY"
                       className="w-1/2 p-4 rounded-xl border border-gray-200 focus:ring-2 focus:ring-ayur-orange outline-none"
                     />
-                    <input 
-                      type="text" 
-                      placeholder="CVV" 
+                    <input
+                      type="text"
+                      placeholder="CVV"
                       className="w-1/2 p-4 rounded-xl border border-gray-200 focus:ring-2 focus:ring-ayur-orange outline-none"
                     />
                   </div>
@@ -118,7 +118,7 @@ export const Payment = () => {
             <Button variant="primary" className="w-full py-5 text-lg rounded-xl shadow-xl shadow-ayur-orange/20 flex items-center justify-center gap-2">
               🔒 Pay $55.00 & Confirm Appointment
             </Button>
-            
+
             <p className="text-center text-xs text-gray-400 mt-6 leading-relaxed px-4">
               Your payment is encrypted and secure. By clicking Pay, you agree to AyurCure's Terms of Service and cancellation policy.
             </p>

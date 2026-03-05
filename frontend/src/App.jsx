@@ -8,14 +8,19 @@ import { Login } from './pages/auth/Login';
 import { SignUp } from './pages/auth/SignUp';
 
 // User Portal
+import { Dashboard } from './pages/user-portal/Dashboard';
 import { Overview } from './pages/user-portal/Overview';
 import { Appointments } from './pages/user-portal/Appointments';
 import { Settings } from './pages/user-portal/Settings';
 
 // Booking Flow
 import { BookingFlow } from './pages/booking/BookingFlow';
+import { SlotPicker } from './pages/booking/SlotPicker';
+import { SymptomsForm } from './pages/booking/SymptomsForm';
 import { Payment } from './pages/booking/Payment';
+import { BookingConfirmation } from './pages/booking/BookingConfirmation';
 import { DoctorProfile } from './pages/booking/DoctorProfile';
+import { DoctorDiscovery } from './pages/booking/DoctorDiscovery';
 
 // Shop
 import { Marketplace } from './pages/shop/Marketplace';
@@ -38,12 +43,16 @@ function App() {
         <Route path="/signup" element={<SignUp />} />
 
         {/* Patient Dashboard Routes */}
-        <Route path="/dashboard" element={<Overview />} />
+        <Route path="/dashboard" element={<Dashboard />} />
+        <Route path="/overview" element={<Overview />} />
         <Route path="/dashboard/appointments" element={<Appointments />} />
         <Route path="/dashboard/settings" element={<Settings />} />
 
         {/* Consultation Booking Routes */}
         <Route path="/book" element={<BookingFlow />} />
+        <Route path="/book/slot" element={<SlotPicker />} />
+        <Route path="/book/symptoms" element={<SymptomsForm />} />
+        <Route path="/book/confirmation" element={<BookingConfirmation />} />
         <Route path="/book/payment" element={<Payment />} />
 
 
@@ -52,6 +61,7 @@ function App() {
         <Route path="/shop/product" element={<ProductDetail />} />
         <Route path="/shop/checkout" element={<Checkout />} />
 
+        <Route path="/doctors" element={<DoctorDiscovery />} />
         <Route path="/doctor-profile" element={<DoctorProfile />} />
 
         {/* Admin Dashboard Routes */}
