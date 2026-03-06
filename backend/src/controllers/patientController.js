@@ -1,5 +1,6 @@
 const PatientModel = require('../models/patientModel');
 const logger = require('../utils/logger');
+const db = require('../config/db');
 
 const getPatientId = async (userId, res) => {
     const profile = await PatientModel.getProfileByUserId(userId);
