@@ -29,3 +29,5 @@ export const getDailyRoutine = () => apiClient.get('/patients/routine');
 
 // Updates the patient's daily Dincharya
 export const updateDailyRoutine = (data) => apiClient.put('/patients/routine', data);
+
+export const getAppointmentDetails = (id) => apiClient.get(`/patients/appointments/${id}`);
