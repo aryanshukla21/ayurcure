@@ -1,7 +1,6 @@
 const express = require('express');
 const router = express.Router();
 const authController = require('../controllers/authController');
-// Updated to use the correct filename found in your repository
 const { validateBodyFields } = require('../middlewares/validationMiddleware');
 const { requireAuth } = require('../middlewares/authMiddleware');
 
@@ -9,15 +8,23 @@ const { requireAuth } = require('../middlewares/authMiddleware');
 // 1. REGISTRATION & LOGIN
 // ==========================================
 
-// Initial registration with basic details
-router.post('/register',
-    validateBodyFields(['email', 'password', 'full_name']),
-    authController.register
+// Step 1: Send OTPs to Email and Phone (temporarily caches email OTP)
+router.post('/send-signup-otps',
+    validateBodyFields(['email', 'phone']),
+    authController.sendSignupOtps
+);
+
+// Step 2: Verify both OTPs and permanently create the User Profile
+router.post('/verify-and-register',
+    validateBodyFields(['email', 'phone', 'password', 'full_name', 'emailOtp', 'phoneOtp']),
+    authController.verifyAndRegister
 );
 
 // Standard local login
+// Note: Removed 'email' from validateBodyFields because the user might send 'phone' instead.
+// The authController.login handles the missing email/phone logic gracefully.
 router.post('/login',
-    validateBodyFields(['email', 'password']),
+    validateBodyFields(['password']),
     authController.login
 );
 
@@ -86,5 +93,12 @@ router.put('/fcm-token',
     validateBodyFields(['fcm_token']),
     authController.updateFcmToken
 );
+
+// ==========================================
+// 5. SESSION MANAGEMENT
+// ==========================================
+
+router.post('/logout', authController.logout);
+router.get('/me', requireAuth, authController.checkAuth);
 
 module.exports = router;

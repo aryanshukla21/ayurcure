@@ -2,6 +2,7 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const db = require('./src/config/db');
+const cookieParser = require('cookie-parser');
 
 // Import routes and error handler
 const indexRoutes = require('./src/routes/index');
@@ -9,8 +10,12 @@ const errorHandler = require('./src/middlewares/errorHandler');
 const { startOtpCleanupJob } = require('./src/utils/cronJobs');
 
 const app = express();
-app.use(cors());
+app.use(cors({
+    origin: 'http://localhost:5173',
+    credentials: true
+}));
 app.use(express.json());
+app.use(cookieParser());
 
 // API Routes
 app.use('/api', indexRoutes);

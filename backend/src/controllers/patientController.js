@@ -151,3 +151,104 @@ const generateBaselineWellnessPlan = (prakriti) => {
     };
     return plans[prakriti] || plans['Vata']; // Fallback
 };
+
+// Fetch the most recent health stats for the Overview page
+exports.getHealthStats = async (req, res) => {
+    try {
+        // Fetches the latest health log/stats for the patient
+        const query = `
+            SELECT weight, sleep_hours, dosha_balance, bp 
+            FROM health_stats 
+            WHERE patient_id = $1 
+            ORDER BY created_at DESC 
+            LIMIT 1
+        `;
+        const { rows } = await db.query(query, [req.user.id]);
+
+        // Return the stats, or null if no stats exist yet (frontend handles null gracefully)
+        res.status(200).json(rows[0] || null);
+    } catch (err) {
+        console.error("Health Stats Error:", err);
+        res.status(500).json({ error: 'Failed to fetch health stats.' });
+    }
+};
+
+// Fetch the Daily Dincharya (Routine)
+exports.getDailyRoutine = async (req, res) => {
+    try {
+        const query = `
+            SELECT morning, afternoon, evening, night 
+            FROM patient_routines 
+            WHERE patient_id = $1
+        `;
+        const { rows } = await db.query(query, [req.user.id]);
+        res.status(200).json(rows[0] || null);
+    } catch (err) {
+        console.error("Get Routine Error:", err);
+        res.status(500).json({ error: 'Failed to fetch daily routine.' });
+    }
+};
+
+// Create or Update the Daily Dincharya
+exports.updateDailyRoutine = async (req, res) => {
+    try {
+        const { morning, afternoon, evening, night } = req.body;
+
+        // UPSERT query: Inserts a new row, or updates the existing one if patient_id already exists
+        const query = `
+            INSERT INTO patient_routines (patient_id, morning, afternoon, evening, night) 
+            VALUES ($1, $2, $3, $4, $5)
+            ON CONFLICT (patient_id) DO UPDATE 
+            SET morning = EXCLUDED.morning, 
+                afternoon = EXCLUDED.afternoon, 
+                evening = EXCLUDED.evening, 
+                night = EXCLUDED.night
+        `;
+
+        await db.query(query, [req.user.id, morning, afternoon, evening, night]);
+        res.status(200).json({ message: 'Daily routine updated successfully.' });
+    } catch (err) {
+        console.error("Update Routine Error:", err);
+        res.status(500).json({ error: 'Failed to update daily routine.' });
+    }
+};
+
+// Fetch active medicine regimen for the patient
+exports.getCurrentRegimen = async (req, res) => {
+    try {
+        const query = `
+            SELECT id, medicine_name, dosage, timing, duration 
+            FROM prescriptions 
+            WHERE patient_id = $1 AND is_active = true
+            ORDER BY created_at DESC
+        `;
+        const { rows } = await db.query(query, [req.user.id]);
+        res.status(200).json(rows);
+    } catch (err) {
+        console.error("Regimen Error:", err);
+        res.status(500).json({ error: 'Failed to fetch current regimen.' });
+    }
+};
+
+// Fetch a random wellness tip
+exports.getWellnessTip = async (req, res) => {
+    try {
+        // Randomly selects 1 tip from the database
+        const query = 'SELECT content FROM wellness_tips ORDER BY RANDOM() LIMIT 1';
+        const { rows } = await db.query(query);
+
+        if (rows.length === 0) {
+            // Fallback tip if the table is currently empty
+            return res.status(200).json({
+                content: "Start your day with a glass of warm water and a slice of lemon to awaken your digestion."
+            });
+        }
+        res.status(200).json(rows[0]);
+    } catch (err) {
+        console.error("Wellness Tip Error:", err);
+        // Fallback tip in case the table doesn't exist yet during development
+        res.status(200).json({
+            content: "Practice mindful eating: chew your food thoroughly to aid digestion and nutrient absorption."
+        });
+    }
+};

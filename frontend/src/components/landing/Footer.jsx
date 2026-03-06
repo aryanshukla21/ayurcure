@@ -50,7 +50,6 @@ export const Footer = () => {
                         <li><Link to="/book" className="hover:text-ayur-orange transition-colors">Book Consultation</Link></li>
                         <li><Link to="/shop" className="hover:text-ayur-orange transition-colors">Ayurvedic Shop</Link></li>
                         <li><Link to="/dashboard" className="hover:text-ayur-orange transition-colors">Patient Portal</Link></li>
-                        <li><Link to="/admin" className="hover:text-ayur-orange transition-colors">Admin Dashboard</Link></li>
                     </ul>
                 </div>
 

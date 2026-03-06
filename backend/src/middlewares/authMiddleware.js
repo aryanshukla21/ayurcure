@@ -5,13 +5,11 @@ const logger = require('../utils/logger');
  * Authenticates the request by validating the Bearer token in the Authorization header.
  */
 const requireAuth = (req, res, next) => {
-    const authHeader = req.headers.authorization;
+    const token = req.cookies?.token || (req.headers.authorization && req.headers.authorization.split(' ')[1]);
 
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    if (!token) {
         return res.status(401).json({ error: 'Authentication required. Token missing.' });
     }
-
-    const token = authHeader.split(' ')[1];
 
     try {
         // Verify token using the secret key from environment variables

@@ -29,6 +29,8 @@ CREATE TABLE Users (
     phone VARCHAR(20) UNIQUE,
     auth_provider auth_provider_type,
     password_hash VARCHAR(255),
+    google_id VARCHAR(255) UNIQUE, -- Added for SSO
+    fcm_token VARCHAR(255),        -- Added for Notifications
     otp_hash VARCHAR(255),
     otp_expires_at TIMESTAMP,
     is_email_verified BOOLEAN DEFAULT false,
@@ -53,23 +55,37 @@ CREATE TABLE PatientProfiles (
     wallet_credits DECIMAL(10, 2) DEFAULT 0.00
 );
 
+-- Replaces old HealthLogs to support the Overview Dashboard
+CREATE TABLE HealthStats (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    patient_id UUID NOT NULL REFERENCES PatientProfiles(id) ON DELETE CASCADE,
+    weight DECIMAL(5, 2),
+    sleep_hours DECIMAL(4, 2),
+    bp VARCHAR(20),
+    dosha_balance INT, -- Percentage 0-100
+    water_intake DECIMAL(5, 2),
+    stress_level VARCHAR(50),
+    symptoms TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- New Table for the "Full Routine / Daily Dincharya" feature
+CREATE TABLE PatientRoutines (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    patient_id UUID UNIQUE NOT NULL REFERENCES PatientProfiles(id) ON DELETE CASCADE,
+    morning TEXT,
+    afternoon TEXT,
+    evening TEXT,
+    night TEXT,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
 CREATE TABLE WellnessPlans (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     patient_id UUID UNIQUE NOT NULL REFERENCES PatientProfiles(id) ON DELETE CASCADE,
-    dinacharya_routine TEXT,
     diet_chart TEXT,
     yoga_schedule TEXT,
     generated_at TIMESTAMP
-);
-
-CREATE TABLE HealthLogs (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    patient_id UUID NOT NULL REFERENCES PatientProfiles(id) ON DELETE CASCADE,
-    log_date DATE,
-    sleep_hours DECIMAL(4, 2),
-    water_intake DECIMAL(5, 2),
-    stress_level VARCHAR(50),
-    symptoms TEXT
 );
 
 CREATE TABLE MedicalRecords (
@@ -97,12 +113,12 @@ CREATE TABLE DoctorProfiles (
     verified_by_admin_id UUID REFERENCES Users(id) ON DELETE SET NULL
 );
 
-CREATE TABLE DoctorAvailabilities (
+-- Replaced DoctorAvailabilities with specific Time Slots for Rescheduling feature
+CREATE TABLE DoctorSlots (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     doctor_id UUID NOT NULL REFERENCES DoctorProfiles(id) ON DELETE CASCADE,
-    day_of_week VARCHAR(20) NOT NULL,
-    start_time TIME NOT NULL,
-    end_time TIME NOT NULL,
+    start_time TIMESTAMP NOT NULL,
+    end_time TIMESTAMP NOT NULL,
     is_booked BOOLEAN DEFAULT false
 );
 
@@ -117,24 +133,33 @@ CREATE TABLE Articles (
 -- ==========================================
 -- 5. APPOINTMENT MODULE
 -- ==========================================
+-- Updated to include slot tracking and meeting links
 CREATE TABLE Appointments (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     patient_id UUID NOT NULL REFERENCES PatientProfiles(id) ON DELETE CASCADE,
     doctor_id UUID NOT NULL REFERENCES DoctorProfiles(id) ON DELETE CASCADE,
-    scheduled_at TIMESTAMP NOT NULL,
+    slot_id UUID REFERENCES DoctorSlots(id) ON DELETE SET NULL,
+    start_time TIMESTAMP NOT NULL,
+    end_time TIMESTAMP NOT NULL,
     mode appointment_mode NOT NULL,
     status appointment_status DEFAULT 'Scheduled',
+    meet_link VARCHAR(500),
     pre_consultation_symptoms TEXT,
-    chief_complaint TEXT
+    chief_complaint TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
+-- Updated for the "Current Regimen" feature on the overview dashboard
 CREATE TABLE Prescriptions (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     appointment_id UUID UNIQUE NOT NULL REFERENCES Appointments(id) ON DELETE CASCADE,
-    herbs_prescribed TEXT,
-    dosage TEXT,
+    patient_id UUID NOT NULL REFERENCES PatientProfiles(id) ON DELETE CASCADE,
+    medicine_name VARCHAR(255),
+    dosage VARCHAR(100),
+    timing VARCHAR(100),
     duration VARCHAR(100),
     lifestyle_advice TEXT,
+    is_active BOOLEAN DEFAULT true,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -208,7 +233,7 @@ CREATE TABLE Coupons (
 );
 
 -- ==========================================
--- 7. ADMIN MODULE
+-- 7. ADMIN & PLATFORM MODULE
 -- ==========================================
 CREATE TABLE Payouts (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -242,4 +267,11 @@ CREATE TABLE AdminActionLogs (
     target_entity_id UUID,
     details TEXT,
     timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- New Table for Dynamic Wellness Tips on Dashboard
+CREATE TABLE WellnessTips (
+    id SERIAL PRIMARY KEY,
+    content TEXT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );

@@ -6,7 +6,7 @@ const { validateBodyFields } = require('../middlewares/validationMiddleware');
 
 router.use(requireAuth);
 
-router.get('/', appointmentController.getAppointments);
+// router.get('/', appointmentController.getAppointments);
 
 // Ensure booking requests have the necessary information
 router.post('/book',

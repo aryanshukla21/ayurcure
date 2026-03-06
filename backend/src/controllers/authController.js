@@ -1,4 +1,6 @@
 const UserModel = require('../models/userModel');
+const PatientModel = require('../models/patientModel'); // Added for Role Profile
+const DoctorModel = require('../models/doctorModel');   // Added for Role Profile
 const authService = require('../services/authService');
 const notificationService = require('../services/notificationService');
 const logger = require('../utils/logger');
@@ -6,24 +8,65 @@ const { OAuth2Client } = require('google-auth-library');
 
 const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
+// Temporary Memory Cache for Email OTPs during the 2-step signup process
+// (For production with multiple server instances, use Redis instead)
+const tempOtpCache = new Map();
+
+// Helper function to set the JWT token in an HttpOnly cookie
+const setTokenCookie = (res, token) => {
+    res.cookie('token', token, {
+        httpOnly: true, // Prevents JavaScript access (XSS protection)
+        secure: process.env.NODE_ENV === 'production', // Requires HTTPS in production
+        sameSite: 'lax', // CSRF protection
+        maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days expiration
+    });
+};
+
 // ==========================================
-// 1. LOCAL AUTHENTICATION (EMAIL & PHONE)
+// 1. LOCAL AUTHENTICATION & REGISTRATION
 // ==========================================
 
-exports.register = async (req, res) => {
+// STEP 1: Send OTPs but DO NOT create the user in the database yet
+exports.sendSignupOtps = async (req, res) => {
     try {
-        const { role, full_name, email, phone, password } = req.body;
-
-        if (!email || !password || !full_name) {
-            return res.status(400).json({ error: 'Incomplete registration details.' });
+        const { email, phone } = req.body;
+        if (!email || !phone) {
+            return res.status(400).json({ error: 'Email and Phone are required.' });
         }
 
-        const password_hash = await authService.hashData(password);
+        // A. Send SMS via Twilio
+        await notificationService.sendPhoneOTP(phone);
 
-        // FIX: Re-integrated DB OTP storage for SendGrid
-        const otp = authService.generateOTP();
-        const otp_hash = await authService.hashData(otp);
-        const otp_expires_at = new Date(Date.now() + 5 * 60000); // 5 minutes
+        // B. Send Email via SendGrid & store temporarily
+        const emailOtp = authService.generateOTP();
+        tempOtpCache.set(email, { otp: emailOtp, expiresAt: Date.now() + 5 * 60000 }); // 5 min expiry
+        await notificationService.sendEmailVerification(email, emailOtp);
+
+        res.status(200).json({ message: 'Verification codes sent to email and phone.' });
+    } catch (error) {
+        logger.error(`Pre-Signup OTP Error: ${error.message}`);
+        res.status(500).json({ error: 'Failed to send verification codes.' });
+    }
+};
+
+// STEP 2: Verify both OTPs and Permanently Store User Details
+exports.verifyAndRegister = async (req, res) => {
+    try {
+        const { role, full_name, email, phone, password, emailOtp, phoneOtp } = req.body;
+
+        // A. Verify Phone OTP (Twilio)
+        const isPhoneValid = await notificationService.verifyPhoneOTP(phone, phoneOtp);
+        if (!isPhoneValid) return res.status(401).json({ error: 'Invalid or expired Phone OTP.' });
+
+        // B. Verify Email OTP (Cache)
+        const cachedEmailData = tempOtpCache.get(email);
+        if (!cachedEmailData || cachedEmailData.otp !== emailOtp || Date.now() > cachedEmailData.expiresAt) {
+            return res.status(401).json({ error: 'Invalid or expired Email OTP.' });
+        }
+        tempOtpCache.delete(email); // Clean up cache
+
+        // C. Permanently store user in Database
+        const password_hash = await authService.hashData(password);
 
         const newUser = await UserModel.createUser({
             role: role || 'patient',
@@ -32,47 +75,80 @@ exports.register = async (req, res) => {
             phone,
             auth_provider: 'local',
             password_hash,
-            otp_hash,
-            otp_expires_at,
             google_id: null
         });
 
-        // THIRD-PARTY VERIFICATION: Trigger SendGrid Verify for Email
-        await notificationService.sendEmailVerification(email, otp);
+        // Since they verified via OTPs, set status immediately to true
+        await UserModel.updateVerificationStatus(newUser.id, true, 'email');
+        await UserModel.updateVerificationStatus(newUser.id, true, 'phone');
 
-        res.status(201).json({ message: 'Verification email sent via SendGrid.', userId: newUser.id });
+        // D. Create specific sub-profile based on Role selection
+        if (role === 'doctor') {
+            await DoctorModel.createProfile({ user_id: newUser.id });
+        } else {
+            await PatientModel.createProfile({ user_id: newUser.id });
+        }
+
+        // E. Generate Session Cookie & Auto-Login
+        const token = authService.generateToken(newUser);
+        setTokenCookie(res, token);
+
+        res.status(201).json({ message: 'Registration complete.', user: { id: newUser.id, role: newUser.role } });
     } catch (error) {
-        if (error.code === '23505') return res.status(409).json({ error: 'User exists.' });
-        logger.error(`Register Error: ${error.message}`);
+        if (error.code === '23505') return res.status(409).json({ error: 'Email or phone already registered.' });
+        logger.error(`Final Registration Error: ${error.message}`);
         res.status(500).json({ error: 'Registration failed.' });
     }
 };
 
 exports.login = async (req, res) => {
     try {
-        const { email, password } = req.body;
-        const user = await UserModel.getUserByEmail(email);
+        const { email, phone, password, role } = req.body;
+        let user;
 
+        // 1. Fetch user by either Email OR Phone
+        if (email) {
+            user = await UserModel.getUserByEmail(email);
+        } else if (phone) {
+            // NOTE: Ensure your UserModel has a 'getUserByPhone' method
+            user = await UserModel.getUserByPhone(phone);
+        } else {
+            return res.status(400).json({ error: 'Email or phone is required to login.' });
+        }
+
+        // 2. Validate existence and password
         if (!user || !user.password_hash || !(await authService.verifyHash(password, user.password_hash))) {
             return res.status(401).json({ error: 'Invalid credentials.' });
+        }
+
+        // 3. Ensure they are logging in from the correct portal (Patient vs Doctor)
+        if (role && user.role !== role) {
+            return res.status(403).json({ error: `You are registered as a ${user.role}. Please select the correct role.` });
         }
 
         if (user.account_status !== 'Active') {
             return res.status(403).json({ error: `Account is ${user.account_status}.` });
         }
 
-        // Security requirement: Must be verified via Email or Phone
         if (!user.is_email_verified && !user.is_phone_verified) {
             return res.status(403).json({ error: 'Account not verified. Please check your email or phone.' });
         }
 
         const token = authService.generateToken(user);
-        res.status(200).json({ token, user: { id: user.id, role: user.role } });
+
+        // Use our cookie helper
+        setTokenCookie(res, token);
+
+        res.status(200).json({ user: { id: user.id, role: user.role } });
     } catch (error) {
         logger.error(`Login Error: ${error.message}`);
         res.status(500).json({ error: 'Login failed.' });
     }
 };
+
+// ==========================================
+// 2. EMAIL / PHONE VERIFICATION (LEGACY / MANUAL)
+// ==========================================
 
 exports.requestEmailVerification = async (req, res) => {
     try {
@@ -109,19 +185,17 @@ exports.verifyEmailToken = async (req, res) => {
         if (!isValid) return res.status(401).json({ error: 'Invalid verification code.' });
 
         await UserModel.updateVerificationStatus(user.id, true, 'email');
-        await UserModel.updatePasswordAndClearOtp(user.id, user.password_hash); // Clears OTP
+        await UserModel.updatePasswordAndClearOtp(user.id, user.password_hash);
 
         const jwtToken = authService.generateToken(user);
-        res.status(200).json({ message: 'Email verified successfully.', token: jwtToken });
+        setTokenCookie(res, jwtToken);
+
+        res.status(200).json({ message: 'Email verified successfully.' });
     } catch (error) {
         logger.error(`Email Verify Error: ${error.message}`);
         res.status(500).json({ error: 'Verification failed.' });
     }
 };
-
-// ==========================================
-// 2. PHONE VERIFICATION (TWILIO VERIFY)
-// ==========================================
 
 exports.requestPhoneOTP = async (req, res) => {
     try {
@@ -153,11 +227,6 @@ exports.verifyPhoneOTP = async (req, res) => {
     }
 };
 
-// ==========================================
-// 3. LEGACY OTP & RESEND ROUTES
-// ==========================================
-
-// FIX: Added missing resendOtp
 exports.resendOtp = async (req, res) => {
     try {
         const { email, phone } = req.body;
@@ -174,15 +243,13 @@ exports.resendOtp = async (req, res) => {
     }
 };
 
-// FIX: Added missing verifyOtp legacy route 
 exports.verifyOtp = async (req, res) => {
     try {
         const { email, phone } = req.body;
         if (email) {
-            req.body.token = req.body.otp; // map payload
+            req.body.token = req.body.otp;
             return await exports.verifyEmailToken(req, res);
         } else if (phone) {
-            // Faking auth dependency for legacy fallback if required
             if (!req.user) req.user = await UserModel.getUserByEmail(email);
             return await exports.verifyPhoneOTP(req, res);
         }
@@ -193,7 +260,7 @@ exports.verifyOtp = async (req, res) => {
 };
 
 // ==========================================
-// 4. SSO & PASSWORD MANAGEMENT
+// 3. SSO & PASSWORD MANAGEMENT
 // ==========================================
 
 exports.ssoLogin = async (req, res) => {
@@ -221,12 +288,20 @@ exports.ssoLogin = async (req, res) => {
                     google_id
                 });
                 await UserModel.updateVerificationStatus(user.id, true, 'email');
+
+                // Also create Role-based profile for new SSO users
+                if (role === 'doctor') {
+                    await DoctorModel.createProfile({ user_id: user.id });
+                } else {
+                    await PatientModel.createProfile({ user_id: user.id });
+                }
             }
         }
 
         const token = authService.generateToken(user);
+        setTokenCookie(res, token);
+
         res.status(200).json({
-            token,
             user: { id: user.id, role: user.role, full_name: user.full_name },
             requiresPasswordSetup: !user.password_hash
         });
@@ -253,7 +328,6 @@ exports.setupSsoPassword = async (req, res) => {
     }
 };
 
-// Recovery using SendGrid
 exports.forgotPassword = async (req, res) => {
     try {
         const { email } = req.body;
@@ -268,7 +342,6 @@ exports.forgotPassword = async (req, res) => {
             await notificationService.sendEmailVerification(email, otp);
         }
 
-        // Always return 200 to prevent user enumeration attacks
         res.status(200).json({ message: 'If registered, a reset code has been sent via email.' });
     } catch (error) {
         res.status(500).json({ error: 'Error processing request.' });
@@ -307,4 +380,23 @@ exports.updateFcmToken = async (req, res) => {
         logger.error(`FCM Update Error: ${error.message}`);
         res.status(500).json({ error: 'Failed to update token.' });
     }
+};
+
+// ==========================================
+// 4. SESSION MANAGEMENT
+// ==========================================
+
+// Endpoint to handle frontend session validation
+exports.checkAuth = (req, res) => {
+    res.status(200).json({ user: req.user });
+};
+
+// Clear the cookie to log the user out
+exports.logout = (req, res) => {
+    res.clearCookie('token', {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax'
+    });
+    res.status(200).json({ message: 'Logged out successfully.' });
 };

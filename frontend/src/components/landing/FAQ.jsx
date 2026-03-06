@@ -1,9 +1,7 @@
-import React from 'react';
-import { useState } from 'react';
-import { Button } from '../common/Button';
+import React, { useState } from 'react';
 
 export const FAQ = () => {
-    const [openIndex, setOpenIndex] = useState(0);
+    const [openIndex, setOpenIndex] = useState(null); // Changed to null so none are open by default
 
     const faqs = [
         { q: "Are the doctors certified?", a: "Yes, all our practitioners hold valid degrees in Ayurvedic Medicine and Surgery (BAMS) and have been thoroughly verified." },
@@ -12,13 +10,13 @@ export const FAQ = () => {
     ];
 
     const toggleFAQ = (index) => {
-        setOpenIndex(openIndex === index ? -1 : index);
+        setOpenIndex(openIndex === index ? null : index);
     };
 
     return (
         <section id="faq" className="bg-[#F1F8F6] w-full px-6 md:px-12 lg:px-24 py-24 font-sans">
             <div className="max-w-4xl mx-auto flex flex-col md:flex-col gap-12 justify-center">
-                <div className="">
+                <div>
                     <h2 className="text-4xl lg:text-5xl font-sans font-bold text-gray-900 mb-4 text-center">Frequently Asked Questions</h2>
                 </div>
                 <div className="flex flex-col gap-4 justify-center">
