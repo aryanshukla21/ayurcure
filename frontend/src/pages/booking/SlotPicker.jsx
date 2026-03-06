@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { CalendarWidget } from '../../components/booking/CalendarWidget';
-import { TimeSlots } from '../../components/booking/TimeSlots';
+import { CalendarWidget } from '../../components/booking/slotPicker/CalendarWidget';
+import { TimeSlots } from '../../components/booking/slotPicker/TimeSlots';
 import { SlotPickerFooter } from '../../components/booking/slotPicker/SlotPickerFooter';
 
 export const SlotPicker = () => {

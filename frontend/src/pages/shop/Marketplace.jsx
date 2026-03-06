@@ -1,6 +1,6 @@
 import React from 'react';
-import { ShopSidebar } from '../../components/ecommerce/ShopSidebar';
-import { ProductCard } from '../../components/ecommerce/ProductCard';
+import { ShopSidebar } from '../../components/shop/marketplace/ShopSidebar';
+import { ProductCard } from '../../components/shop/marketplace/ProductCard';
 
 export const Marketplace = () => {
   const products = [
@@ -20,7 +20,7 @@ export const Marketplace = () => {
 
         <div className="flex gap-12">
           <ShopSidebar />
-          
+
           <div className="flex-1">
             <div className="flex justify-between items-center mb-8">
               <div className="flex gap-4">

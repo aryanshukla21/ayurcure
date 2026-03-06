@@ -1,6 +1,6 @@
 import React from 'react';
-import { ConfirmationHeader } from '../../components/booking/ConfirmationHeader';
-import { AppointmentDetailsCard } from '../../components/booking/AppointmentDetailsCard';
+import { ConfirmationHeader } from '../../components/booking/confirmation/ConfirmationHeader';
+import { AppointmentDetailsCard } from '../../components/booking/confirmation/AppointmentDetailsCard';
 import { ConfirmationActions } from '../../components/booking/confirmation/ConfirmationActions';
 
 export const BookingConfirmation = () => {

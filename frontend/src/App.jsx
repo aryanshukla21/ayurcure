@@ -24,8 +24,10 @@ import { DoctorDiscovery } from './pages/booking/DoctorDiscovery';
 
 // Shop
 import { Marketplace } from './pages/shop/Marketplace';
+import { CartPage } from './pages/shop/CartPage';
 import { ProductDetail } from './pages/shop/ProductDetail';
 import { Checkout } from './pages/shop/Checkout';
+import { OrderConfirmation } from './pages/shop/OrderConfirmation';
 
 // Admin Portal
 import { Analytics } from './pages/admin/Analytics';
@@ -52,14 +54,16 @@ function App() {
         <Route path="/book" element={<BookingFlow />} />
         <Route path="/book/slot" element={<SlotPicker />} />
         <Route path="/book/symptoms" element={<SymptomsForm />} />
-        <Route path="/book/confirmation" element={<BookingConfirmation />} />
         <Route path="/book/payment" element={<Payment />} />
+        <Route path="/book/confirmation" element={<BookingConfirmation />} />
 
 
         {/* E-Commerce Routes */}
         <Route path="/shop" element={<Marketplace />} />
+        <Route path="/shop/cart" element={<CartPage />} />
         <Route path="/shop/product" element={<ProductDetail />} />
         <Route path="/shop/checkout" element={<Checkout />} />
+        <Route path="/shop/order-success" element={<OrderConfirmation />} />
 
         <Route path="/doctors" element={<DoctorDiscovery />} />
         <Route path="/doctor-profile" element={<DoctorProfile />} />

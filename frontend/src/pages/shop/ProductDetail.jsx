@@ -11,13 +11,13 @@ export const ProductDetail = () => {
   return (
     <div className="min-h-screen bg-white py-12 px-6">
       <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-16">
-        
+
         {/* Left: Product Images & Core Info */}
         <div className="space-y-8">
           <div className="aspect-square bg-ayur-green-light rounded-[40px] overflow-hidden border border-gray-100 shadow-inner flex items-center justify-center">
-             <span className="text-gray-300 font-bold">Product Image Placeholder</span>
+            <span className="text-gray-300 font-bold">Product Image Placeholder</span>
           </div>
-          
+
           <div className="bg-ayur-beige p-8 rounded-3xl border border-gray-100">
             <h3 className="text-sm font-black uppercase tracking-[0.2em] text-ayur-green mb-4">Our Quality Promise</h3>
             <ul className="grid grid-cols-2 gap-4 text-xs font-bold text-gray-600">
@@ -35,7 +35,7 @@ export const ProductDetail = () => {
             <span className="bg-ayur-orange/10 text-ayur-orange px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider">Premium Formula</span>
             <div className="text-yellow-400 text-xs">★★★★★ <span className="text-gray-400 ml-1">(120 Reviews)</span></div>
           </div>
-          
+
           <h1 className="text-4xl font-black text-gray-900 mb-4 tracking-tight">Brahmi Brain Booster</h1>
           <p className="text-lg text-gray-500 mb-8 leading-relaxed">Pure Ayurvedic formula for cognitive excellence & mental clarity.</p>
 
@@ -54,7 +54,7 @@ export const ProductDetail = () => {
                 ))}
               </div>
             </div>
-            
+
             <Button variant="primary" className="w-full py-5 rounded-2xl text-lg font-black shadow-xl shadow-ayur-orange/20">
               Add to Cart
             </Button>

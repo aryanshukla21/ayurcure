@@ -24,11 +24,10 @@ export const ShopSidebar = () => {
           {doshas.map((dosha) => (
             <button
               key={dosha}
-              className={`px-4 py-2 rounded-full text-xs font-bold border transition-all ${
-                dosha === "Pitta" 
-                ? 'bg-ayur-orange border-ayur-orange text-white shadow-md' 
-                : 'bg-white border-gray-200 text-gray-500 hover:border-ayur-orange'
-              }`}
+              className={`px-4 py-2 rounded-full text-xs font-bold border transition-all ${dosha === "Pitta"
+                  ? 'bg-ayur-orange border-ayur-orange text-white shadow-md'
+                  : 'bg-white border-gray-200 text-gray-500 hover:border-ayur-orange'
+                }`}
             >
               {dosha}
             </button>

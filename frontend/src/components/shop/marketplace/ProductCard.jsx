@@ -1,5 +1,5 @@
 import React from 'react';
-import { Button } from '../common/Button';
+import { Button } from '../../common/Button';
 
 export const ProductCard = ({ name, price, rating, doshaTag, image }) => (
   <div className="bg-white rounded-3xl p-5 border border-gray-100 shadow-sm hover:shadow-xl transition-all group">
