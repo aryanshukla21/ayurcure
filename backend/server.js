@@ -10,8 +10,10 @@ const errorHandler = require('./src/middlewares/errorHandler');
 const { startOtpCleanupJob } = require('./src/utils/cronJobs');
 
 const app = express();
+
+// Middleware
 app.use(cors({
-    origin: 'http://localhost:5173',
+    origin: 'http://localhost:5173', // React frontend URL
     credentials: true
 }));
 app.use(express.json());
@@ -28,18 +30,22 @@ async function startServer() {
     try {
         // Test database connection pool
         const { rows } = await db.query('SELECT NOW() AS current_time');
-        console.log(`Database Connected Successfully at: ${rows[0].current_time}`);
+        console.log(`✅ Database Connected Successfully to Supabase at: ${rows[0].current_time}`);
 
-        // FIX: Start background jobs (sweep expired OTPs)
-        startOtpCleanupJob();
-        console.log('Background Jobs Started Successfully');
+        // FIX: Start background jobs safely (sweep expired OTPs)
+        if (typeof startOtpCleanupJob === 'function') {
+            startOtpCleanupJob();
+            console.log('✅ Background Jobs Started Successfully');
+        } else {
+            console.warn('⚠️ startOtpCleanupJob is not a valid function. Check cronJobs.js export.');
+        }
 
         const PORT = process.env.PORT || 5000;
         app.listen(PORT, () => {
-            console.log(`AyurCure API Server actively listening on port ${PORT}`);
+            console.log(`🚀 AyurCure API Server actively listening on http://localhost:${PORT}`);
         });
     } catch (error) {
-        console.error('Failed to initialize application. Database connection rejected:', error.message);
+        console.error('❌ Failed to initialize application. Database connection rejected:', error.message);
         process.exit(1);
     }
 }

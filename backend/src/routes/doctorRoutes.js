@@ -8,6 +8,9 @@ const { requireAuth, requireRole } = require('../middlewares/authMiddleware');
 // ==========================================
 router.get('/', doctorController.searchDoctors);
 
+// TEMPORARY: Database Seeder Route (Remove this line before going to production)
+router.post('/seed', doctorController.seedDoctorsDatabase);
+
 // ==========================================
 // PROTECTED ROUTES (Doctor Role Only)
 // ==========================================

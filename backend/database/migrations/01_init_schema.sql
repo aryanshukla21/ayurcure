@@ -1,4 +1,13 @@
--- Enable UUID extension if on an older Postgres version (13+ has gen_random_uuid() natively)
+-- ==========================================
+-- 0. CLEAN SLATE (Drops existing data & tables)
+-- ==========================================
+DROP SCHEMA public CASCADE;
+CREATE SCHEMA public;
+
+GRANT ALL ON SCHEMA public TO postgres;
+GRANT ALL ON SCHEMA public TO public;
+
+-- Enable UUID extension
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
 -- ==========================================
@@ -29,8 +38,11 @@ CREATE TABLE Users (
     phone VARCHAR(20) UNIQUE,
     auth_provider auth_provider_type,
     password_hash VARCHAR(255),
-    google_id VARCHAR(255) UNIQUE, -- Added for SSO
-    fcm_token VARCHAR(255),        -- Added for Notifications
+    
+    -- Added fields for SSO and Notifications
+    google_id VARCHAR(255) UNIQUE, 
+    fcm_token VARCHAR(255),        
+    
     otp_hash VARCHAR(255),
     otp_expires_at TIMESTAMP,
     is_email_verified BOOLEAN DEFAULT false,
@@ -55,21 +67,19 @@ CREATE TABLE PatientProfiles (
     wallet_credits DECIMAL(10, 2) DEFAULT 0.00
 );
 
--- Replaces old HealthLogs to support the Overview Dashboard
 CREATE TABLE HealthStats (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     patient_id UUID NOT NULL REFERENCES PatientProfiles(id) ON DELETE CASCADE,
     weight DECIMAL(5, 2),
     sleep_hours DECIMAL(4, 2),
     bp VARCHAR(20),
-    dosha_balance INT, -- Percentage 0-100
+    dosha_balance INT, 
     water_intake DECIMAL(5, 2),
     stress_level VARCHAR(50),
     symptoms TEXT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- New Table for the "Full Routine / Daily Dincharya" feature
 CREATE TABLE PatientRoutines (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     patient_id UUID UNIQUE NOT NULL REFERENCES PatientProfiles(id) ON DELETE CASCADE,
@@ -108,12 +118,31 @@ CREATE TABLE DoctorProfiles (
     experience_years INT,
     verification_status verification_enum DEFAULT 'Pending',
     consultation_fee DECIMAL(10, 2),
+    
+    -- Added Contact & Location
+    location VARCHAR(255),
+    languages TEXT[], 
+    
+    -- Added Consultation & Availability
+    consultation_duration_mins INT DEFAULT 30,
+    availability_summary VARCHAR(255), 
+    
+    -- Added Professional Stats
+    publications_count INT DEFAULT 0,
+    average_rating DECIMAL(3, 2) DEFAULT 0.00,
+    total_reviews INT DEFAULT 0,
+    
+    -- Added Bio & Detailed Background
+    bio TEXT,
+    education_details JSONB, 
+    sub_specializations TEXT[], 
+    certifications TEXT[],
+    
     total_earnings DECIMAL(12, 2) DEFAULT 0.00,
     admin_comments TEXT,
     verified_by_admin_id UUID REFERENCES Users(id) ON DELETE SET NULL
 );
 
--- Replaced DoctorAvailabilities with specific Time Slots for Rescheduling feature
 CREATE TABLE DoctorSlots (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     doctor_id UUID NOT NULL REFERENCES DoctorProfiles(id) ON DELETE CASCADE,
@@ -133,7 +162,6 @@ CREATE TABLE Articles (
 -- ==========================================
 -- 5. APPOINTMENT MODULE
 -- ==========================================
--- Updated to include slot tracking and meeting links
 CREATE TABLE Appointments (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     patient_id UUID NOT NULL REFERENCES PatientProfiles(id) ON DELETE CASCADE,
@@ -149,7 +177,6 @@ CREATE TABLE Appointments (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- Updated for the "Current Regimen" feature on the overview dashboard
 CREATE TABLE Prescriptions (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     appointment_id UUID UNIQUE NOT NULL REFERENCES Appointments(id) ON DELETE CASCADE,
@@ -269,7 +296,6 @@ CREATE TABLE AdminActionLogs (
     timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
--- New Table for Dynamic Wellness Tips on Dashboard
 CREATE TABLE WellnessTips (
     id SERIAL PRIMARY KEY,
     content TEXT NOT NULL,
