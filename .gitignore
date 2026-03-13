@@ -26,6 +26,7 @@ backend/.env
 backend/logs/
 backend/*.log
 backend/database/dump/
+backend/HelperCode.js
 
 # IDE Specific
 .vscode/

@@ -2,13 +2,49 @@ const db = require('../config/db');
 
 class PatientModel {
     static async registerPatient(userId, patientData) {
-        const { age, gender, health_history, prakriti_type, referral_code } = patientData;
+        // Destructure all available fields from the incoming payload
+        const {
+            age, gender, health_history, prakriti_type, referral_code,
+            patient_display_id, clinical_status, dob, blood_group,
+            height_cm, weight_kg, bmi, vikruti, address, diet_preference, allergies,
+            emergency_contact_name, emergency_contact_relation, emergency_contact_phone,
+            chief_complaints, medical_history, current_medications,
+            lifestyle_profile, treatment_plan, doctor_notes, primary_doctor_id
+        } = patientData;
+
         const query = `
-            INSERT INTO PatientProfiles (user_id, age, gender, health_history, prakriti_type, referral_code)
-            VALUES ($1, $2, $3, $4, $5, $6)
+            INSERT INTO PatientProfiles (
+                user_id, age, gender, health_history, prakriti_type, referral_code,
+                patient_display_id, clinical_status, dob, blood_group, 
+                height_cm, weight_kg, bmi, vikruti, address, diet_preference, allergies,
+                emergency_contact_name, emergency_contact_relation, emergency_contact_phone,
+                chief_complaints, medical_history, current_medications,
+                lifestyle_profile, treatment_plan, doctor_notes, primary_doctor_id
+            )
+            VALUES (
+                $1, $2, $3, $4, $5, $6, 
+                $7, $8, $9, $10, 
+                $11, $12, $13, $14, $15, $16, $17, 
+                $18, $19, $20, 
+                $21, $22, $23, 
+                $24, $25, $26, $27
+            )
             RETURNING *;
         `;
-        const { rows } = await db.query(query, [userId, age, gender, health_history, prakriti_type, referral_code]);
+
+        // Format values, ensuring JSON arrays/objects are stringified properly for PostgreSQL
+        const values = [
+            userId, age, gender, health_history, prakriti_type, referral_code,
+            patient_display_id, clinical_status || 'Active', dob, blood_group,
+            height_cm, weight_kg, bmi, vikruti, address, diet_preference, allergies,
+            emergency_contact_name, emergency_contact_relation, emergency_contact_phone,
+            chief_complaints || null,
+            medical_history || null,
+            current_medications ? JSON.stringify(current_medications) : null,
+            lifestyle_profile, treatment_plan, doctor_notes, primary_doctor_id
+        ];
+
+        const { rows } = await db.query(query, values);
         return rows[0];
     }
 

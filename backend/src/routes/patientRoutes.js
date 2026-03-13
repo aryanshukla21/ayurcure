@@ -3,6 +3,8 @@ const router = express.Router();
 const patientController = require('../controllers/patientController');
 const { requireAuth, requireRole } = require('../middlewares/authMiddleware');
 
+// router.post('/seed', patientController.seedPatients);
+
 // Apply authentication and role-checking to all routes below
 router.use(requireAuth);
 router.use(requireRole('patient'));

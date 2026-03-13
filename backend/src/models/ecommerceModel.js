@@ -13,13 +13,9 @@ class EcommerceModel {
             values.push(filters.category);
             query += ` AND category = $${values.length}`;
         }
-        if (filters.prakriti_suitability) {
-            values.push(`%${filters.prakriti_suitability}%`);
-            query += ` AND prakriti_suitability ILIKE $${values.length}`;
-        }
         if (filters.search) {
             values.push(`%${filters.search}%`);
-            query += ` AND name ILIKE $${values.length}`;
+            query += ` AND (name ILIKE $${values.length} OR tags::text ILIKE $${values.length})`;
         }
 
         query += ` ORDER BY name ASC;`;
@@ -34,13 +30,44 @@ class EcommerceModel {
     }
 
     static async createProduct(productData) {
-        const { name, category, brand, ingredients, benefits, usage_instructions, certifications, prakriti_suitability, price, stock_quantity } = productData;
+        const {
+            name, sku, brand, category, form, quantity_size,
+            mrp, price, gst_percent, hsn_code,
+            shelf_life, storage_instructions, certifications, origin,
+            target_audience, tags, description, key_ingredients,
+            therapeutic_indications, dosage_administration, contraindications,
+            stock_quantity
+        } = productData;
+
         const query = `
-            INSERT INTO Products (name, category, brand, ingredients, benefits, usage_instructions, certifications, prakriti_suitability, price, stock_quantity)
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+            INSERT INTO Products (
+                name, sku, brand, category, form, quantity_size, 
+                mrp, price, gst_percent, hsn_code, 
+                shelf_life, storage_instructions, certifications, origin, 
+                target_audience, tags, description, key_ingredients, 
+                therapeutic_indications, dosage_administration, contraindications, 
+                stock_quantity
+            )
+            VALUES (
+                $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, 
+                $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22
+            )
             RETURNING *;
         `;
-        const values = [name, category, brand, ingredients, benefits, usage_instructions, certifications, prakriti_suitability, price, stock_quantity];
+
+        const values = [
+            name, sku, brand, category, form, quantity_size,
+            mrp, price, gst_percent, hsn_code,
+            shelf_life, storage_instructions, certifications, origin,
+            target_audience,
+            tags ? tags : null, // Postgres handles arrays cleanly if passed properly or stringified depending on pg-pool setup
+            description,
+            key_ingredients ? key_ingredients : null,
+            therapeutic_indications ? therapeutic_indications : null,
+            dosage_administration, contraindications,
+            stock_quantity || 0
+        ];
+
         const { rows } = await db.query(query, values);
         return rows[0];
     }
@@ -79,11 +106,10 @@ class EcommerceModel {
     static async placeOrder(orderData, items) {
         const client = await db.getClient();
         try {
-            await client.query('BEGIN'); // Start transaction
+            await client.query('BEGIN');
 
             const { patient_id, total_amount, discount_applied, shipping_address, payment_method } = orderData;
 
-            // 1. Create the parent order
             const orderQuery = `
                 INSERT INTO Orders (patient_id, total_amount, discount_applied, shipping_address, payment_method, payment_status, order_status)
                 VALUES ($1, $2, $3, $4, $5, 'Pending', 'Processing')
@@ -93,14 +119,12 @@ class EcommerceModel {
             const orderResult = await client.query(orderQuery, orderValues);
             const orderId = orderResult.rows[0].id;
 
-            // 2. Insert items and deduct stock
             const itemQuery = `
                 INSERT INTO OrderItems (order_id, product_id, quantity, price_at_purchase)
                 VALUES ($1, $2, $3, $4);
             `;
 
             for (let item of items) {
-                // Check stock first to prevent negative inventory
                 const stockCheck = await client.query(`SELECT stock_quantity FROM Products WHERE id = $1 FOR UPDATE`, [item.product_id]);
                 if (stockCheck.rows[0].stock_quantity < item.quantity) {
                     throw new Error(`Insufficient stock for product ID: ${item.product_id}`);

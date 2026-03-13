@@ -3,6 +3,8 @@ const router = express.Router();
 const ecommerceController = require('../controllers/ecommerceController');
 const { requireAuth, requireRole } = require('../middlewares/authMiddleware');
 
+// router.post('/seed', ecommerceController.seedProducts);
+
 // ==========================================
 // PUBLIC ROUTES (Anyone can view products)
 // ==========================================
