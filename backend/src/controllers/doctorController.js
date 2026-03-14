@@ -119,3 +119,80 @@ exports.getPatientProfile = async (req, res) => {
         res.status(500).json({ error: 'Failed to fetch patient profile.' });
     }
 };
+
+// Add this to your doctorController.js
+exports.getDashboardStats = async (req, res) => {
+    try {
+        const doctorId = await getDoctorId(req.user.id, res);
+        if (!doctorId) return;
+
+        const activePatients = await DoctorModel.getActivePatientCount(doctorId);
+
+        res.status(200).json({
+            stats: {
+                activePatients: activePatients || 0,
+                newReports: 0 // You can make this dynamic later
+            }
+        });
+    } catch (error) {
+        logger.error(`Get Stats Error: ${error.message}`);
+        res.status(500).json({ error: 'Failed to fetch dashboard stats.' });
+    }
+};
+
+exports.getDashboardData = async (req, res) => {
+    try {
+        const doctorId = await getDoctorId(req.user.id, res);
+        if (!doctorId) return;
+
+        // Fetch everything concurrently
+        const [activePatients, recentPrescriptions, recentReviews, profile] = await Promise.all([
+            DoctorModel.getActivePatientCount(doctorId),
+            DoctorModel.getRecentPrescriptions(doctorId),
+            DoctorModel.getRecentReviews(doctorId, 1),
+            DoctorModel.getFullProfile(req.user.id)
+        ]);
+
+        // Generate a dynamic insight based on actual prescription data
+        let dynamicInsight = "Analyzing recent health reports shows a stable trend in patient vitals this week.";
+        if (recentPrescriptions && recentPrescriptions.length > 0) {
+            // UPDATED: Using medicine_name instead of herbs_prescribed
+            const commonHerb = recentPrescriptions[0].medicine_name || 'standard formulations';
+            dynamicInsight = `Recent patient data indicates a high requirement for ${commonHerb}. Monitoring Vata imbalances is recommended based on current prescription trends.`;
+        }
+
+        res.status(200).json({
+            stats: { activePatients: activePatients || 0, newReports: 0 },
+            recentPrescriptions: recentPrescriptions || [],
+            recentReviews: recentReviews || [],
+            insight: dynamicInsight,
+            doctorName: profile ? profile.full_name : 'Doctor',
+            specialization: profile ? profile.specialization : 'Ayurvedic Specialist'
+        });
+    } catch (error) {
+        logger.error(`Get Dashboard Data Error: ${error.message}`);
+        res.status(500).json({ error: 'Failed to fetch dashboard data.' });
+    }
+};
+
+exports.getPayoutDashboard = async (req, res) => {
+    try {
+        const doctorId = await getDoctorId(req.user.id, res);
+        if (!doctorId) return;
+
+        const [stats, transactions, monthlyEarnings] = await Promise.all([
+            DoctorModel.getPayoutStats(doctorId),
+            DoctorModel.getRecentTransactions(doctorId),
+            DoctorModel.getMonthlyEarnings(doctorId)
+        ]);
+
+        res.status(200).json({
+            stats,
+            transactions,
+            chartData: monthlyEarnings
+        });
+    } catch (error) {
+        logger.error(`Get Payout Dashboard Error: ${error.message}`);
+        res.status(500).json({ error: 'Failed to fetch payout data.' });
+    }
+};

@@ -19,6 +19,13 @@ class UserModel {
         return result.rows[0];
     }
 
+    // ADD THIS METHOD
+    static async getUserByPhone(phone) {
+        const query = `SELECT * FROM Users WHERE phone = $1;`;
+        const result = await db.query(query, [phone]);
+        return result.rows[0];
+    }
+
     static async getUserById(id) {
         const query = `SELECT * FROM Users WHERE id = $1;`;
         const result = await db.query(query, [id]);

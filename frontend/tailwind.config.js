@@ -5,29 +5,24 @@ export default {
     "./src/**/*.{js,ts,jsx,tsx}",
   ],
   theme: {
-    extend: {},
-  },
-  plugins: [],
-}
-// tailwind.config.js
-module.exports = {
-  content: ["./src/**/*.{js,jsx,ts,tsx}"],
-  theme: {
     extend: {
       colors: {
         'ayur-green': {
           light: '#F1F8F6', // Page backgrounds 
-          DEFAULT: '#2D5A27', // Primary buttons/icons [cite: 26, 32]
+          DEFAULT: '#2D5A27', // Primary buttons/icons
           dark: '#1B3D18',
         },
         'ayur-orange': {
-          DEFAULT: '#FF7D44', // "Book Consultation" & "Add to Cart" [cite: 68, 506]
+          DEFAULT: '#FF7D44', // "Book Consultation" & "Add to Cart"
           light: '#FFF2EC',
         },
-        'ayur-beige': '#F9F7F2', // Card backgrounds [cite: 1]
+        'ayur-beige': '#F9F7F2', // Card backgrounds
       },
       fontFamily: {
-        sans: ['Inter', 'sans-serif'], // For the modern digital feel 
+        // Inter as the primary UI font
+        sans: ['Inter', 'system-ui', 'Arial', 'sans-serif'],
+        // DM Serif Display for marketing/section headings
+        serif: ['DM Serif Display', 'Georgia', 'serif'],
       },
     },
   },

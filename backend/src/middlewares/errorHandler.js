@@ -15,6 +15,7 @@ const errorHandler = (err, req, res, next) => {
     if (err.code === '23505') {
         return res.status(400).json({ error: 'Data already exists (Email/Phone unique violation).' });
     }
+    
     // In production, avoid sending detailed server errors to the client
     const message = process.env.NODE_ENV === 'production' && statusCode === 500
         ? 'Internal Server Error'
