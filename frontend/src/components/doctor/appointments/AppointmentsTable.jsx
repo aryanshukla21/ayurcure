@@ -1,7 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { Calendar as CalendarIcon, ChevronLeft, ChevronRight } from 'lucide-react';
+import { useNavigate } from 'react-router-dom'; // <-- 1. Import useNavigate
 
 const AppointmentsTable = ({ appointments = [], activeTab }) => {
+    const navigate = useNavigate(); // <-- 2. Initialize navigate hook
+
     // --- Pagination State & Logic ---
     const [currentPage, setCurrentPage] = useState(1);
     const itemsPerPage = 4; // Set to 4 to match your requirement ("Showing 1 to 4...")
@@ -60,7 +63,11 @@ const AppointmentsTable = ({ appointments = [], activeTab }) => {
                                 const statusStr = apt?.status || 'Scheduled';
 
                                 return (
-                                    <tr key={apt?.id || index} className="hover:bg-gray-50 transition-colors group">
+                                    <tr
+                                        key={apt?.id || index}
+                                        onClick={() => navigate(`/doctor/appointments/${apt?.id || index + 1}`)} // <-- 3. Click handler added
+                                        className="hover:bg-gray-50 transition-colors group cursor-pointer" // <-- 4. cursor-pointer added
+                                    >
                                         <td className="px-8 py-5">
                                             <div className="flex items-center gap-4">
                                                 <div className="w-12 h-12 rounded-full bg-[#FDF9EE] flex items-center justify-center font-bold text-[#4A7C59] text-lg group-hover:bg-white transition-colors border border-transparent group-hover:border-gray-200">
@@ -87,6 +94,7 @@ const AppointmentsTable = ({ appointments = [], activeTab }) => {
                     </tbody>
                 </table>
             </div>
+
 
             {/* --- Dynamic Pagination Footer --- */}
             {totalItems > 0 && (

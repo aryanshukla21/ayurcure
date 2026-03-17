@@ -51,17 +51,6 @@ const DoctorSidebar = () => {
 
             {/* Bottom Profile Snippet & Logout */}
             <div className="p-4 mt-auto border-t border-white/10 bg-black/5">
-                <div className="flex items-center gap-3 mb-4 p-2 rounded-xl hover:bg-white/10 transition-colors cursor-pointer">
-                    <img
-                        src="https://ui-avatars.com/api/?name=Julian+Reed&background=E5E7EB&color=4A7C59"
-                        alt="Doctor Profile"
-                        className="w-10 h-10 rounded-full border-2 border-white/20 object-cover"
-                    />
-                    <div className="flex-1 min-w-0">
-                        <p className="text-sm font-bold truncate text-white">Dr. Julian Reed</p>
-                        <p className="text-xs text-white/70 truncate">Ayurvedic Specialist</p>
-                    </div>
-                </div>
 
                 <button
                     onClick={handleLogout}
