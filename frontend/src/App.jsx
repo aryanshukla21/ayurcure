@@ -6,6 +6,8 @@ import DoctorDashboard from './pages/doctor/DoctorDashboard';
 import DoctorAppointments from './pages/doctor/DoctorAppointments';
 import DoctorAppointmentDetails from './pages/doctor/DoctorAppointmentDetails';
 import DoctorEarnings from './pages/doctor/DoctorEarnings';
+import DoctorProfile from './pages/doctor/DoctorProfile';
+import DoctorSettings from './pages/doctor/DoctorSettings';
 
 function App() {
   return (
@@ -22,8 +24,8 @@ function App() {
           <Route path="appointments/:id" element={<DoctorAppointmentDetails />} />
 
           <Route path="earnings" element={<DoctorEarnings />} />
-          <Route path="profile" element={<div className="p-8">Profile UI Coming Soon</div>} />
-          <Route path="settings" element={<div className="p-8">Settings UI Coming Soon</div>} />
+          <Route path="profile" element={<DoctorProfile />} />
+          <Route path="settings" element={<DoctorSettings />} />
         </Route>
         <Route path="*" element={<Navigate to="/doctor/dashboard" replace />} />
       </Routes>

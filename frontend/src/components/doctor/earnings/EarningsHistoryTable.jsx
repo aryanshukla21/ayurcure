@@ -24,15 +24,15 @@ const EarningsHistoryTable = ({ history = [] }) => {
                 <h3 className="text-xl font-extrabold text-gray-900">Earnings History</h3>
             </div>
 
-            <div className="overflow-x-auto p-6">
+            <div className="overflow-x-auto">
                 <table className="w-full text-left border-collapse">
                     <thead>
-                        <tr className="bg-[#FDF9EE]/50 text-sm uppercase tracking-widest text-gray-500 rounded-2xl">
+                        <tr className="bg-[#FDF9EE]/50 text-lg uppercase tracking-widest text-amber-700 rounded-2xl">
                             {/* Updated 4 Columns based on new UI rules */}
-                            <th className="px-8 py-5 font-bold rounded-l-2xl">Transaction ID</th>
+                            <th className="px-8 py-5 font-bold">Transaction ID</th>
                             <th className="px-8 py-5 font-bold">Date & Time</th>
                             <th className="px-8 py-5 font-bold">Patient / Type</th>
-                            <th className="px-8 py-5 font-bold rounded-r-2xl">Amount</th>
+                            <th className="px-8 py-5 font-bold">Amount</th>
                         </tr>
                     </thead>
                     <tbody className="divide-y divide-transparent">
