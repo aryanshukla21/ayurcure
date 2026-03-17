@@ -9,18 +9,18 @@ const EarningsSummary = ({ stats }) => {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-10">
 
             {/* Total Earnings Card - Height increased to h-56 */}
-            <div className="bg-white rounded-3xl p-8 shadow-sm border border-gray-100 flex flex-col justify-center h-72 transition-transform hover:-translate-y-1 duration-300">
+            <div className="bg-white rounded-3xl px-12 shadow-sm border border-gray-100 flex flex-col justify-center h-48 transition-transform hover:-translate-y-1 duration-300">
 
                 {/* Icon and Title in the same row */}
                 <div className="flex items-center gap-4 mb-6">
-                    <div className="p-3.5 rounded-2xl bg-[#FDF9EE] text-[#4A7C59] shadow-sm">
-                        <DollarSign size={28} />
+                    <div className="p-3.5 rounded-2xl text-green-600">
+                        <DollarSign size={20} />
                     </div>
                     <p className="text-sm text-gray-500 font-bold tracking-widest uppercase">Total Earnings</p>
                 </div>
 
                 {/* Amount */}
-                <h2 className="text-5xl font-black text-gray-900 tracking-tight mb-4">
+                <h2 className="text-4xl font-black text-gray-900 tracking-tight mb-4">
                     ${safeStats.totalEarnings.toLocaleString()}
                 </h2>
 
@@ -34,18 +34,18 @@ const EarningsSummary = ({ stats }) => {
             </div>
 
             {/* Monthly Earnings Card - Height increased to h-56 */}
-            <div className="bg-white rounded-3xl p-8 shadow-sm border border-gray-100 flex flex-col justify-center h-72 transition-transform hover:-translate-y-1 duration-300">
+            <div className="bg-white rounded-3xl px-12 shadow-sm border border-gray-100 flex flex-col justify-center h-48 transition-transform hover:-translate-y-1 duration-300">
 
                 {/* Icon and Title in the same row */}
                 <div className="flex items-center gap-4 mb-6">
-                    <div className="p-3.5 rounded-2xl bg-blue-50 text-blue-600 shadow-sm">
-                        <Wallet size={28} />
+                    <div className="p-3.5 rounded-2xl text-blue-600">
+                        <Wallet size={20} />
                     </div>
                     <p className="text-sm text-gray-500 font-bold tracking-widest uppercase">Monthly Earnings</p>
                 </div>
 
                 {/* Amount */}
-                <h2 className="text-5xl font-black text-gray-900 tracking-tight mb-4">
+                <h2 className="text-4xl font-black text-gray-900 tracking-tight mb-4">
                     ${safeStats.monthlyEarnings.toLocaleString()}
                 </h2>
 

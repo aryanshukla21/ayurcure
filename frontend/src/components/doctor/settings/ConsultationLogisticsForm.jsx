@@ -27,13 +27,13 @@ const ConsultationLogisticsForm = ({ data }) => {
             </FormGroup>
 
             <FormGroup label="Availability">
-                <div className="flex flex-wrap gap-3 mb-2">
+                <div className="flex flex-wrap gap-3">
                     {Object.keys(formData.days).map(day => (
                         <button
                             key={day}
                             type="button"
                             onClick={() => toggleDay(day)}
-                            className={`w-16 h-8 rounded-3xl font-bold transition-all flex items-center justify-center border
+                            className={`w-12 h-6 rounded-3xl font-bold transition-all flex items-center justify-center border
                                 ${formData.days[day]
                                     ? 'bg-[#4A7C59] text-white border-[#4A7C59] shadow-md shadow-[#4A7C59]/30'
                                     : 'bg-gray-50 text-gray-500 border-gray-200 hover:border-gray-300'}`}

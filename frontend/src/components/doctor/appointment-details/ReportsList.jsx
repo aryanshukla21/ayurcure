@@ -3,10 +3,10 @@ import { FileText, Download } from 'lucide-react';
 
 const ReportsList = ({ reports = [] }) => {
     return (
-        <div className="mt-4">
-            <div className="flex items-center justify-between mb-6">
-                <h3 className="text-lg font-extrabold text-gray-900 flex items-center gap-2">
-                    <FileText size={20} className="text-gray-400" /> Patient Reports
+        <div>
+            <div className="flex items-center justify-between mb-6 ml-4">
+                <h3 className="text-sm font-extrabold text-gray-900 flex items-center gap-2">
+                    <FileText size={12} className="text-gray-400" /> Patient Reports
                 </h3>
                 <span className="text-xs text-gray-500 font-bold tracking-widest uppercase">{reports.length} DOCUMENTS</span>
             </div>
@@ -15,7 +15,7 @@ const ReportsList = ({ reports = [] }) => {
                 {reports.map((report, index) => (
                     <div key={index} className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 flex items-center justify-between group cursor-pointer hover:border-[#4A7C59]/30 transition-colors">
                         <div className="flex items-center gap-4 overflow-hidden">
-                            <div className="w-10 h-10 rounded-xl bg-red-50 text-red-500 flex items-center justify-center flex-shrink-0">
+                            <div className="w-10 h-8 rounded-xl bg-red-50 text-red-500 flex items-center justify-center flex-shrink-0">
                                 <FileText size={20} />
                             </div>
                             <div className="min-w-0">

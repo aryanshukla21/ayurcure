@@ -20,19 +20,19 @@ const EarningsHistoryTable = ({ history = [] }) => {
 
     return (
         <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden flex flex-col">
-            <div className="p-8 border-b border-gray-100">
-                <h3 className="text-xl font-extrabold text-gray-900">Earnings History</h3>
+            <div className="p-4 border-b border-gray-100">
+                <h3 className="text-lg font-extrabold text-gray-900 px-4">Earnings History</h3>
             </div>
 
             <div className="overflow-x-auto">
                 <table className="w-full text-left border-collapse">
                     <thead>
-                        <tr className="bg-[#FDF9EE]/50 text-lg uppercase tracking-widest text-amber-700 rounded-2xl">
+                        <tr className="bg-[#FDF9EE]/50 text-xs uppercase tracking-widest text-amber-700 rounded-2xl">
                             {/* Updated 4 Columns based on new UI rules */}
-                            <th className="px-8 py-5 font-bold">Transaction ID</th>
-                            <th className="px-8 py-5 font-bold">Date & Time</th>
-                            <th className="px-8 py-5 font-bold">Patient / Type</th>
-                            <th className="px-8 py-5 font-bold">Amount</th>
+                            <th className="px-8 py-3 font-bold">Transaction ID</th>
+                            <th className="px-8 py-3 font-bold">Date & Time</th>
+                            <th className="px-8 py-3 font-bold">Patient / Type</th>
+                            <th className="px-8 py-3 font-bold">Amount</th>
                         </tr>
                     </thead>
                     <tbody className="divide-y divide-transparent">
@@ -48,25 +48,25 @@ const EarningsHistoryTable = ({ history = [] }) => {
                         ) : (
                             paginatedHistory.map((trx, index) => (
                                 <tr key={trx.id || index} className="hover:bg-gray-50 transition-colors group">
-                                    <td className="px-8 py-5 rounded-l-2xl">
-                                        <span className="font-bold text-gray-900">{trx.id}</span>
+                                    <td className="px-8 py-3 rounded-l-2xl">
+                                        <span className="font-bold text-gray-900 text-xs">{trx.id}</span>
                                     </td>
-                                    <td className="px-8 py-5">
+                                    <td className="px-8 py-3">
                                         {/* Displaying Date AND Time together */}
-                                        <span className="text-gray-900 font-bold block">{trx.date}</span>
-                                        <span className="text-gray-500 text-sm font-medium">{trx.time}</span>
+                                        <span className="text-gray-900 text-xs font-bold block">{trx.date}</span>
+                                        <span className="text-gray-500 text-xs font-medium">{trx.time}</span>
                                     </td>
-                                    <td className="px-8 py-5">
+                                    <td className="px-8 py-3">
                                         <div>
-                                            <p className="font-bold text-gray-900">{trx.patient}</p>
-                                            <div className="flex items-center gap-1.5 text-gray-500 text-sm mt-0.5 font-medium">
+                                            <p className="font-bold text-gray-900 text-xs">{trx.patient}</p>
+                                            <div className="flex items-center gap-1.5 text-gray-500 text-xs mt-0.5 font-medium">
                                                 {trx.type === 'Video' ? <Video size={14} /> : <User size={14} />}
                                                 {trx.type} Consultation
                                             </div>
                                         </div>
                                     </td>
-                                    <td className="px-8 py-5 rounded-r-2xl">
-                                        <span className="font-extrabold text-black text-lg">${trx.amount.toLocaleString()}</span>
+                                    <td className="px-8 py-3 rounded-r-2xl">
+                                        <span className="font-extrabold text-black text-xs">${trx.amount.toLocaleString()}</span>
                                     </td>
                                 </tr>
                             ))

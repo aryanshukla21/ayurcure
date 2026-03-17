@@ -68,10 +68,10 @@ const DoctorSettings = () => {
     if (!settingsData) return null;
 
     return (
-        <div className="max-w-[1600px] mx-auto p-10 bg-[#FDF9EE] min-h-full flex flex-col gap-8">
+        <div className="max-w-[1600px] mx-auto p-10 bg-[#FDF9EE] min-h-full flex flex-col gap-4">
             <div>
-                <h1 className="text-5xl font-extrabold text-gray-900 mb-3">Settings</h1>
-                <p className='text-lg'>Manage your clinical profile, credentials, and consultation preferences.</p>
+                <h1 className="text-3xl font-extrabold text-gray-900 mb-2">Settings</h1>
+                <p className='text-sm'>Manage your clinical profile, credentials, and consultation preferences.</p>
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">

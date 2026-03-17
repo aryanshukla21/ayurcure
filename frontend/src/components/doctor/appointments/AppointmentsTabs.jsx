@@ -10,7 +10,7 @@ const AppointmentsTabs = ({ tabs = [], activeTab, onTabChange }) => {
                 <button
                     key={tab}
                     onClick={() => onTabChange(tab)}
-                    className={`px-6 py-2.5 rounded-full font-bold text-lg transition-all duration-200 ${activeTab === tab
+                    className={`px-6 py-2.5 rounded-full font-bold text-sm transition-all duration-200 ${activeTab === tab
                         ? 'bg-[#4A7C59] text-white shadow-md'
                         : 'bg-white text-gray-500 hover:bg-gray-50 hover:text-gray-700 border border-gray-200 shadow-sm'
                         }`}

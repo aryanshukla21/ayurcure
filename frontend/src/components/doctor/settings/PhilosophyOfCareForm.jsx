@@ -7,7 +7,7 @@ const PhilosophyOfCareForm = ({ data }) => {
     const [bio, setBio] = useState(data?.bio || '');
 
     return (
-        <div className="bg-white rounded-3xl p-8 shadow-sm border border-gray-100 flex flex-col">
+        <div className="bg-white rounded-3xl px-8 py-4 shadow-sm border border-gray-100 flex flex-col">
             <CardHeader
                 icon={Heart}
                 title="Philosophy of Care"

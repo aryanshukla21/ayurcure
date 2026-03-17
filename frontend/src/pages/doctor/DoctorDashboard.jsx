@@ -27,8 +27,8 @@ const DoctorDashboard = () => {
         < div className="max-w-[1600px] mx-auto p-10 bg-[#FDF9EE] min-h-full" >
 
             <div className="mb-10">
-                <h1 className="text-4xl font-extrabold text-gray-900 mb-3 tracking-tight">Dashboard</h1>
-                <p className="text-gray-500 text-lg">
+                <h1 className="text-3xl font-extrabold text-gray-900 mb-3 tracking-tight">Dashboard</h1>
+                <p className="text-gray-500 text-xs">
                     Welcome back. You have <span className="font-bold text-gray-700">{stats.appointmentsToday} consultations</span> scheduled for today.
                 </p>
             </div>
@@ -38,7 +38,7 @@ const DoctorDashboard = () => {
                 <StatCard
                     title="Total Patients"
                     value={stats.totalPatients.toLocaleString()}
-                    icon={<Users size={28} />}
+                    icon={<Users size={16} />}
                     iconBgColor="bg-blue-50"
                     iconTextColor="text-blue-600"
                     bottomContent={<><TrendingUp size={18} className="mr-1.5 text-green-600" /> <span className="text-green-600">+12% from last month</span></>}
@@ -46,7 +46,7 @@ const DoctorDashboard = () => {
                 <StatCard
                     title="Appointments Today"
                     value={stats.appointmentsToday}
-                    icon={<Calendar size={28} />}
+                    icon={<Calendar size={16} />}
                     iconBgColor="bg-orange-50"
                     iconTextColor="text-orange-500"
                     bottomContent={<><Clock size={18} className="mr-1.5 text-gray-500" /> <span className="text-gray-500">Next in 45 minutes</span></>}
@@ -54,7 +54,7 @@ const DoctorDashboard = () => {
                 <StatCard
                     title="Upcoming Consultations"
                     value={stats.upcomingConsultations}
-                    icon={<Video size={28} />}
+                    icon={<Video size={16} />}
                     iconBgColor="bg-purple-50"
                     iconTextColor="text-purple-600"
                 />

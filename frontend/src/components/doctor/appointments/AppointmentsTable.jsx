@@ -39,11 +39,11 @@ const AppointmentsTable = ({ appointments = [], activeTab }) => {
             <div className="overflow-x-auto">
                 <table className="w-full text-left border-collapse">
                     <thead>
-                        <tr className=" text-lg uppercase tracking-widest text-amber-700 border-b border-gray-100">
-                            <th className="px-8 py-6 font-bold">Patient Name</th>
-                            <th className="px-8 py-6 font-bold">Date</th>
-                            <th className="px-8 py-6 font-bold">Time</th>
-                            <th className="px-8 py-6 font-bold">Status</th>
+                        <tr className=" text-xs uppercase tracking-widest text-amber-700 border-b border-gray-100">
+                            <th className="px-8 py-3 font-bold">Patient Name</th>
+                            <th className="px-8 py-3 font-bold">Date</th>
+                            <th className="px-8 py-3 font-bold">Time</th>
+                            <th className="px-8 py-3 font-bold">Status</th>
                         </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-50">
@@ -68,22 +68,22 @@ const AppointmentsTable = ({ appointments = [], activeTab }) => {
                                         onClick={() => navigate(`/doctor/appointments/${apt?.id || index + 1}`)} // <-- 3. Click handler added
                                         className="hover:bg-gray-50 transition-colors group cursor-pointer" // <-- 4. cursor-pointer added
                                     >
-                                        <td className="px-8 py-5">
+                                        <td className="px-8 py-2">
                                             <div className="flex items-center gap-4">
                                                 <div className="w-12 h-12 rounded-full bg-[#FDF9EE] flex items-center justify-center font-bold text-[#4A7C59] text-lg group-hover:bg-white transition-colors border border-transparent group-hover:border-gray-200">
                                                     {initials}
                                                 </div>
-                                                <span className="font-bold text-gray-900 text-base">{name}</span>
+                                                <span className="font-bold text-gray-900 text-xs">{name}</span>
                                             </div>
                                         </td>
-                                        <td className="px-8 py-5">
-                                            <span className="text-gray-600 font-semibold text-base">{dateStr}</span>
+                                        <td className="px-8 py-2">
+                                            <span className="text-gray-600 font-semibold text-xs">{dateStr}</span>
                                         </td>
-                                        <td className="px-8 py-5">
-                                            <span className="font-bold text-gray-800 text-base">{timeStr}</span>
+                                        <td className="px-8 py-2">
+                                            <span className="font-bold text-gray-800 text-xs">{timeStr}</span>
                                         </td>
-                                        <td className="px-8 py-5">
-                                            <span className={`px-4 py-2 rounded-full text-sm font-bold tracking-wide ${getStatusStyle(statusStr)}`}>
+                                        <td className="px-8 py-2">
+                                            <span className={`px-4 py-2 rounded-full text-xs font-bold tracking-wide ${getStatusStyle(statusStr)}`}>
                                                 {statusStr}
                                             </span>
                                         </td>

@@ -9,7 +9,7 @@ const AccountSecurityForm = () => {
     const handleChange = (e) => setPasswords({ ...passwords, [e.target.name]: e.target.value });
 
     return (
-        <div className="bg-gray-900 rounded-3xl p-8 shadow-sm border border-gray-100">
+        <div className="bg-gray-900 rounded-3xl px-8 py-4 shadow-sm border border-gray-100">
             <CardHeader
                 icon={ShieldCheck}
                 title="Account Security"
@@ -32,7 +32,7 @@ const AccountSecurityForm = () => {
                 </FormGroup>
             </div>
 
-            <div className="flex justify-end mt-4">
+            <div className="flex justify-end mt-2">
                 <SaveButton text="Update Password" colorClass="bg-green-300 hover:bg-green-700" textColor="text-black" onClick={() => console.log('Updating Password')} />
             </div>
         </div>

@@ -102,7 +102,7 @@ const DoctorAppointmentDetails = () => {
 
             {/* Header / Breadcrumb */}
             <div className="mb-10">
-                <h1 className="text-4xl font-extrabold text-gray-900 mb-3 tracking-tight">Appointment Details</h1>
+                <h1 className="text-3xl font-extrabold text-gray-900 mb-3 tracking-tight">Appointment Details</h1>
                 <div className="flex items-center text-gray-500 text-sm font-bold tracking-wide">
                     <Link to="/doctor/appointments" className="hover:text-[#4A7C59] transition-colors">Appointments</Link>
                     <ChevronRight size={16} className="mx-2" />

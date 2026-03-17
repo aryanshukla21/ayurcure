@@ -7,12 +7,12 @@ const PhilosophyCard = ({ profile }) => {
             <div>
                 <div className="flex items-center gap-3 mb-8">
                     <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center">
-                        <Quote size={20} />
+                        <Quote size={12} />
                     </div>
-                    <h3 className="text-3xl font-extrabold text-gray-900">Philosophy</h3>
+                    <h3 className="text-xl font-extrabold text-gray-900">Philosophy</h3>
                 </div>
                 <div className='bg-[#FDF9EE] p-6 rounded-xl'>
-                    <p className="text-gray-600 italic leading-relaxed text-2xl">
+                    <p className="text-gray-600 italic leading-relaxed text-sm">
                         "{profile.bio || 'No bio provided.'}"
                     </p>
                 </div>
