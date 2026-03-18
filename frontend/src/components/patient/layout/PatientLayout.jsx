@@ -1,6 +1,6 @@
 import React from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
-import { Bell, Search } from 'lucide-react';
+import { Bell, Search, ShoppingCart } from 'lucide-react';
 import PatientSidebar from './PatientSidebar';
 
 const PatientLayout = () => {
@@ -20,6 +20,14 @@ const PatientLayout = () => {
     return 'Patient Portal';
   };
 
+  // Helper to dynamically set the search placeholder
+  const getSearchPlaceholder = () => {
+    if (location.pathname.includes('pharmacy-store')) {
+      return 'Search medicines, supplements, or Ayurvedic products...';
+    }
+    return 'Search medical history, doctors...';
+  };
+
   return (
     <div className="flex h-screen bg-[#FDF9EE] font-sans">
 
@@ -36,7 +44,7 @@ const PatientLayout = () => {
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
             <input
               type="text"
-              placeholder="Search medical history, doctors..."
+              placeholder={getSearchPlaceholder()}
               className="w-full pl-12 pr-4 py-3 bg-[#F3F0E9] border-none rounded-full text-sm font-medium text-gray-700 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-[#4A7C59]/20 transition-all"
             />
           </div>
@@ -44,6 +52,15 @@ const PatientLayout = () => {
           {/* Right Header Controls */}
           <div className="flex items-center gap-6">
             <span className="text-sm font-bold text-gray-900">{getPageTitle()}</span>
+
+            {/* Notification and Cart Icons */}
+            <div className="flex items-center gap-4">
+              <button className="text-gray-600 hover:text-[#4A7C59] transition-colors relative">
+                <ShoppingCart size={20} />
+                {/* Static cart badge for UI consistency, no functionality yet */}
+                <span className="absolute -top-2 -right-2 bg-[#4A7C59] text-white text-[10px] font-bold w-4 h-4 flex items-center justify-center rounded-full border border-white">2</span>
+              </button>
+            </div>
 
             <img
               src="/api/placeholder/36/36"

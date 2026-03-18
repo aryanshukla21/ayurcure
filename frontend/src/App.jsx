@@ -16,6 +16,9 @@ import PatientDashboard from './pages/patient/PatientDashboard';
 import PatientAppointments from './pages/patient/PatientAppointments'
 import PatientAppointmentDetails from './pages/patient/PatientAppointmentDetails'
 import BookAppointmentPage from './pages/patient/BookAppointmentPage';
+import PharmacyStore from './pages/patient/PharmacyStore';
+import PatientPrescriptionsPage from './pages/patient/PatientPrescriptionsPage';
+import PatientHealthReportsPage from './pages/patient/PatientHealthReportsPage';
 
 function App() {
   return (
@@ -43,6 +46,9 @@ function App() {
 
           <Route path="appointments/:id" element={<PatientAppointmentDetails />} />
           <Route path="book-appointment" element={<BookAppointmentPage />} />
+          <Route path="pharmacy-store" element={<PharmacyStore />} />
+          <Route path="prescriptions" element={<PatientPrescriptionsPage />} />
+          <Route path="health-records" element={<PatientHealthReportsPage />} />
 
         </Route>
         <Route path="*" element={<Navigate to="/doctor/dashboard" replace />} />
