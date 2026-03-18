@@ -19,6 +19,7 @@ import BookAppointmentPage from './pages/patient/BookAppointmentPage';
 import PharmacyStore from './pages/patient/PharmacyStore';
 import PatientPrescriptionsPage from './pages/patient/PatientPrescriptionsPage';
 import PatientHealthReportsPage from './pages/patient/PatientHealthReportsPage';
+import ProductDetails from './pages/patient/ProductDetails';
 
 function App() {
   return (
@@ -42,16 +43,19 @@ function App() {
         <Route path="/patient" element={<PatientLayout />}>
           <Route index element={<Navigate to="dashboard" replace />} />
           <Route path="dashboard" element={<PatientDashboard />} />
-          <Route path="appointments" element={<PatientAppointments />} />
 
+          <Route path="appointments" element={<PatientAppointments />} />
           <Route path="appointments/:id" element={<PatientAppointmentDetails />} />
           <Route path="book-appointment" element={<BookAppointmentPage />} />
+
           <Route path="pharmacy-store" element={<PharmacyStore />} />
+          <Route path="pharmacy-store/:id" element={<ProductDetails />} />
+
           <Route path="prescriptions" element={<PatientPrescriptionsPage />} />
           <Route path="health-records" element={<PatientHealthReportsPage />} />
 
         </Route>
-        <Route path="*" element={<Navigate to="/doctor/dashboard" replace />} />
+        <Route path="*" element={<Navigate to="/patient/dashboard" replace />} />
       </Routes>
     </BrowserRouter>
   );

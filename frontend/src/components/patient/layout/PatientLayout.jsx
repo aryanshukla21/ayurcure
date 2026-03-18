@@ -1,10 +1,11 @@
 import React from 'react';
-import { Outlet, useLocation } from 'react-router-dom';
-import { Bell, Search, ShoppingCart } from 'lucide-react';
+import { Outlet, useLocation, useNavigate } from 'react-router-dom';
+import { Bell, Search, ShoppingCart, ChevronLeft } from 'lucide-react';
 import PatientSidebar from './PatientSidebar';
 
 const PatientLayout = () => {
   const location = useLocation();
+  const navigate = useNavigate();
 
   // Helper to get the current page title for the header
   const getPageTitle = () => {
@@ -28,6 +29,9 @@ const PatientLayout = () => {
     return 'Search medical history, doctors...';
   };
 
+  // Check if we are on a specific product detail page
+  const isProductDetailsPage = location.pathname.includes('/pharmacy-store/') && location.pathname !== '/patient/pharmacy-store';
+
   return (
     <div className="flex h-screen bg-[#FDF9EE] font-sans">
 
@@ -39,14 +43,26 @@ const PatientLayout = () => {
         {/* Top Header */}
         <header className="h-24 px-10 flex items-center justify-between border-b border-gray-200 shrink-0 shadow-sm z-10">
 
-          {/* Search Bar */}
+          {/* Search Bar / Back Button */}
           <div className="relative w-[480px]">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
-            <input
-              type="text"
-              placeholder={getSearchPlaceholder()}
-              className="w-full pl-12 pr-4 py-3 bg-[#F3F0E9] border-none rounded-full text-sm font-medium text-gray-700 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-[#4A7C59]/20 transition-all"
-            />
+            {isProductDetailsPage ? (
+              <button
+                onClick={() => navigate('/patient/pharmacy-store')}
+                className="text-gray-500 hover:text-[#2D5A27] flex items-center gap-2 font-medium transition-colors py-3"
+              >
+                <ChevronLeft size={20} />
+                Back to Pharmacy Store
+              </button>
+            ) : (
+              <>
+                <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+                <input
+                  type="text"
+                  placeholder={getSearchPlaceholder()}
+                  className="w-full pl-12 pr-4 py-3 bg-[#F3F0E9] border-none rounded-full text-sm font-medium text-gray-700 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-[#4A7C59]/20 transition-all"
+                />
+              </>
+            )}
           </div>
 
           {/* Right Header Controls */}
