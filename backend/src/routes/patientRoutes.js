@@ -18,7 +18,7 @@ router.post('/prakriti-assessment', patientController.updatePrakriti);
 router.get('/profile', patientController.getProfile);
 router.post('/health-logs', patientController.addHealthLogs);
 router.get('/all-appointments', patientController.getAllAppointments);
-router.get('/appointments/:id', patientController.getAppointment);
+router.get('/appointment/:id', patientController.getAppointment);
 
 // ==========================================
 // NEW OVERVIEW & ROUTINE ROUTES
