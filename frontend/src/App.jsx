@@ -25,6 +25,11 @@ import CheckoutPage from './pages/patient/CheckoutPage';
 import PatientPrescriptionsPage from './pages/patient/PatientPrescriptionsPage';
 import PatientHealthReportsPage from './pages/patient/PatientHealthReportsPage';
 
+import PatientProfilePage from './pages/patient/PatientProfilePage';
+import PatientSettingsPage from './pages/patient/PatientSettingsPage';
+import PatientOrderDetailsPage from './pages/patient/PatientOrderDetailsPage';
+import PharmacyOrdersPage from './pages/patient/PharmacyOrdersPage';
+
 function App() {
   return (
     <BrowserRouter>
@@ -59,6 +64,11 @@ function App() {
 
           <Route path="prescriptions" element={<PatientPrescriptionsPage />} />
           <Route path="health-records" element={<PatientHealthReportsPage />} />
+
+          <Route path="pharmacy-orders" element={<PharmacyOrdersPage />} />
+          <Route path="pharmacy-orders/:id" element={<PatientOrderDetailsPage />} />
+          <Route path="profile" element={<PatientProfilePage />} />
+          <Route path="settings" element={<PatientSettingsPage />} />
 
         </Route>
         <Route path="*" element={<Navigate to="/patient/dashboard" replace />} />
