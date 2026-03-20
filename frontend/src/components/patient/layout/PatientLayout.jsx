@@ -71,9 +71,11 @@ const PatientLayout = () => {
 
             {/* Notification and Cart Icons */}
             <div className="flex items-center gap-4">
-              <button className="text-gray-600 hover:text-[#4A7C59] transition-colors relative">
+              <button
+                onClick={() => navigate('/patient/cart')}
+                className="text-gray-600 hover:text-[#4A7C59] transition-colors relative group"
+              >
                 <ShoppingCart size={20} />
-                {/* Static cart badge for UI consistency, no functionality yet */}
                 <span className="absolute -top-2 -right-2 bg-[#4A7C59] text-white text-[10px] font-bold w-4 h-4 flex items-center justify-center rounded-full border border-white">2</span>
               </button>
             </div>
