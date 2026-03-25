@@ -9,7 +9,7 @@ export const appointmentApi = {
     },
 
     // Add a prescription to an existing appointment
-    // Expected prescriptionData: { herbs_prescribed: [...] }
+    // Expected prescriptionData: { medicine_name, dosage, timing, duration, lifestyle_advice }
     addPrescription: async (appointmentId, prescriptionData) => {
         const response = await axiosInstance.post(`/api/appointments/${appointmentId}/prescription`, prescriptionData);
         return response.data;

@@ -4,9 +4,6 @@ const paymentService = require('../services/paymentService');
 const logger = require('../utils/logger');
 const db = require('../config/db');
 
-/**
- * Utility: Gets the PatientProfile ID for the authenticated User
- */
 const getPatientId = async (userId) => {
     const profile = await PatientModel.getProfileByUserId(userId);
     if (!profile) throw new Error('Patient profile not found. Please complete onboarding.');
@@ -46,9 +43,12 @@ exports.getProductDetails = async (req, res) => {
 exports.toggleWishlist = async (req, res) => {
     try {
         const patientId = await getPatientId(req.user.id);
-        const { product_id } = req.body;
+        // Supports both camelCase (frontend) and snake_case (standard backend)
+        const productId = req.body.productId || req.body.product_id;
 
-        const result = await EcommerceModel.toggleWishlist(patientId, product_id);
+        if (!productId) return res.status(400).json({ error: 'Product ID is required.' });
+
+        const result = await EcommerceModel.toggleWishlist(patientId, productId);
         const message = result.added ? 'Added to wishlist.' : 'Removed from wishlist.';
 
         res.status(200).json({ message, added: result.added });
@@ -76,7 +76,6 @@ exports.placeOrder = async (req, res) => {
 
         if (!items || items.length === 0) return res.status(400).json({ error: 'Cart is empty.' });
 
-        // 1. Create DB Order & Deduct Stock
         const { orderId } = await EcommerceModel.placeOrder({
             patient_id: patientId,
             total_amount,
@@ -85,7 +84,6 @@ exports.placeOrder = async (req, res) => {
             payment_method
         }, items);
 
-        // 2. Initialize Payment Gateway if not Cash on Delivery
         if (payment_method === 'Online') {
             const gatewayOrder = await paymentService.createOrder(total_amount, orderId);
             return res.status(201).json({
@@ -135,3 +133,19 @@ exports.getUserOrders = async (req, res) => {
     }
 };
 
+// NEW: Fetch specific order details (used for order tracking page)
+exports.getOrderDetails = async (req, res) => {
+    try {
+        const patientId = await getPatientId(req.user.id);
+        const orderId = req.params.id;
+
+        const order = await EcommerceModel.getOrderById(orderId, patientId);
+
+        if (!order) return res.status(404).json({ error: 'Order not found or access denied.' });
+
+        res.status(200).json({ order });
+    } catch (error) {
+        logger.error(`Get Order Details Error: ${error.message}`);
+        res.status(500).json({ error: 'Failed to fetch order details.' });
+    }
+};

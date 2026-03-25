@@ -1,8 +1,8 @@
 const PatientModel = require('../models/patientModel');
 const logger = require('../utils/logger');
-const db = require('../config/db');
 const bcrypt = require('bcrypt');
 
+// Helper to reliably get patient ID and handle incomplete profiles
 const getPatientId = async (userId, res) => {
     const profile = await PatientModel.getProfileByUserId(userId);
     if (!profile) {
@@ -90,6 +90,24 @@ exports.getProfile = async (req, res) => {
     }
 };
 
+exports.updateProfile = async (req, res) => {
+    try {
+        const patientId = await getPatientId(req.user.id, res);
+        if (!patientId) return;
+
+        const updatedProfile = await PatientModel.updateProfile(patientId, req.body);
+
+        if (!updatedProfile) {
+            return res.status(404).json({ error: 'Profile not found.' });
+        }
+
+        res.status(200).json({ message: 'Profile updated successfully.', profile: updatedProfile });
+    } catch (error) {
+        logger.error(`Update Profile Error: ${error.message}`);
+        res.status(500).json({ error: 'Failed to update profile.' });
+    }
+};
+
 exports.addHealthLogs = async (req, res) => {
     try {
         const patientId = await getPatientId(req.user.id, res);
@@ -100,6 +118,19 @@ exports.addHealthLogs = async (req, res) => {
     } catch (error) {
         logger.error(`Add Health Log Error: ${error.message}`);
         res.status(500).json({ error: 'Failed to add health log.' });
+    }
+};
+
+exports.getHealthLogs = async (req, res) => {
+    try {
+        const patientId = await getPatientId(req.user.id, res);
+        if (!patientId) return;
+
+        const logs = await PatientModel.getHealthLogs(patientId);
+        res.status(200).json({ logs });
+    } catch (error) {
+        logger.error(`Get Health Logs Error: ${error.message}`);
+        res.status(500).json({ error: 'Failed to fetch health logs.' });
     }
 };
 
@@ -131,6 +162,84 @@ exports.getAppointment = async (req, res) => {
     }
 };
 
+// Fetch the most recent health stats for the Overview page
+exports.getHealthStats = async (req, res) => {
+    try {
+        const patientId = await getPatientId(req.user.id, res);
+        if (!patientId) return;
+
+        const stats = await PatientModel.getHealthStats(patientId);
+        // Return the stats, or null if no stats exist yet
+        res.status(200).json(stats || null);
+    } catch (err) {
+        logger.error(`Health Stats Error: ${err.message}`);
+        res.status(500).json({ error: 'Failed to fetch health stats.' });
+    }
+};
+
+// Fetch the Daily Dincharya (Routine)
+exports.getDailyRoutine = async (req, res) => {
+    try {
+        const patientId = await getPatientId(req.user.id, res);
+        if (!patientId) return;
+
+        const routine = await PatientModel.getDailyRoutine(patientId);
+        res.status(200).json(routine || null);
+    } catch (err) {
+        logger.error(`Get Routine Error: ${err.message}`);
+        res.status(500).json({ error: 'Failed to fetch daily routine.' });
+    }
+};
+
+// Create or Update the Daily Dincharya
+exports.updateDailyRoutine = async (req, res) => {
+    try {
+        const patientId = await getPatientId(req.user.id, res);
+        if (!patientId) return;
+
+        await PatientModel.updateDailyRoutine(patientId, req.body);
+        res.status(200).json({ message: 'Daily routine updated successfully.' });
+    } catch (err) {
+        logger.error(`Update Routine Error: ${err.message}`);
+        res.status(500).json({ error: 'Failed to update daily routine.' });
+    }
+};
+
+// Fetch active medicine regimen for the patient
+exports.getCurrentRegimen = async (req, res) => {
+    try {
+        const patientId = await getPatientId(req.user.id, res);
+        if (!patientId) return;
+
+        const regimen = await PatientModel.getCurrentRegimen(patientId);
+        res.status(200).json(regimen);
+    } catch (err) {
+        logger.error(`Regimen Error: ${err.message}`);
+        res.status(500).json({ error: 'Failed to fetch current regimen.' });
+    }
+};
+
+// Fetch a random wellness tip
+exports.getWellnessTip = async (req, res) => {
+    try {
+        const tip = await PatientModel.getWellnessTip();
+
+        if (!tip) {
+            // Fallback tip if the table is currently empty
+            return res.status(200).json({
+                content: "Start your day with a glass of warm water and a slice of lemon to awaken your digestion."
+            });
+        }
+        res.status(200).json(tip);
+    } catch (err) {
+        logger.error(`Wellness Tip Error: ${err.message}`);
+        // Fallback tip in case the table doesn't exist yet during development
+        res.status(200).json({
+            content: "Practice mindful eating: chew your food thoroughly to aid digestion and nutrient absorption."
+        });
+    }
+};
+
 // --- Internal Business Logic Helpers ---
 
 const generateBaselineWellnessPlan = (prakriti) => {
@@ -154,103 +263,29 @@ const generateBaselineWellnessPlan = (prakriti) => {
     return plans[prakriti] || plans['Vata']; // Fallback
 };
 
-// Fetch the most recent health stats for the Overview page
-exports.getHealthStats = async (req, res) => {
+// Assuming your uploadMiddleware returns the file path in req.file.path
+exports.uploadDocument = async (req, res) => {
     try {
-        // Fetches the latest health log/stats for the patient
-        const query = `
-            SELECT weight, sleep_hours, dosha_balance, bp 
-            FROM health_stats 
-            WHERE patient_id = $1 
-            ORDER BY created_at DESC 
-            LIMIT 1
-        `;
-        const { rows } = await db.query(query, [req.user.id]);
+        const patientId = await getPatientId(req.user.id, res);
+        if (!patientId) return;
 
-        // Return the stats, or null if no stats exist yet (frontend handles null gracefully)
-        res.status(200).json(rows[0] || null);
-    } catch (err) {
-        console.error("Health Stats Error:", err);
-        res.status(500).json({ error: 'Failed to fetch health stats.' });
-    }
-};
-
-// Fetch the Daily Dincharya (Routine)
-exports.getDailyRoutine = async (req, res) => {
-    try {
-        const query = `
-            SELECT morning, afternoon, evening, night 
-            FROM patient_routines 
-            WHERE patient_id = $1
-        `;
-        const { rows } = await db.query(query, [req.user.id]);
-        res.status(200).json(rows[0] || null);
-    } catch (err) {
-        console.error("Get Routine Error:", err);
-        res.status(500).json({ error: 'Failed to fetch daily routine.' });
-    }
-};
-
-// Create or Update the Daily Dincharya
-exports.updateDailyRoutine = async (req, res) => {
-    try {
-        const { morning, afternoon, evening, night } = req.body;
-
-        // UPSERT query: Inserts a new row, or updates the existing one if patient_id already exists
-        const query = `
-            INSERT INTO patient_routines (patient_id, morning, afternoon, evening, night) 
-            VALUES ($1, $2, $3, $4, $5)
-            ON CONFLICT (patient_id) DO UPDATE 
-            SET morning = EXCLUDED.morning, 
-                afternoon = EXCLUDED.afternoon, 
-                evening = EXCLUDED.evening, 
-                night = EXCLUDED.night
-        `;
-
-        await db.query(query, [req.user.id, morning, afternoon, evening, night]);
-        res.status(200).json({ message: 'Daily routine updated successfully.' });
-    } catch (err) {
-        console.error("Update Routine Error:", err);
-        res.status(500).json({ error: 'Failed to update daily routine.' });
-    }
-};
-
-// Fetch active medicine regimen for the patient
-exports.getCurrentRegimen = async (req, res) => {
-    try {
-        const query = `
-            SELECT id, medicine_name, dosage, timing, duration 
-            FROM prescriptions 
-            WHERE patient_id = $1 AND is_active = true
-            ORDER BY created_at DESC
-        `;
-        const { rows } = await db.query(query, [req.user.id]);
-        res.status(200).json(rows);
-    } catch (err) {
-        console.error("Regimen Error:", err);
-        res.status(500).json({ error: 'Failed to fetch current regimen.' });
-    }
-};
-
-// Fetch a random wellness tip
-exports.getWellnessTip = async (req, res) => {
-    try {
-        // Randomly selects 1 tip from the database
-        const query = 'SELECT content FROM wellness_tips ORDER BY RANDOM() LIMIT 1';
-        const { rows } = await db.query(query);
-
-        if (rows.length === 0) {
-            // Fallback tip if the table is currently empty
-            return res.status(200).json({
-                content: "Start your day with a glass of warm water and a slice of lemon to awaken your digestion."
-            });
+        if (!req.file) {
+            return res.status(400).json({ error: 'No file provided.' });
         }
-        res.status(200).json(rows[0]);
-    } catch (err) {
-        console.error("Wellness Tip Error:", err);
-        // Fallback tip in case the table doesn't exist yet during development
-        res.status(200).json({
-            content: "Practice mindful eating: chew your food thoroughly to aid digestion and nutrient absorption."
-        });
+
+        const { document_name, document_type } = req.body;
+        const fileUrl = req.file.path; // Or wherever your cloud storage URL is saved
+
+        // Add this query to your PatientModel or run it directly here
+        const query = `
+            INSERT INTO PatientDocuments (patient_id, document_name, document_type, file_url)
+            VALUES ($1, $2, $3, $4) RETURNING *;
+        `;
+        const { rows } = await db.query(query, [patientId, document_name, document_type, fileUrl]);
+
+        res.status(201).json({ message: 'Document uploaded successfully.', document: rows[0] });
+    } catch (error) {
+        console.error("Upload Error:", error);
+        res.status(500).json({ error: 'Failed to upload document.' });
     }
 };

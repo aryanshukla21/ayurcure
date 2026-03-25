@@ -9,9 +9,6 @@ const { requireAuth, requireRole } = require('../middlewares/authMiddleware');
 router.get('/', doctorController.searchDoctors);
 router.get('/:id/slots', doctorController.getDoctorSlots);
 
-// TEMPORARY: Database Seeder Route (Remove this line before going to production)
-// router.post('/seed', doctorController.seedDoctorsDatabase);
-
 // ==========================================
 // PROTECTED ROUTES (Doctor Role Only)
 // ==========================================
@@ -21,6 +18,7 @@ router.use(requireRole('doctor'));
 // Profile & Verification
 router.post('/apply', doctorController.submitProfile);
 router.get('/profile', doctorController.getProfile);
+router.put('/profile', doctorController.updateProfile); // <--- Added
 
 // Availability & Content
 router.post('/availability', doctorController.updateAvailability);
@@ -30,9 +28,7 @@ router.post('/articles', doctorController.addArticle);
 router.get('/all-appointments', doctorController.getAllAppointments);
 router.get('/appointments/:id', doctorController.getAppointment);
 router.get('/patient-profile/:id', doctorController.getPatientProfile);
-// Add this under your Clinical Operations section
 router.get('/stats', doctorController.getDashboardStats);
-// Add this line inside the Clinical Operations section of doctorRoutes.js
 router.get('/dashboard-data', doctorController.getDashboardData);
 router.get('/payouts', doctorController.getPayoutDashboard);
 

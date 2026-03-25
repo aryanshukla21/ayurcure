@@ -50,6 +50,19 @@ exports.getProfile = async (req, res) => {
     }
 };
 
+exports.updateProfile = async (req, res) => {
+    try {
+        const doctorId = await getDoctorId(req.user.id, res);
+        if (!doctorId) return;
+
+        const updatedProfile = await DoctorModel.updateProfile(doctorId, req.body);
+        res.status(200).json({ message: 'Profile updated successfully', profile: updatedProfile });
+    } catch (error) {
+        logger.error(`Update Profile Error: ${error.message}`);
+        res.status(500).json({ error: 'Failed to update profile.' });
+    }
+};
+
 exports.updateAvailability = async (req, res) => {
     try {
         const doctorId = await getDoctorId(req.user.id, res);
@@ -109,63 +122,39 @@ exports.getDoctorSlots = async (req, res, next) => {
         const doctorId = req.params.id;
         const { date } = req.query; // Expected format: YYYY-MM-DD
 
-        if (!date) {
-            return res.status(400).json({ success: false, message: 'Date is required to fetch slots' });
-        }
+        if (!date) return res.status(400).json({ success: false, message: 'Date is required to fetch slots' });
 
-        // 1. Fetch the doctor to get their schedule and consultation duration
-        const doctor = await DoctorModel.findById(doctorId);
-        if (!doctor) {
-            return res.status(404).json({ success: false, message: 'Doctor not found' });
-        }
+        // 1. Fetch Doctor using PostgreSQL
+        const doctor = await DoctorModel.getProfileById(doctorId);
+        if (!doctor) return res.status(404).json({ success: false, message: 'Doctor not found' });
 
-        // 2. Fetch all existing appointments for this doctor on the requested date
-        // Note: Assuming you store scheduled_at as a Date object in MongoDB/Postgres
-        const startOfDay = new Date(`${date}T00:00:00.000Z`);
-        const endOfDay = new Date(`${date}T23:59:59.999Z`);
+        // 2. Fetch Booked Appointments using PostgreSQL
+        const bookedAppointments = await AppointmentModel.getAppointmentsByDate(doctorId, date);
 
-        const bookedAppointments = await AppointmentModel.find({
-            doctor_id: doctorId,
-            scheduled_at: { $gte: startOfDay, $lte: endOfDay },
-            status: { $ne: 'Cancelled' } // Don't count cancelled appointments
-        });
-
-        // Extract just the times that are already booked (e.g., ["09:00", "10:30"])
         const bookedTimes = bookedAppointments.map(app => {
             const time = new Date(app.scheduled_at);
-            return time.toISOString().substring(11, 16); // Extracts "HH:mm"
+            return time.toISOString().substring(11, 16);
         });
 
-        // 3. Generate available slots based on doctor's working hours
-        // (Assuming your doctor model has something like standard start/end times and slot duration)
-        const slotDurationMinutes = doctor.slot_duration || 30; // Default to 30 mins
-        const startTime = doctor.working_hours?.start || '09:00';
-        const endTime = doctor.working_hours?.end || '17:00';
+        const slotDurationMinutes = doctor.consultation_duration_mins || 30;
+        const startTime = '09:00'; // Default start time
+        const endTime = '17:00';   // Default end time
 
         let availableSlots = [];
         let currentTime = new Date(`${date}T${startTime}:00.000Z`);
         const closingTime = new Date(`${date}T${endTime}:00.000Z`);
 
         while (currentTime < closingTime) {
-            let timeString = currentTime.toISOString().substring(11, 16); // "HH:mm"
-
-            // If this time is NOT in the bookedTimes array, add it to available slots
+            let timeString = currentTime.toISOString().substring(11, 16);
             if (!bookedTimes.includes(timeString)) {
                 availableSlots.push(timeString);
             }
-
-            // Increment by slot duration
             currentTime.setMinutes(currentTime.getMinutes() + slotDurationMinutes);
         }
 
-        res.status(200).json({
-            success: true,
-            date: date,
-            availableSlots: availableSlots // e.g., ["09:00", "09:30", "11:00", ...]
-        });
-
+        res.status(200).json({ success: true, date: date, availableSlots });
     } catch (error) {
-        console.error("Error fetching doctor slots:", error);
+        logger.error(`Error fetching doctor slots: ${error.message}`);
         res.status(500).json({ success: false, message: 'Server Error fetching slots' });
     }
 };
@@ -187,7 +176,6 @@ exports.getPatientProfile = async (req, res) => {
     }
 };
 
-// Add this to your doctorController.js
 exports.getDashboardStats = async (req, res) => {
     try {
         const doctorId = await getDoctorId(req.user.id, res);
@@ -198,7 +186,7 @@ exports.getDashboardStats = async (req, res) => {
         res.status(200).json({
             stats: {
                 activePatients: activePatients || 0,
-                newReports: 0 // You can make this dynamic later
+                newReports: 0
             }
         });
     } catch (error) {
@@ -212,7 +200,6 @@ exports.getDashboardData = async (req, res) => {
         const doctorId = await getDoctorId(req.user.id, res);
         if (!doctorId) return;
 
-        // Fetch everything concurrently
         const [activePatients, recentPrescriptions, recentReviews, profile] = await Promise.all([
             DoctorModel.getActivePatientCount(doctorId),
             DoctorModel.getRecentPrescriptions(doctorId),
@@ -220,10 +207,8 @@ exports.getDashboardData = async (req, res) => {
             DoctorModel.getFullProfile(req.user.id)
         ]);
 
-        // Generate a dynamic insight based on actual prescription data
         let dynamicInsight = "Analyzing recent health reports shows a stable trend in patient vitals this week.";
         if (recentPrescriptions && recentPrescriptions.length > 0) {
-            // UPDATED: Using medicine_name instead of herbs_prescribed
             const commonHerb = recentPrescriptions[0].medicine_name || 'standard formulations';
             dynamicInsight = `Recent patient data indicates a high requirement for ${commonHerb}. Monitoring Vata imbalances is recommended based on current prescription trends.`;
         }

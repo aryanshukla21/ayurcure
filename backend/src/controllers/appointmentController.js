@@ -103,7 +103,17 @@ exports.addPrescription = async (req, res) => {
         }
 
         const appointmentId = req.params.id;
-        const prescription = await AppointmentModel.addPrescription(appointmentId, req.body);
+
+        // Fetch appointment to attach the correct patient ID to the prescription
+        const appointment = await AppointmentModel.getById(appointmentId);
+        if (!appointment) return res.status(404).json({ error: 'Appointment not found' });
+
+        const prescriptionData = {
+            ...req.body,
+            patient_id: appointment.patient_id
+        };
+
+        const prescription = await AppointmentModel.addPrescription(appointmentId, prescriptionData);
 
         // Auto-complete the appointment when a prescription is issued
         await AppointmentModel.updateStatus(appointmentId, 'Completed');

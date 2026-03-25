@@ -29,6 +29,12 @@ export const doctorApi = {
         return response.data;
     },
 
+    // ADDED Update Profile
+    updateProfile: async (profileData) => {
+        const response = await axiosInstance.put('/api/doctors/profile', profileData);
+        return response.data;
+    },
+
     updateAvailability: async (availabilityData) => {
         const response = await axiosInstance.post('/api/doctors/availability', availabilityData);
         return response.data;

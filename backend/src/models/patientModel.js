@@ -1,8 +1,11 @@
 const db = require('../config/db');
 
 class PatientModel {
+    // ==========================================
+    // 1. REGISTRATION & PROFILE MANAGEMENT
+    // ==========================================
+
     static async registerPatient(userId, patientData) {
-        // Destructure all available fields from the incoming payload
         const {
             age, gender, health_history, prakriti_type, referral_code,
             patient_display_id, clinical_status, dob, blood_group,
@@ -32,7 +35,6 @@ class PatientModel {
             RETURNING *;
         `;
 
-        // Format values, ensuring JSON arrays/objects are stringified properly for PostgreSQL
         const values = [
             userId, age, gender, health_history, prakriti_type, referral_code,
             patient_display_id, clinical_status || 'Active', dob, blood_group,
@@ -64,6 +66,26 @@ class PatientModel {
         return rows[0];
     }
 
+    static async updateProfile(patientId, profileData) {
+        const { age, gender, health_history, prakriti_type } = profileData;
+        const query = `
+            UPDATE PatientProfiles 
+            SET age = COALESCE($1, age),
+                gender = COALESCE($2, gender),
+                health_history = COALESCE($3, health_history),
+                prakriti_type = COALESCE($4, prakriti_type),
+                updated_at = CURRENT_TIMESTAMP
+            WHERE id = $5
+            RETURNING *;
+        `;
+        const { rows } = await db.query(query, [age, gender, health_history, prakriti_type, patientId]);
+        return rows[0];
+    }
+
+    // ==========================================
+    // 2. PRAKRITI & WELLNESS PLANS
+    // ==========================================
+
     static async updatePrakriti(patientId, prakriti_type) {
         const query = `UPDATE PatientProfiles SET prakriti_type = $1 WHERE id = $2 RETURNING *;`;
         const { rows } = await db.query(query, [prakriti_type, patientId]);
@@ -92,6 +114,16 @@ class PatientModel {
         return rows[0];
     }
 
+    static async getWellnessTip() {
+        const query = `SELECT content FROM wellness_tips ORDER BY RANDOM() LIMIT 1;`;
+        const { rows } = await db.query(query);
+        return rows[0];
+    }
+
+    // ==========================================
+    // 3. HEALTH LOGS & STATS
+    // ==========================================
+
     static async addHealthLog(patientId, logData) {
         const { log_date, sleep_hours, water_intake, stress_level, symptoms } = logData;
         const query = `
@@ -108,6 +140,58 @@ class PatientModel {
         const { rows } = await db.query(query, [patientId]);
         return rows[0];
     }
+
+    static async getHealthLogs(patientId) {
+        const query = `SELECT * FROM HealthLogs WHERE patient_id = $1 ORDER BY log_date DESC;`;
+        const { rows } = await db.query(query, [patientId]);
+        return rows;
+    }
+
+    static async getHealthStats(patientId) {
+        const query = `
+            SELECT weight, sleep_hours, dosha_balance, bp 
+            FROM health_stats 
+            WHERE patient_id = $1 
+            ORDER BY created_at DESC 
+            LIMIT 1;
+        `;
+        const { rows } = await db.query(query, [patientId]);
+        return rows[0];
+    }
+
+    // ==========================================
+    // 4. DAILY ROUTINE (DINACHARYA)
+    // ==========================================
+
+    static async getDailyRoutine(patientId) {
+        const query = `
+            SELECT morning, afternoon, evening, night 
+            FROM patient_routines 
+            WHERE patient_id = $1;
+        `;
+        const { rows } = await db.query(query, [patientId]);
+        return rows[0];
+    }
+
+    static async updateDailyRoutine(patientId, routineData) {
+        const { morning, afternoon, evening, night } = routineData;
+        const query = `
+            INSERT INTO patient_routines (patient_id, morning, afternoon, evening, night) 
+            VALUES ($1, $2, $3, $4, $5)
+            ON CONFLICT (patient_id) DO UPDATE 
+            SET morning = EXCLUDED.morning, 
+                afternoon = EXCLUDED.afternoon, 
+                evening = EXCLUDED.evening, 
+                night = EXCLUDED.night
+            RETURNING *;
+        `;
+        const { rows } = await db.query(query, [patientId, morning, afternoon, evening, night]);
+        return rows[0];
+    }
+
+    // ==========================================
+    // 5. APPOINTMENTS & REGIMENS
+    // ==========================================
 
     static async getUpcomingAppointment(patientId) {
         const query = `
@@ -147,6 +231,17 @@ class PatientModel {
         `;
         const { rows } = await db.query(query, [appointmentId, patientId]);
         return rows[0];
+    }
+
+    static async getCurrentRegimen(patientId) {
+        const query = `
+            SELECT id, medicine_name, dosage, timing, duration 
+            FROM Prescriptions 
+            WHERE patient_id = $1 AND is_active = true
+            ORDER BY created_at DESC;
+        `;
+        const { rows } = await db.query(query, [patientId]);
+        return rows;
     }
 }
 

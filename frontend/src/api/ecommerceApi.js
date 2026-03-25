@@ -17,14 +17,14 @@ export const ecommerceApi = {
         return response.data;
     },
 
-    toggleWishlist: async (wishlistData) => {
-        // wishlistData should contain the product ID to toggle: { productId }
-        const response = await axiosInstance.post(`/api/ecommerce/wishlist/toggle`, wishlistData);
+    toggleWishlist: async (productId) => {
+        // Send as productId so it aligns smoothly with component logic
+        const response = await axiosInstance.post(`/api/ecommerce/wishlist/toggle`, { productId });
         return response.data;
     },
 
     placeOrder: async (orderData) => {
-        // orderData should contain cart items, shipping details, etc.
+        // Expected: { items: [{product_id, quantity, price}], total_amount, discount_applied, shipping_address, payment_method }
         const response = await axiosInstance.post(`/api/ecommerce/orders`, orderData);
         return response.data;
     },
@@ -34,8 +34,14 @@ export const ecommerceApi = {
         return response.data;
     },
 
+    // NEW: Get details and items of a specific order
+    getOrderDetails: async (orderId) => {
+        const response = await axiosInstance.get(`/api/ecommerce/orders/${orderId}`);
+        return response.data;
+    },
+
     verifyPayments: async (paymentData) => {
-        // Changed to POST. paymentData should contain { razorpay_order_id, razorpay_payment_id, razorpay_signature } or similar.
+        // Expected: { razorpay_order_id, razorpay_payment_id, razorpay_signature, order_id }
         const response = await axiosInstance.post(`/api/ecommerce/orders/verify-payment`, paymentData);
         return response.data;
     },

@@ -5,7 +5,6 @@ class DoctorModel {
     // PROFILE MANAGEMENT
     // ==========================================
 
-    // Inserts a new doctor profile record with professional data and sets verification status to 'Verified'.
     static async createDoctorProfile(userId, docData) {
         const {
             qualifications, registration_number, specialization, experience_years, consultation_fee,
@@ -35,14 +34,18 @@ class DoctorModel {
         return rows[0];
     }
 
-    // Retrieves basic doctor profile information associated with a specific user ID.
     static async getProfileByUserId(userId) {
         const query = `SELECT * FROM DoctorProfiles WHERE user_id = $1;`;
         const { rows } = await db.query(query, [userId]);
         return rows[0];
     }
 
-    // Retrieves a comprehensive doctor profile by joining profile data with associated user account details.
+    static async getProfileById(id) {
+        const query = `SELECT * FROM DoctorProfiles WHERE id = $1;`;
+        const { rows } = await db.query(query, [id]);
+        return rows[0];
+    }
+
     static async getFullProfile(userId) {
         const query = `
             SELECT d.*, u.full_name, u.email, u.phone 
@@ -54,7 +57,22 @@ class DoctorModel {
         return rows[0];
     }
 
-    // Searches for verified doctors based on optional specialization filters and includes their contact information.
+    static async updateProfile(doctorId, profileData) {
+        const { consultation_fee, bio, experience_years, availability_summary } = profileData;
+        const query = `
+            UPDATE DoctorProfiles 
+            SET consultation_fee = COALESCE($1, consultation_fee),
+                bio = COALESCE($2, bio),
+                experience_years = COALESCE($3, experience_years),
+                availability_summary = COALESCE($4, availability_summary),
+                updated_at = CURRENT_TIMESTAMP
+            WHERE id = $5
+            RETURNING *;
+        `;
+        const { rows } = await db.query(query, [consultation_fee, bio, experience_years, availability_summary, doctorId]);
+        return rows[0];
+    }
+
     static async searchDoctors(filters = {}) {
         let query = `
             SELECT d.*, u.full_name as name, u.email, u.phone 
@@ -75,7 +93,6 @@ class DoctorModel {
     // AVAILABILITY & CONTENT
     // ==========================================
 
-    // Adds a new available consultation time slot for a specific doctor to the database.
     static async addAvailability(doctorId, availData) {
         const { day_of_week, start_time, end_time } = availData;
         const query = `
@@ -87,7 +104,6 @@ class DoctorModel {
         return rows[0];
     }
 
-    // Submits a new article written by a doctor for review and eventual publication.
     static async createArticle(doctorId, articleData) {
         const { title, content } = articleData;
         const query = `
@@ -103,7 +119,6 @@ class DoctorModel {
     // CLINICAL OPERATIONS (APPOINTMENTS)
     // ==========================================
 
-    // Retrieves all appointments for a doctor including detailed patient demographic and profile information.
     static async getAllAppointments(doctorId) {
         const query = `
             SELECT a.id, a.start_time, a.end_time, a.mode, a.status, u.full_name AS patient_name, p.age, p.gender
@@ -117,7 +132,6 @@ class DoctorModel {
         return rows;
     }
 
-    // Fetches specific details of a single appointment by its ID while verifying it belongs to the doctor.
     static async getAppointmentById(appointmentId, doctorId) {
         const query = `
             SELECT a.*, u.full_name AS patient_name, p.age, p.gender, p.health_history, p.prakriti_type
@@ -130,7 +144,6 @@ class DoctorModel {
         return rows[0];
     }
 
-    // Retrieves detailed patient profile and contact information for authorized clinical review by a doctor.
     static async getPatientProfileForDoctor(patientId) {
         const query = `
             SELECT u.full_name, u.email, u.phone, p.* FROM PatientProfiles p
@@ -145,7 +158,6 @@ class DoctorModel {
     // DASHBOARD WIDGET QUERIES
     // ==========================================
 
-    // Calculates the total number of unique patients assigned to a doctor as their primary provider.
     static async getActivePatientCount(doctorId) {
         const query = `
             SELECT COUNT(id) as count 
@@ -156,7 +168,6 @@ class DoctorModel {
         return parseInt(rows[0].count, 10) || 0;
     }
 
-    // Fetches the most recently issued prescriptions by a doctor including patient names and medication details.
     static async getRecentPrescriptions(doctorId, limit = 3) {
         const query = `
             SELECT 
@@ -173,7 +184,6 @@ class DoctorModel {
         return rows;
     }
 
-    // Retrieves the latest patient reviews and ratings for a specific doctor's consultations.
     static async getRecentReviews(doctorId, limit = 1) {
         const query = `
             SELECT r.rating, r.review_text, u.full_name as patient_name
@@ -188,10 +198,7 @@ class DoctorModel {
         return rows;
     }
 
-    // Computes comprehensive financial metrics including available balance, month-to-date earnings, and satisfaction.
-
     static async getPayoutStats(doctorId) {
-        // 1. Calculate Available Balance
         const balanceQuery = `
         SELECT (
             COALESCE((SELECT SUM(dp.consultation_fee) 
@@ -202,7 +209,6 @@ class DoctorModel {
         ) as available_balance;
     `;
 
-        // 2. MTD Earnings
         const mtdQuery = `
         SELECT COALESCE(SUM(dp.consultation_fee), 0) as mtd_earned
         FROM Appointments a
@@ -212,7 +218,6 @@ class DoctorModel {
         AND a.start_time >= date_trunc('month', CURRENT_DATE);
     `;
 
-        // 3. Get Patient Satisfaction from Profile
         const profileQuery = `
         SELECT average_rating, u.full_name 
         FROM DoctorProfiles dp
@@ -226,12 +231,10 @@ class DoctorModel {
             db.query(profileQuery, [doctorId])
         ]);
 
-        // Calculate Next Payout Date dynamically (1st of next month)
         const nextMonth = new Date();
         nextMonth.setMonth(nextMonth.getMonth() + 1);
         nextMonth.setDate(1);
 
-        // Corrected toLocaleDateString options
         const formattedNextPayout = nextMonth.toLocaleDateString('en-US', {
             month: 'long',
             day: '2-digit',
@@ -263,7 +266,6 @@ class DoctorModel {
         return rows;
     }
 
-    // Lists the most recent financial transactions related to completed consultations for ledger tracking.
     static async getRecentTransactions(doctorId, limit = 5) {
         const query = `
         SELECT 

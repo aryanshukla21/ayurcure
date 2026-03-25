@@ -1,12 +1,9 @@
 import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 
-// ==========================================
-// IMPORTS
-// ==========================================
-
-// Security Wrapper
-import ProtectedRoute from './components/common/ProtectedRoute'; // Adjust path as needed
+// Security & Utility Wrappers
+import ProtectedRoute from './components/common/ProtectedRoute';
+import ScrollToTop from './components/ScrollToTop';
 
 // Public / Website Pages
 import LandingPage from './pages/website/LandingPage';
@@ -71,18 +68,12 @@ import CartSummary from './pages/patient/CartSummary';
 import CheckoutPage from './pages/patient/CheckoutPage';
 import PharmacyOrdersPage from './pages/patient/PharmacyOrdersPage';
 
-// ==========================================
-// APP COMPONENT
-// ==========================================
-
 function App() {
   return (
     <BrowserRouter>
+      <ScrollToTop />
       <Routes>
-
-        {/* ========================================== */}
-        {/* 1. PUBLIC ROUTES (Website)                   */}
-        {/* ========================================== */}
+        {/* PUBLIC ROUTES */}
         <Route path="/" element={<LandingPage isLoggedIn={false} userRole="patient" />} />
         <Route path="/about" element={<AboutPage />} />
         <Route path="/contact" element={<ContactPage />} />
@@ -92,18 +83,14 @@ function App() {
         <Route path="/blogs" element={<BlogsPage />} />
         <Route path="/blogs/:id" element={<BlogDetailsPage />} />
 
-        {/* ========================================== */}
-        {/* 2. AUTHENTICATION ROUTES                     */}
-        {/* ========================================== */}
+        {/* AUTHENTICATION ROUTES */}
         <Route path="/login" element={<SignInPage />} />
         <Route path="/signup" element={<SignUpPage />} />
         <Route path="/verify" element={<VerifyAccountPage />} />
         <Route path="/reset-password" element={<ResetPasswordPage />} />
         <Route path="/forgot-password" element={<ForgotPasswordPage />} />
 
-        {/* ========================================== */}
-        {/* 3. ADMIN ROUTES (Protected: Admin Only)      */}
-        {/* ========================================== */}
+        {/* ADMIN ROUTES */}
         <Route element={<ProtectedRoute allowedRoles={['admin']} />}>
           <Route path="/admin" element={<AdminLayout />}>
             <Route index element={<Navigate to="dashboard" replace />} />
@@ -125,9 +112,7 @@ function App() {
           </Route>
         </Route>
 
-        {/* ========================================== */}
-        {/* 4. DOCTOR ROUTES (Protected: Doctor Only)    */}
-        {/* ========================================== */}
+        {/* DOCTOR ROUTES */}
         <Route element={<ProtectedRoute allowedRoles={['doctor']} />}>
           <Route path="/doctor" element={<DoctorLayout />}>
             <Route index element={<Navigate to="dashboard" replace />} />
@@ -140,25 +125,20 @@ function App() {
           </Route>
         </Route>
 
-        {/* ========================================== */}
-        {/* 5. PATIENT ROUTES (Protected: Patient Only)  */}
-        {/* ========================================== */}
+        {/* PATIENT ROUTES */}
         <Route element={<ProtectedRoute allowedRoles={['patient']} />}>
           <Route path="/patient" element={<PatientLayout />}>
             <Route index element={<Navigate to="dashboard" replace />} />
             <Route path="dashboard" element={<PatientDashboard />} />
-
             <Route path="book-appointment" element={<BookAppointmentPage />} />
             <Route path="appointments" element={<PatientAppointments />} />
             <Route path="appointments/:id" element={<PatientAppointmentDetails />} />
-
             <Route path="pharmacy-store" element={<PharmacyStore />} />
             <Route path="pharmacy-store/:id" element={<ProductDetails />} />
             <Route path="cart" element={<CartSummary />} />
             <Route path="checkout" element={<CheckoutPage />} />
             <Route path="pharmacy-orders" element={<PharmacyOrdersPage />} />
             <Route path="pharmacy-orders/:id" element={<PatientOrderDetailsPage />} />
-
             <Route path="prescriptions" element={<PatientPrescriptionsPage />} />
             <Route path="health-records" element={<PatientHealthReportsPage />} />
             <Route path="profile" element={<PatientProfilePage />} />
@@ -166,11 +146,8 @@ function App() {
           </Route>
         </Route>
 
-        {/* ========================================== */}
-        {/* 6. CATCH-ALL / FALLBACK ROUTE                */}
-        {/* ========================================== */}
+        {/* CATCH-ALL */}
         <Route path="*" element={<Navigate to="/" replace />} />
-
       </Routes>
     </BrowserRouter>
   );

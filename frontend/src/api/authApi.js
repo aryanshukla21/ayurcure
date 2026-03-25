@@ -73,5 +73,45 @@ export const authApi = {
         // Validates the current session/token and returns user info
         const response = await axiosInstance.get('/api/auth/me');
         return response.data;
+    },
+
+    // ==========================================
+    // 5. EMAIL & PHONE VERIFICATION (TWILIO / SENDGRID)
+    // ==========================================
+
+    requestEmailVerification: async (email) => {
+        const response = await axiosInstance.post('/api/auth/email/request-verification', { email });
+        return response.data;
+    },
+
+    verifyEmailToken: async (data) => {
+        // Expected data: { email, token }
+        const response = await axiosInstance.post('/api/auth/email/verify-token', data);
+        return response.data;
+    },
+
+    requestPhoneOTP: async (phone) => {
+        const response = await axiosInstance.post('/api/auth/phone/request-otp', { phone });
+        return response.data;
+    },
+
+    verifyPhoneOTP: async (data) => {
+        // Expected data: { phone, otp }
+        const response = await axiosInstance.post('/api/auth/phone/verify-otp', data);
+        return response.data;
+    },
+
+    // ==========================================
+    // 6. ACCOUNT SECURITY & NOTIFICATIONS
+    // ==========================================
+
+    setupSsoPassword: async (newPassword) => {
+        const response = await axiosInstance.post('/api/auth/setup-sso-password', { newPassword });
+        return response.data;
+    },
+
+    updateFcmToken: async (fcm_token) => {
+        const response = await axiosInstance.put('/api/auth/fcm-token', { fcm_token });
+        return response.data;
     }
 };

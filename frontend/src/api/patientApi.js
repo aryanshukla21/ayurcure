@@ -71,5 +71,17 @@ export const patientApi = {
     getWellnessTip: async () => {
         const response = await axiosInstance.get('/api/patients/wellness-tip');
         return response.data;
-    }
+    },
+
+    // Update existing profile details
+    updateProfile: async (profileData) => {
+        const response = await axiosInstance.put('/api/patients/profile', profileData);
+        return response.data;
+    },
+
+    // Retrieve historical health logs
+    getHealthLogs: async () => {
+        const response = await axiosInstance.get('/api/patients/health-logs');
+        return response.data;
+    },
 };

@@ -36,7 +36,7 @@ class EcommerceModel {
             shelf_life, storage_instructions, certifications, origin,
             target_audience, tags, description, key_ingredients,
             therapeutic_indications, dosage_administration, contraindications,
-            stock_quantity
+            stock_quantity, image_url
         } = productData;
 
         const query = `
@@ -46,26 +46,21 @@ class EcommerceModel {
                 shelf_life, storage_instructions, certifications, origin, 
                 target_audience, tags, description, key_ingredients, 
                 therapeutic_indications, dosage_administration, contraindications, 
-                stock_quantity
+                stock_quantity, image_url  // <-- ADDED HERE
             )
             VALUES (
                 $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, 
-                $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22
+                $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23 // <-- Added $23
             )
             RETURNING *;
         `;
 
         const values = [
-            name, sku, brand, category, form, quantity_size,
-            mrp, price, gst_percent, hsn_code,
-            shelf_life, storage_instructions, certifications, origin,
-            target_audience,
-            tags ? tags : null, // Postgres handles arrays cleanly if passed properly or stringified depending on pg-pool setup
-            description,
-            key_ingredients ? key_ingredients : null,
+            name, sku, brand, category, form, quantity_size, mrp, price, gst_percent, hsn_code,
+            shelf_life, storage_instructions, certifications, origin, target_audience,
+            tags ? tags : null, description, key_ingredients ? key_ingredients : null,
             therapeutic_indications ? therapeutic_indications : null,
-            dosage_administration, contraindications,
-            stock_quantity || 0
+            dosage_administration, contraindications, stock_quantity, image_url || 0
         ];
 
         const { rows } = await db.query(query, values);
@@ -150,20 +145,32 @@ class EcommerceModel {
         return rows;
     }
 
+    // NEW: Needed for PatientOrderDetailsPage.jsx
+    static async getOrderById(orderId, patientId) {
+        // 1. Fetch the main order details
+        const orderQuery = `SELECT * FROM Orders WHERE id = $1 AND patient_id = $2;`;
+        const orderRes = await db.query(orderQuery, [orderId, patientId]);
+
+        if (orderRes.rows.length === 0) return null;
+
+        // 2. Fetch the items inside that order, joined with Products for names/images
+        const itemsQuery = `
+            SELECT oi.quantity, oi.price_at_purchase, p.id as product_id, p.name, p.image_url 
+            FROM OrderItems oi
+            JOIN Products p ON oi.product_id = p.id
+            WHERE oi.order_id = $1;
+        `;
+        const itemsRes = await db.query(itemsQuery, [orderId]);
+
+        return {
+            ...orderRes.rows[0],
+            items: itemsRes.rows
+        };
+    }
+
     static async updatePaymentStatus(orderId, status) {
         const query = `UPDATE Orders SET payment_status = $1 WHERE id = $2 RETURNING *;`;
         const { rows } = await db.query(query, [status, orderId]);
-        return rows[0];
-    }
-
-    static async createSubscription(subData) {
-        const { patient_id, product_id, frequency, next_billing_date, status } = subData;
-        const query = `
-            INSERT INTO Subscriptions (patient_id, product_id, frequency, next_billing_date, status)
-            VALUES ($1, $2, $3, $4, $5)
-            RETURNING *;
-        `;
-        const { rows } = await db.query(query, [patient_id, product_id, frequency, next_billing_date, status]);
         return rows[0];
     }
 }

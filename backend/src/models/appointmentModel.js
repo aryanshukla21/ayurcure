@@ -43,18 +43,13 @@ class AppointmentModel {
     /**
      * Adds prescription details to a completed appointment.
      */
-    static async addPrescription(appointmentId, { herbs_prescribed, dosage, duration, lifestyle_advice }) {
+    static async addPrescription(appointmentId, { patient_id, medicine_name, dosage, timing, duration, lifestyle_advice }) {
         const query = `
-            INSERT INTO Prescriptions (appointment_id, herbs_prescribed, dosage, duration, lifestyle_advice)
-            VALUES ($1, $2, $3, $4, $5)
-            ON CONFLICT (appointment_id) DO UPDATE 
-            SET herbs_prescribed = EXCLUDED.herbs_prescribed,
-                dosage = EXCLUDED.dosage,
-                duration = EXCLUDED.duration,
-                lifestyle_advice = EXCLUDED.lifestyle_advice
+            INSERT INTO Prescriptions (appointment_id, patient_id, medicine_name, dosage, timing, duration, lifestyle_advice, is_active)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, true)
             RETURNING *;
         `;
-        const values = [appointmentId, herbs_prescribed, dosage, duration, lifestyle_advice];
+        const values = [appointmentId, patient_id, medicine_name, dosage, timing, duration, lifestyle_advice];
         const { rows } = await db.query(query, values);
         return rows[0];
     }
@@ -76,6 +71,18 @@ class AppointmentModel {
         const query = `SELECT * FROM Appointments WHERE id = $1;`;
         const { rows } = await db.query(query, [appointmentId]);
         return rows[0];
+    }
+
+    /**
+     * Fetches appointments by date for slot generation.
+     */
+    static async getAppointmentsByDate(doctorId, dateString) {
+        const query = `
+            SELECT scheduled_at FROM Appointments 
+            WHERE doctor_id = $1 AND status != 'Cancelled' AND DATE(scheduled_at) = $2;
+        `;
+        const { rows } = await db.query(query, [doctorId, dateString]);
+        return rows;
     }
 }
 

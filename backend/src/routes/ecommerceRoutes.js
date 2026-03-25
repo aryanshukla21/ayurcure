@@ -3,8 +3,6 @@ const router = express.Router();
 const ecommerceController = require('../controllers/ecommerceController');
 const { requireAuth, requireRole } = require('../middlewares/authMiddleware');
 
-// router.post('/seed', ecommerceController.seedProducts);
-
 // ==========================================
 // PUBLIC ROUTES (Anyone can view products)
 // ==========================================
@@ -24,6 +22,7 @@ router.post('/wishlist/toggle', ecommerceController.toggleWishlist);
 // Ordering & Payments
 router.post('/orders', ecommerceController.placeOrder);
 router.get('/orders', ecommerceController.getUserOrders);
+router.get('/orders/:id', ecommerceController.getOrderDetails); // <--- Added Order Details Route
 router.post('/orders/verify-payment', ecommerceController.verifyPayment);
 
 module.exports = router;

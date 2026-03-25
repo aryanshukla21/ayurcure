@@ -1,5 +1,6 @@
 import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { motion } from 'framer-motion'; // <-- IMPORTED FRAMER MOTION
 import {
   Leaf, Search, ArrowRight, CalendarCheck, Stethoscope,
   Pill, Clock, ShieldCheck, Star, Award, Heart
@@ -19,6 +20,38 @@ const EXPERTS = [
   { name: 'Dr. Meera Nair', spec: 'Panchakarma', exp: '12 Yrs Exp', img: 'https://images.unsplash.com/photo-1594824416965-4f51e06d2036?auto=format&fit=crop&q=80&w=200' },
   { name: 'Dr. Priya Varma', spec: 'Yoga Therapy', exp: '8 Yrs Exp', img: 'https://images.unsplash.com/photo-1559839734-2b71ea197ec2?auto=format&fit=crop&q=80&w=200' },
 ];
+
+// --- ANIMATION WRAPPER COMPONENT ---
+const ScrollReveal = ({ children, direction = 'left' }) => {
+  let x = 0;
+  let y = 0;
+
+  if (direction === 'left') x = -100;
+  if (direction === 'right') x = 100;
+  if (direction === 'up') y = 100;
+
+  const variants = {
+    hidden: { opacity: 0, x, y },
+    visible: {
+      opacity: 1,
+      x: 0,
+      y: 0,
+      transition: { duration: 0.8, ease: "easeOut" }
+    }
+  };
+
+  return (
+    <motion.div
+      initial="hidden"
+      whileInView="visible"
+      viewport={{ once: true, amount: 0.15 }}
+      variants={variants}
+      className="w-full"
+    >
+      {children}
+    </motion.div>
+  );
+};
 
 // --- SECTIONS ---
 
@@ -63,9 +96,27 @@ const Navbar = ({ isLoggedIn = false, userRole = 'patient' }) => {
 
 const HeroSection = () => (
   <section className="px-8 md:px-16 py-12 md:py-20 max-w-[1600px] mx-auto grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
-    <div>
+    <motion.div
+      initial={{ opacity: 0, x: -100 }}
+      animate={{ opacity: 1, x: 0 }}
+      transition={{ duration: 0.8, ease: "easeOut" }}
+    >
       <h1 className="text-5xl md:text-6xl lg:text-[72px] font-extrabold text-gray-900 leading-[1.1] mb-8 tracking-tight">
-        Modern Healthcare <br /> Rooted in <span className="text-[#3A6447]">Ayurveda</span>
+        Modern Healthcare <br /> Rooted in{' '}
+        <motion.span
+          className="text-[#3A6447] relative inline-block pr-2"
+          initial={{ clipPath: "inset(0 100% 0 0)" }}
+          animate={{ clipPath: "inset(0 0% 0 0)" }}
+          transition={{ duration: 1.5, ease: "easeInOut", delay: 0.6 }}
+        >
+          Ayurveda
+          {/* Blinking Cursor Animation */}
+          <motion.span
+            animate={{ opacity: [0, 1, 0] }}
+            transition={{ duration: 0.8, repeat: Infinity, ease: "linear" }}
+            className="absolute right-0 top-[10%] bottom-[10%] w-[4px] bg-[#3A6447]"
+          />
+        </motion.span>
       </h1>
       <p className="text-lg md:text-xl font-medium text-gray-600 leading-relaxed mb-10 max-w-xl">
         Experience personalized healing based on your unique Dosha. Our modern apothecary brings ancient wisdom to your doorstep.
@@ -78,10 +129,16 @@ const HeroSection = () => (
           Explore Herbs
         </button>
       </div>
-    </div>
-    <div className="relative h-[400px] md:h-[600px] rounded-[40px] overflow-hidden shadow-2xl">
+    </motion.div>
+
+    <motion.div
+      initial={{ opacity: 0, x: 100 }}
+      animate={{ opacity: 1, x: 0 }}
+      transition={{ duration: 0.8, ease: "easeOut", delay: 0.2 }}
+      className="relative h-[400px] md:h-[600px] rounded-[40px] overflow-hidden shadow-2xl"
+    >
       <img src="https://images.unsplash.com/photo-1545205597-3d9d02c29597?auto=format&fit=crop&q=80&w=1200" alt="Ayurvedic herbs and oils" className="w-full h-full object-cover" />
-    </div>
+    </motion.div>
   </section>
 );
 
@@ -155,7 +212,6 @@ const HowItWorksSection = () => (
   <section className="px-8 md:px-16 py-20 max-w-[1600px] mx-auto text-center bg-white rounded-[40px] border border-[#EFEBE1] my-10">
     <h2 className="text-3xl md:text-4xl font-extrabold text-gray-900 tracking-tight mb-16">How it Works</h2>
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-12 relative">
-      {/* Decorative dashed line hidden on mobile */}
       <div className="hidden lg:block absolute top-8 left-[12%] right-[12%] h-0.5 border-t-2 border-dashed border-[#EFEBE1] z-0"></div>
 
       <div className="relative z-10 flex flex-col items-center">
@@ -182,13 +238,11 @@ const HowItWorksSection = () => (
   </section>
 );
 
-// --- UPDATED BLOGS SECTION ---
 const BlogsSection = () => (
   <section className="px-8 md:px-16 py-20 max-w-[1600px] mx-auto">
     <h2 className="text-3xl md:text-4xl font-extrabold text-gray-900 tracking-tight mb-12 text-center">Health & Wellness Blog</h2>
 
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 justify-center">
-      {/* Slicing to show the latest blogs, mapping over the real data from websiteBlogs.js */}
       {websiteBlogs.slice(0, 3).map((blog) => (
         <Link to={`/blogs/${blog.id}`} key={blog.id} className="bg-white rounded-[32px] border border-[#EFEBE1] shadow-sm overflow-hidden group cursor-pointer block">
           <div className="h-48 overflow-hidden">
@@ -304,17 +358,46 @@ const Footer = () => (
 // --- MAIN PAGE COMPONENT ---
 const LandingPage = ({ isLoggedIn = false, userRole = 'patient' }) => {
   return (
-    <div className="min-h-screen bg-[#FAF7F2] font-sans flex flex-col">
+    // overflow-x-hidden is crucial to prevent horizontal scrolling during slide animations
+    <div className="min-h-screen bg-[#FAF7F2] font-sans flex flex-col overflow-x-hidden">
       <Navbar isLoggedIn={isLoggedIn} userRole={userRole} />
+
+      {/* Hero handles its own specific animations */}
       <HeroSection />
-      <RevealGlowSection />
-      <ProductsSection />
-      <ServicesSection />
-      <HowItWorksSection />
-      <ExpertsSection />
-      <BlogsSection />
-      <WhyChooseUsSection />
-      <CTASection />
+
+      {/* Wrapping the rest of the sections in the alternating ScrollReveal */}
+      <ScrollReveal direction="right">
+        <RevealGlowSection />
+      </ScrollReveal>
+
+      <ScrollReveal direction="left">
+        <ProductsSection />
+      </ScrollReveal>
+
+      <ScrollReveal direction="right">
+        <ServicesSection />
+      </ScrollReveal>
+
+      <ScrollReveal direction="left">
+        <HowItWorksSection />
+      </ScrollReveal>
+
+      <ScrollReveal direction="right">
+        <ExpertsSection />
+      </ScrollReveal>
+
+      <ScrollReveal direction="left">
+        <BlogsSection />
+      </ScrollReveal>
+
+      <ScrollReveal direction="right">
+        <WhyChooseUsSection />
+      </ScrollReveal>
+
+      <ScrollReveal direction="up">
+        <CTASection />
+      </ScrollReveal>
+
       <Footer />
     </div>
   );

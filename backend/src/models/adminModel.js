@@ -42,6 +42,18 @@ class AdminModel {
         return rows[0];
     }
 
+    // --- DOCTOR MANAGEMENT ---
+    static async getAllDoctors() {
+        const query = `
+            SELECT d.id, u.full_name, u.email, u.phone, d.specialization, d.verification_status, d.experience_years
+            FROM DoctorProfiles d
+            JOIN Users u ON d.user_id = u.id
+            ORDER BY u.created_at DESC;
+        `;
+        const { rows } = await db.query(query);
+        return rows;
+    }
+
     static async getPendingDoctorApplications() {
         const query = `
             SELECT d.id, u.full_name, u.email, d.qualifications, d.registration_number, d.specialization, d.experience_years
@@ -65,6 +77,78 @@ class AdminModel {
         return rows[0];
     }
 
+    // --- ORDER MANAGEMENT ---
+    static async getAllOrders() {
+        const query = `
+            SELECT o.id, o.total_amount, o.order_status, o.payment_status, o.created_at, u.full_name as customer_name
+            FROM Orders o
+            JOIN Users u ON o.user_id = u.id
+            ORDER BY o.created_at DESC;
+        `;
+        const { rows } = await db.query(query);
+        return rows;
+    }
+
+    // --- BLOG MANAGEMENT ---
+    static async createBlog(adminId, { title, content, image_url, tags }) {
+        const query = `
+            INSERT INTO Blogs (author_id, title, content, image_url, tags, published_at)
+            VALUES ($1, $2, $3, $4, $5, CURRENT_TIMESTAMP)
+            RETURNING *;
+        `;
+        const { rows } = await db.query(query, [adminId, title, content, image_url, JSON.stringify(tags)]);
+        return rows[0];
+    }
+
+    static async getAllBlogs() {
+        const query = `SELECT * FROM Blogs ORDER BY published_at DESC;`;
+        const { rows } = await db.query(query);
+        return rows;
+    }
+
+    static async getBlogById(blogId) {
+        const query = `SELECT * FROM Blogs WHERE id = $1;`;
+        const { rows } = await db.query(query, [blogId]);
+        return rows[0];
+    }
+
+    static async updateBlog(blogId, { title, content, image_url, tags }) {
+        const query = `
+            UPDATE Blogs 
+            SET title = COALESCE($1, title),
+                content = COALESCE($2, content),
+                image_url = COALESCE($3, image_url),
+                tags = COALESCE($4, tags),
+                updated_at = CURRENT_TIMESTAMP
+            WHERE id = $5
+            RETURNING *;
+        `;
+        const { rows } = await db.query(query, [title, content, image_url, JSON.stringify(tags), blogId]);
+        return rows[0];
+    }
+
+    static async deleteBlog(blogId) {
+        const query = `DELETE FROM Blogs WHERE id = $1 RETURNING id;`;
+        const { rows } = await db.query(query, [blogId]);
+        return rows[0];
+    }
+
+    // --- REPORTS & ANALYTICS ---
+    static async getRevenueChartData() {
+        const query = `
+            SELECT 
+                to_char(date_trunc('month', created_at), 'Mon') as month,
+                SUM(total_amount) as revenue
+            FROM Orders
+            WHERE payment_status = 'Paid' AND created_at >= CURRENT_DATE - INTERVAL '6 months'
+            GROUP BY date_trunc('month', created_at)
+            ORDER BY date_trunc('month', created_at) ASC;
+        `;
+        const { rows } = await db.query(query);
+        return rows;
+    }
+
+    // --- UTILITIES ---
     static async logAction(logData) {
         const { admin_id, action_type, target_entity_id, details } = logData;
         const query = `
@@ -73,29 +157,6 @@ class AdminModel {
             RETURNING *;
         `;
         const { rows } = await db.query(query, [admin_id, action_type, target_entity_id, details]);
-        return rows[0];
-    }
-
-    static async createPayout(payoutData) {
-        const { doctor_id, period_start, period_end, total_consultations, amount_due } = payoutData;
-        const query = `
-            INSERT INTO Payouts (doctor_id, period_start, period_end, total_consultations, amount_due)
-            VALUES ($1, $2, $3, $4, $5)
-            RETURNING *;
-        `;
-        const { rows } = await db.query(query, [doctor_id, period_start, period_end, total_consultations, amount_due]);
-        return rows[0];
-    }
-
-    static async createBannerCampaign(campaignData) {
-        const { title, image_url, target_link, type, status, start_date, end_date, created_by } = campaignData;
-        const query = `
-            INSERT INTO BannerCampaigns (title, image_url, target_link, type, status, start_date, end_date, created_by)
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-            RETURNING *;
-        `;
-        const values = [title, image_url, target_link, type, status, start_date, end_date, created_by];
-        const { rows } = await db.query(query, values);
         return rows[0];
     }
 }

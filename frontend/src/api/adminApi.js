@@ -1,48 +1,25 @@
 import axiosInstance from './axiosConfig';
 
 export const adminApi = {
-    // Get dashboard statistics
-    getStats: async () => {
-        const response = await axiosInstance.get('/api/admin/stats');
-        return response.data;
-    },
+    getStats: async () => (await axiosInstance.get('/api/admin/stats')).data,
+    getAllUsers: async () => (await axiosInstance.get('/api/admin/users')).data,
+    banUser: async (userId, status, reason) => (await axiosInstance.put(`/api/admin/users/${userId}/ban`, { status, reason })).data,
 
-    // Get a list of all users
-    getAllUsers: async () => {
-        const response = await axiosInstance.get('/api/admin/users');
-        return response.data;
-    },
+    getAdmins: async () => (await axiosInstance.get('/api/admin/admins')).data,
+    createAdmin: async (adminData) => (await axiosInstance.post('/api/admin/admins', adminData)).data,
 
-    // Update a user's ban status
-    // Expected status: e.g., 'Banned', 'Active'
-    banUser: async (userId, status, reason) => {
-        const response = await axiosInstance.put(`/api/admin/users/${userId}/ban`, {
-            status,
-            reason
-        });
-        return response.data;
-    },
+    getAllDoctors: async () => (await axiosInstance.get('/api/admin/doctors')).data,
+    getPendingDoctors: async () => (await axiosInstance.get('/api/admin/doctors/pending')).data,
+    verifyDoctor: async (doctorId, status, comments) => (await axiosInstance.put(`/api/admin/doctors/${doctorId}/verify`, { status, comments })).data,
 
-    // Get a list of doctors pending verification
-    getPendingDoctors: async () => {
-        const response = await axiosInstance.get('/api/admin/doctors/pending');
-        return response.data;
-    },
+    getAllOrders: async () => (await axiosInstance.get('/api/admin/orders')).data,
+    getReportData: async () => (await axiosInstance.get('/api/admin/reports')).data,
 
-    // Verify or reject a doctor's application
-    // Expected status: e.g., 'Verified', 'Rejected'
-    verifyDoctor: async (doctorId, status, comments) => {
-        const response = await axiosInstance.put(`/api/admin/doctors/${doctorId}/verify`, {
-            status,
-            comments
-        });
-        return response.data;
-    },
+    getAllBlogs: async () => (await axiosInstance.get('/api/admin/blogs')).data,
+    getBlogById: async (blogId) => (await axiosInstance.get(`/api/admin/blogs/${blogId}`)).data,
+    createBlog: async (blogData) => (await axiosInstance.post('/api/admin/blogs', blogData)).data,
+    updateBlog: async (blogId, blogData) => (await axiosInstance.put(`/api/admin/blogs/${blogId}`, blogData)).data,
+    deleteBlog: async (blogId) => (await axiosInstance.delete(`/api/admin/blogs/${blogId}`)).data,
 
-    // Send a broadcast notification (Health reminders, promos, etc.)
-    sendBroadcastNotification: async (broadcastData) => {
-        // broadcastData should contain: { topic, title, body }
-        const response = await axiosInstance.post('/api/admin/broadcast', broadcastData);
-        return response.data;
-    }
+    sendBroadcastNotification: async (broadcastData) => (await axiosInstance.post('/api/admin/broadcast', broadcastData)).data
 };

@@ -11,8 +11,9 @@ router.post('/book',
     appointmentController.bookAppointment
 );
 
+// Updated fields to match the database schema
 router.post('/:id/prescription',
-    validateBodyFields(['herbs_prescribed']),
+    validateBodyFields(['medicine_name', 'dosage', 'timing', 'duration']),
     appointmentController.addPrescription
 );
 
