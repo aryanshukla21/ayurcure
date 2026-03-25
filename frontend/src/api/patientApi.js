@@ -1,23 +1,6 @@
 import axiosInstance from './axiosConfig';
 
 export const patientApi = {
-    // // Fetch all data needed for the patient dashboard 
-    // getDashboardData: async () => {
-    //     // You can either hit a single aggregation endpoint or use Promise.all to fetch multiple
-    //     const response = await axiosInstance.get('/api/patients/dashboard');
-    //     return response.data;
-    // },
-
-    // getUpcomingAppointment: async () => {
-    //     const response = await axiosInstance.get('/api/appointments/upcoming');
-    //     return response.data;
-    // },
-
-    // getMedicalHistory: async () => {
-    //     const response = await axiosInstance.get('/api/patients/medical-history');
-    //     return response.data;
-    // }
-
     // 1
     getcompletePatientProfile: async () => {
         const response = await axiosInstance.post('/api/patients/onboarding');
@@ -55,8 +38,8 @@ export const patientApi = {
     },
 
     // 7
-    getAppointment: async () => {
-        const response = await axiosInstance.get('/api/patients/appointment/:id');
+    getAppointment: async (id) => {
+        const response = await axiosInstance.get(`/api/patients/appointment/${id}`);
         return response.data;
     },
 
@@ -73,8 +56,8 @@ export const patientApi = {
     },
 
     // 10
-    updtaeDailyRoutine: async () => {
-        const response = await axiosInstance.put('/api/patients/routine');
+    updateDailyRoutine: async (routineData) => {
+        const response = await axiosInstance.put('/api/patients/routine', routineData);
         return response.data;
     },
 
@@ -85,8 +68,8 @@ export const patientApi = {
     },
 
     // 12
-    getWellnessTips: async () => {
-        const response = await axiosInstance.get('/api/patients/wellness-tips');
+    getWellnessTip: async () => {
+        const response = await axiosInstance.get('/api/patients/wellness-tip');
         return response.data;
     }
 };

@@ -6,15 +6,11 @@ const { validateBodyFields } = require('../middlewares/validationMiddleware');
 
 router.use(requireAuth);
 
-// router.get('/', appointmentController.getAppointments);
-
-// Ensure booking requests have the necessary information
 router.post('/book',
     validateBodyFields(['doctor_id', 'scheduled_at', 'mode']),
     appointmentController.bookAppointment
 );
 
-// Ensure prescriptions have core data
 router.post('/:id/prescription',
     validateBodyFields(['herbs_prescribed']),
     appointmentController.addPrescription

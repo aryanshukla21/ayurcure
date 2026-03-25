@@ -1,4 +1,5 @@
 const DoctorModel = require('../models/doctorModel');
+const AppointmentModel = require('../models/appointmentModel');
 const db = require('../config/db');
 const logger = require('../utils/logger');
 
@@ -100,6 +101,72 @@ exports.getAppointment = async (req, res) => {
     } catch (error) {
         logger.error(`Get Appointment Error: ${error.message}`);
         res.status(500).json({ error: 'Failed to fetch appointment.' });
+    }
+};
+
+exports.getDoctorSlots = async (req, res, next) => {
+    try {
+        const doctorId = req.params.id;
+        const { date } = req.query; // Expected format: YYYY-MM-DD
+
+        if (!date) {
+            return res.status(400).json({ success: false, message: 'Date is required to fetch slots' });
+        }
+
+        // 1. Fetch the doctor to get their schedule and consultation duration
+        const doctor = await DoctorModel.findById(doctorId);
+        if (!doctor) {
+            return res.status(404).json({ success: false, message: 'Doctor not found' });
+        }
+
+        // 2. Fetch all existing appointments for this doctor on the requested date
+        // Note: Assuming you store scheduled_at as a Date object in MongoDB/Postgres
+        const startOfDay = new Date(`${date}T00:00:00.000Z`);
+        const endOfDay = new Date(`${date}T23:59:59.999Z`);
+
+        const bookedAppointments = await AppointmentModel.find({
+            doctor_id: doctorId,
+            scheduled_at: { $gte: startOfDay, $lte: endOfDay },
+            status: { $ne: 'Cancelled' } // Don't count cancelled appointments
+        });
+
+        // Extract just the times that are already booked (e.g., ["09:00", "10:30"])
+        const bookedTimes = bookedAppointments.map(app => {
+            const time = new Date(app.scheduled_at);
+            return time.toISOString().substring(11, 16); // Extracts "HH:mm"
+        });
+
+        // 3. Generate available slots based on doctor's working hours
+        // (Assuming your doctor model has something like standard start/end times and slot duration)
+        const slotDurationMinutes = doctor.slot_duration || 30; // Default to 30 mins
+        const startTime = doctor.working_hours?.start || '09:00';
+        const endTime = doctor.working_hours?.end || '17:00';
+
+        let availableSlots = [];
+        let currentTime = new Date(`${date}T${startTime}:00.000Z`);
+        const closingTime = new Date(`${date}T${endTime}:00.000Z`);
+
+        while (currentTime < closingTime) {
+            let timeString = currentTime.toISOString().substring(11, 16); // "HH:mm"
+
+            // If this time is NOT in the bookedTimes array, add it to available slots
+            if (!bookedTimes.includes(timeString)) {
+                availableSlots.push(timeString);
+            }
+
+            // Increment by slot duration
+            currentTime.setMinutes(currentTime.getMinutes() + slotDurationMinutes);
+        }
+
+        res.status(200).json({
+            success: true,
+            date: date,
+            availableSlots: availableSlots // e.g., ["09:00", "09:30", "11:00", ...]
+        });
+
+    } catch (error) {
+        console.error("Error fetching doctor slots:", error);
+        res.status(500).json({ success: false, message: 'Server Error fetching slots' });
     }
 };
 

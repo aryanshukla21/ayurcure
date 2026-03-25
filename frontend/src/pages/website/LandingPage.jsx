@@ -1,9 +1,10 @@
 import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { 
-  Leaf, Search, ArrowRight, CalendarCheck, Stethoscope, 
+import {
+  Leaf, Search, ArrowRight, CalendarCheck, Stethoscope,
   Pill, Clock, ShieldCheck, Star, Award, Heart
 } from 'lucide-react';
+import { websiteBlogs } from '../../data/websiteBlogs'; // <-- IMPORTED REAL DATA
 
 // --- DUMMY DATA ---
 const PRODUCTS = [
@@ -17,12 +18,6 @@ const EXPERTS = [
   { name: 'Dr. Amit Sharma', spec: 'General Medicine', exp: '15 Yrs Exp', img: 'https://images.unsplash.com/photo-1612349317150-e413f6a5b16d?auto=format&fit=crop&q=80&w=200' },
   { name: 'Dr. Meera Nair', spec: 'Panchakarma', exp: '12 Yrs Exp', img: 'https://images.unsplash.com/photo-1594824416965-4f51e06d2036?auto=format&fit=crop&q=80&w=200' },
   { name: 'Dr. Priya Varma', spec: 'Yoga Therapy', exp: '8 Yrs Exp', img: 'https://images.unsplash.com/photo-1559839734-2b71ea197ec2?auto=format&fit=crop&q=80&w=200' },
-];
-
-const BLOGS = [
-  { title: 'Understanding Pitta Dosha: Balance Through Food', category: 'Diet', img: 'https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?auto=format&fit=crop&q=80&w=400' },
-  { title: 'Morning Rituals: The Dinacharya Guide', category: 'Lifestyle', img: 'https://images.unsplash.com/photo-1506126613408-eca07ce68773?auto=format&fit=crop&q=80&w=400' },
-  { title: 'Herbal Tea Blends for Better Sleep', category: 'Wellness', img: 'https://images.unsplash.com/photo-1576092768241-dec231879fc3?auto=format&fit=crop&q=80&w=400' },
 ];
 
 // --- SECTIONS ---
@@ -41,12 +36,12 @@ const Navbar = ({ isLoggedIn = false, userRole = 'patient' }) => {
       <Link to="/" className="flex items-center gap-2 text-2xl font-extrabold text-[#3A6447] tracking-tight shrink-0">
         <Leaf size={28} /> AyurCare360
       </Link>
-      
+
       <div className="hidden md:block relative w-full max-w-2xl mx-4">
         <Search className="absolute left-5 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
-        <input 
-          type="text" 
-          placeholder="Search wellness topics, doctors, or products..." 
+        <input
+          type="text"
+          placeholder="Search wellness topics, doctors, or products..."
           className="w-full bg-white border border-[#EFEBE1] rounded-full py-3.5 pl-12 pr-6 text-sm font-medium text-gray-700 focus:outline-none focus:ring-2 focus:ring-[#3A6447]/30 shadow-sm transition-all"
         />
       </div>
@@ -70,7 +65,7 @@ const HeroSection = () => (
   <section className="px-8 md:px-16 py-12 md:py-20 max-w-[1600px] mx-auto grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
     <div>
       <h1 className="text-5xl md:text-6xl lg:text-[72px] font-extrabold text-gray-900 leading-[1.1] mb-8 tracking-tight">
-        Modern Healthcare <br/> Rooted in <span className="text-[#3A6447]">Ayurveda</span>
+        Modern Healthcare <br /> Rooted in <span className="text-[#3A6447]">Ayurveda</span>
       </h1>
       <p className="text-lg md:text-xl font-medium text-gray-600 leading-relaxed mb-10 max-w-xl">
         Experience personalized healing based on your unique Dosha. Our modern apothecary brings ancient wisdom to your doorstep.
@@ -162,7 +157,7 @@ const HowItWorksSection = () => (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-12 relative">
       {/* Decorative dashed line hidden on mobile */}
       <div className="hidden lg:block absolute top-8 left-[12%] right-[12%] h-0.5 border-t-2 border-dashed border-[#EFEBE1] z-0"></div>
-      
+
       <div className="relative z-10 flex flex-col items-center">
         <div className="w-16 h-16 rounded-full bg-[#3A6447] text-white flex items-center justify-center text-xl font-bold mb-6 border-4 border-white shadow-sm">1</div>
         <h3 className="text-lg font-bold text-gray-900 mb-2">Book Appointment</h3>
@@ -187,6 +182,31 @@ const HowItWorksSection = () => (
   </section>
 );
 
+// --- UPDATED BLOGS SECTION ---
+const BlogsSection = () => (
+  <section className="px-8 md:px-16 py-20 max-w-[1600px] mx-auto">
+    <h2 className="text-3xl md:text-4xl font-extrabold text-gray-900 tracking-tight mb-12 text-center">Health & Wellness Blog</h2>
+
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 justify-center">
+      {/* Slicing to show the latest blogs, mapping over the real data from websiteBlogs.js */}
+      {websiteBlogs.slice(0, 3).map((blog) => (
+        <Link to={`/blogs/${blog.id}`} key={blog.id} className="bg-white rounded-[32px] border border-[#EFEBE1] shadow-sm overflow-hidden group cursor-pointer block">
+          <div className="h-48 overflow-hidden">
+            <img src={blog.image} alt={blog.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+          </div>
+          <div className="p-8">
+            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3">{blog.category}</p>
+            <h3 className="text-lg font-bold text-gray-900 mb-6 line-clamp-2">{blog.title}</h3>
+            <button className="text-sm font-bold text-[#3A6447] flex items-center gap-2 group-hover:gap-3 transition-all">
+              Read Article <ArrowRight size={16} />
+            </button>
+          </div>
+        </Link>
+      ))}
+    </div>
+  </section>
+);
+
 const ExpertsSection = () => (
   <section className="px-8 md:px-16 py-20 max-w-[1600px] mx-auto text-center">
     <h2 className="text-3xl md:text-4xl font-extrabold text-gray-900 tracking-tight mb-12">Consult Our Experts</h2>
@@ -200,28 +220,6 @@ const ExpertsSection = () => (
           <button className="w-full bg-[#FAF7F2] hover:bg-[#3A6447] hover:text-white text-[#3A6447] font-bold py-3.5 rounded-full transition-colors text-sm">
             Consult Now
           </button>
-        </div>
-      ))}
-    </div>
-  </section>
-);
-
-const BlogsSection = () => (
-  <section className="px-8 md:px-16 py-20 max-w-[1600px] mx-auto">
-    <h2 className="text-3xl md:text-4xl font-extrabold text-gray-900 tracking-tight mb-12 text-center">Health & Wellness Blog</h2>
-    <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-      {BLOGS.map((blog, idx) => (
-        <div key={idx} className="bg-white rounded-[32px] border border-[#EFEBE1] shadow-sm overflow-hidden group cursor-pointer">
-          <div className="h-48 overflow-hidden">
-            <img src={blog.img} alt={blog.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
-          </div>
-          <div className="p-8">
-            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3">{blog.category}</p>
-            <h3 className="text-lg font-bold text-gray-900 mb-6 line-clamp-2">{blog.title}</h3>
-            <button className="text-sm font-bold text-[#3A6447] flex items-center gap-2 group-hover:gap-3 transition-all">
-              Read Article <ArrowRight size={16} />
-            </button>
-          </div>
         </div>
       ))}
     </div>
@@ -304,7 +302,6 @@ const Footer = () => (
 );
 
 // --- MAIN PAGE COMPONENT ---
-// In a real app, you would pass isLoggedIn and userRole down from a global state provider (like Context or Redux)
 const LandingPage = ({ isLoggedIn = false, userRole = 'patient' }) => {
   return (
     <div className="min-h-screen bg-[#FAF7F2] font-sans flex flex-col">

@@ -7,6 +7,7 @@ const { requireAuth, requireRole } = require('../middlewares/authMiddleware');
 // PUBLIC ROUTES
 // ==========================================
 router.get('/', doctorController.searchDoctors);
+router.get('/:id/slots', doctorController.getDoctorSlots);
 
 // TEMPORARY: Database Seeder Route (Remove this line before going to production)
 // router.post('/seed', doctorController.seedDoctorsDatabase);
