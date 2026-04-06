@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useOutletContext } from 'react-router-dom';
 import { doctorApi } from '../../api/doctorApi';
 
 import EarningsHeader from '../../components/doctor/earnings/EarningsHeader';
@@ -33,6 +34,9 @@ const generateStaticEarningsData = () => {
 };
 
 const DoctorEarnings = () => {
+    // Grab the global search query from DoctorLayout
+    const { searchQuery = '' } = useOutletContext() || {};
+
     const [isLoading, setIsLoading] = useState(true);
     const [earningsData, setEarningsData] = useState({
         stats: { totalEarnings: 0, monthlyEarnings: 0 },
@@ -42,10 +46,8 @@ const DoctorEarnings = () => {
     useEffect(() => {
         const fetchEarnings = async () => {
             try {
-                // Fetch from your backend via the API folder
                 const res = await doctorApi.getPayoutDashboard();
 
-                // Safety check to parse valid data from backend
                 if (res && res.stats) {
                     setEarningsData({
                         stats: {
@@ -58,7 +60,6 @@ const DoctorEarnings = () => {
                     setEarningsData(generateStaticEarningsData());
                 }
             } catch (error) {
-                // Inject static data when user is not logged in / backend returns 403 Forbidden
                 console.warn("API fetch failed. Loading dynamic fallback data.");
                 setEarningsData(generateStaticEarningsData());
             } finally {
@@ -68,6 +69,12 @@ const DoctorEarnings = () => {
 
         fetchEarnings();
     }, []);
+
+    // Filter history based on search query (Transaction ID or Patient Name)
+    const filteredHistory = earningsData.history.filter(trx =>
+        (trx.id || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (trx.patient || '').toLowerCase().includes(searchQuery.toLowerCase())
+    );
 
     if (isLoading) {
         return (
@@ -79,9 +86,11 @@ const DoctorEarnings = () => {
 
     return (
         <div className="max-w-[1600px] mx-auto p-10 bg-[#FDF9EE] min-h-full">
-            <EarningsHeader />
+            {/* Pass the dynamically filtered history to the header so PDF export matches search results! */}
+            <EarningsHeader stats={earningsData.stats} history={filteredHistory} />
             <EarningsSummary stats={earningsData.stats} />
-            <EarningsHistoryTable history={earningsData.history} />
+            {/* Render the dynamically filtered history */}
+            <EarningsHistoryTable history={filteredHistory} />
         </div>
     );
 };

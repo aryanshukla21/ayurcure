@@ -1,21 +1,36 @@
-// frontend/src/components/doctor/settings/ConsultationLogisticsForm.jsx
 import React, { useState } from 'react';
 import { CalendarClock } from 'lucide-react';
 import { FormGroup, Input, SaveButton, CardHeader } from './SettingsUI';
 
 const ConsultationLogisticsForm = ({ data }) => {
-    const [formData, setFormData] = useState({
+    const initialData = {
         fee: data?.consultation_fee || '',
         start_time: data?.start_time || '09:00 AM',
         end_time: data?.end_time || '05:00 PM',
         days: data?.availability_days || { Mon: true, Tue: true, Wed: true, Thu: true, Fri: true, Sat: false, Sun: false }
-    });
+    };
+
+    const [formData, setFormData] = useState(initialData);
+    const [isEditing, setIsEditing] = useState(false);
 
     const toggleDay = (day) => {
+        if (!isEditing) return; // Prevent clicking days if not editing
         setFormData(prev => ({
             ...prev,
             days: { ...prev.days, [day]: !prev.days[day] }
         }));
+    };
+
+    const hasChanges = JSON.stringify(formData) !== JSON.stringify(initialData);
+
+    const handleSave = () => {
+        console.log('Saving:', formData);
+        setIsEditing(false);
+    };
+
+    const handleCancel = () => {
+        setFormData(initialData);
+        setIsEditing(false);
     };
 
     return (
@@ -23,7 +38,13 @@ const ConsultationLogisticsForm = ({ data }) => {
             <CardHeader icon={CalendarClock} title="Consultation Logistics" iconColor="text-orange-500" iconBg="bg-orange-50" />
 
             <FormGroup label="Consultation Fee">
-                <Input type="text" name="fee" value={`$${formData.fee}`} onChange={(e) => setFormData({ ...formData, fee: e.target.value.replace('$', '') })} />
+                <Input
+                    type="text"
+                    name="fee"
+                    value={`$${formData.fee}`}
+                    onChange={(e) => setFormData({ ...formData, fee: e.target.value.replace('$', '') })}
+                    disabled={!isEditing}
+                />
             </FormGroup>
 
             <FormGroup label="Availability">
@@ -33,7 +54,8 @@ const ConsultationLogisticsForm = ({ data }) => {
                             key={day}
                             type="button"
                             onClick={() => toggleDay(day)}
-                            className={`w-12 h-6 rounded-3xl font-bold transition-all flex items-center justify-center border
+                            disabled={!isEditing}
+                            className={`w-12 h-6 rounded-3xl font-bold transition-all flex items-center justify-center border ${!isEditing ? 'cursor-not-allowed opacity-70' : ''}
                                 ${formData.days[day]
                                     ? 'bg-[#4A7C59] text-white border-[#4A7C59] shadow-md shadow-[#4A7C59]/30'
                                     : 'bg-gray-50 text-gray-500 border-gray-200 hover:border-gray-300'}`}
@@ -46,15 +68,24 @@ const ConsultationLogisticsForm = ({ data }) => {
 
             <div className="grid grid-cols-2 gap-6 mt-6">
                 <FormGroup label="Start Time">
-                    <Input type="text" name="start_time" value={formData.start_time} onChange={(e) => setFormData({ ...formData, start_time: e.target.value })} />
+                    <Input type="text" name="start_time" value={formData.start_time} onChange={(e) => setFormData({ ...formData, start_time: e.target.value })} disabled={!isEditing} />
                 </FormGroup>
                 <FormGroup label="End Time">
-                    <Input type="text" name="end_time" value={formData.end_time} onChange={(e) => setFormData({ ...formData, end_time: e.target.value })} />
+                    <Input type="text" name="end_time" value={formData.end_time} onChange={(e) => setFormData({ ...formData, end_time: e.target.value })} disabled={!isEditing} />
                 </FormGroup>
             </div>
 
-            <div className="flex justify-center mt-2">
-                <SaveButton text="Update Consultation Details" colorClass="bg-[#4A7C59] hover:bg-[#3a6146]" onClick={() => console.log('Saving:', formData)} />
+            <div className="flex justify-start mt-6 gap-4">
+                {!isEditing ? (
+                    <SaveButton text="Edit" colorClass="bg-blue-600 hover:bg-blue-700" onClick={() => setIsEditing(true)} />
+                ) : (
+                    <>
+                        {hasChanges && (
+                            <SaveButton text="Update Logistics" colorClass="bg-[#4A7C59] hover:bg-[#3a6146]" onClick={handleSave} />
+                        )}
+                        <SaveButton text="Don't Update" colorClass="bg-red-500 hover:bg-red-600" onClick={handleCancel} />
+                    </>
+                )}
             </div>
         </div>
     );

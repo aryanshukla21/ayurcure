@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useOutletContext } from 'react-router-dom';
 import { doctorApi } from '../../api/doctorApi';
 
 import AppointmentsHeader from '../../components/doctor/appointments/AppointmentsHeader';
@@ -24,9 +25,11 @@ const generateStaticData = () => {
 };
 
 const DoctorAppointments = () => {
+    // Grab the global search query from DoctorLayout
+    const { searchQuery = '' } = useOutletContext() || {};
+
     const [isLoading, setIsLoading] = useState(true);
     const [activeTab, setActiveTab] = useState('Upcoming'); // Default tab
-    const [searchTerm, setSearchTerm] = useState('');
     const [appointments, setAppointments] = useState([]);
 
     const tabsArray = ['All', 'Today', 'Upcoming', 'Completed', 'Cancelled'];
@@ -57,14 +60,16 @@ const DoctorAppointments = () => {
     const filteredAppointments = (appointments || []).filter(apt => {
         const status = apt.status?.toLowerCase() || '';
         const patientName = (apt.name || apt.patient_name || '').toLowerCase();
-        const matchesSearch = patientName.includes(searchTerm.toLowerCase());
+
+        // Uses the global searchQuery here
+        const matchesSearch = patientName.includes(searchQuery.toLowerCase());
 
         let matchesTab = false;
-        if (activeTab === 'All') matchesTab = true; // Added an 'All' tab so you can see all 28 easily
+        if (activeTab === 'All') matchesTab = true;
         else if (activeTab === 'Completed') matchesTab = status === 'completed';
         else if (activeTab === 'Cancelled') matchesTab = status === 'cancelled';
         else if (activeTab === 'Today') matchesTab = status === 'confirmed' || status === 'scheduled';
-        else matchesTab = status === 'confirmed' || status === 'scheduled'; // Default Upcoming
+        else matchesTab = status === 'confirmed' || status === 'scheduled';
 
         return matchesSearch && matchesTab;
     });
@@ -80,10 +85,8 @@ const DoctorAppointments = () => {
     return (
         <div className="max-w-[1600px] mx-auto p-10 bg-[#FDF9EE] min-h-full">
 
-            <AppointmentsHeader
-                searchTerm={searchTerm}
-                onSearchChange={setSearchTerm}
-            />
+            {/* If AppointmentsHeader used to have an input, you can now remove it from inside that component since it's in the navbar */}
+            <AppointmentsHeader />
 
             <AppointmentsTabs
                 tabs={tabsArray}

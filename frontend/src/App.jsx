@@ -39,6 +39,9 @@ import AdminEditBlogPage from './pages/admin/AdminEditBlogPage';
 import AdminSettingsPage from './pages/admin/AdminSettingsPage';
 import AdminAddAdminPage from './pages/admin/AdminAddAdminPage';
 import AdminEditAdminPage from './pages/admin/AdminEditAdminPage';
+import AdminInventoryPage from './pages/admin/AdminInventoryPage';
+import AdminAddProductPage from './pages/admin/AdminAddProductPage';
+import AdminEditProductPage from './pages/admin/AdminEditProductPage';
 
 // Doctor Pages
 import DoctorLayout from './components/doctor/layout/DoctorLayout';
@@ -109,41 +112,44 @@ function App() {
             <Route path="settings" element={<AdminSettingsPage />} />
             <Route path="settings/add-admin" element={<AdminAddAdminPage />} />
             <Route path="settings/edit-admin/:id" element={<AdminEditAdminPage />} />
+            <Route path="inventory" element={<AdminInventoryPage />} />
+            <Route path="inventory/add" element={<AdminAddProductPage />} />
+            <Route path="inventory/edit/:id" element={<AdminEditProductPage />} />
           </Route>
         </Route>
 
         {/* DOCTOR ROUTES */}
-        <Route element={<ProtectedRoute allowedRoles={['doctor']} />}>
-          <Route path="/doctor" element={<DoctorLayout />}>
-            <Route index element={<Navigate to="dashboard" replace />} />
-            <Route path="dashboard" element={<DoctorDashboard />} />
-            <Route path="appointments" element={<DoctorAppointments />} />
-            <Route path="appointments/:id" element={<DoctorAppointmentDetails />} />
-            <Route path="earnings" element={<DoctorEarnings />} />
-            <Route path="profile" element={<DoctorProfile />} />
-            <Route path="settings" element={<DoctorSettings />} />
-          </Route>
+        {/* <Route element={<ProtectedRoute allowedRoles={['doctor']} />}> */}
+        <Route path="/doctor" element={<DoctorLayout />}>
+          <Route index element={<Navigate to="dashboard" replace />} />
+          <Route path="dashboard" element={<DoctorDashboard />} />
+          <Route path="appointments" element={<DoctorAppointments />} />
+          <Route path="appointments/:id" element={<DoctorAppointmentDetails />} />
+          <Route path="earnings" element={<DoctorEarnings />} />
+          <Route path="profile" element={<DoctorProfile />} />
+          <Route path="settings" element={<DoctorSettings />} />
+          {/* </Route> */}
         </Route>
 
         {/* PATIENT ROUTES */}
-        <Route element={<ProtectedRoute allowedRoles={['patient']} />}>
-          <Route path="/patient" element={<PatientLayout />}>
-            <Route index element={<Navigate to="dashboard" replace />} />
-            <Route path="dashboard" element={<PatientDashboard />} />
-            <Route path="book-appointment" element={<BookAppointmentPage />} />
-            <Route path="appointments" element={<PatientAppointments />} />
-            <Route path="appointments/:id" element={<PatientAppointmentDetails />} />
-            <Route path="pharmacy-store" element={<PharmacyStore />} />
-            <Route path="pharmacy-store/:id" element={<ProductDetails />} />
-            <Route path="cart" element={<CartSummary />} />
-            <Route path="checkout" element={<CheckoutPage />} />
-            <Route path="pharmacy-orders" element={<PharmacyOrdersPage />} />
-            <Route path="pharmacy-orders/:id" element={<PatientOrderDetailsPage />} />
-            <Route path="prescriptions" element={<PatientPrescriptionsPage />} />
-            <Route path="health-records" element={<PatientHealthReportsPage />} />
-            <Route path="profile" element={<PatientProfilePage />} />
-            <Route path="settings" element={<PatientSettingsPage />} />
-          </Route>
+        {/* <Route element={<ProtectedRoute allowedRoles={['patient']} />}> */}
+        <Route path="/patient" element={<PatientLayout />}>
+          <Route index element={<Navigate to="dashboard" replace />} />
+          <Route path="dashboard" element={<PatientDashboard />} />
+          <Route path="book-appointment" element={<BookAppointmentPage />} />
+          <Route path="appointments" element={<PatientAppointments />} />
+          <Route path="appointments/:id" element={<PatientAppointmentDetails />} />
+          <Route path="pharmacy-store" element={<PharmacyStore />} />
+          <Route path="pharmacy-store/:id" element={<ProductDetails />} />
+          <Route path="cart" element={<CartSummary />} />
+          <Route path="checkout" element={<CheckoutPage />} />
+          <Route path="pharmacy-orders" element={<PharmacyOrdersPage />} />
+          <Route path="pharmacy-orders/:id" element={<PatientOrderDetailsPage />} />
+          <Route path="prescriptions" element={<PatientPrescriptionsPage />} />
+          <Route path="health-records" element={<PatientHealthReportsPage />} />
+          <Route path="profile" element={<PatientProfilePage />} />
+          <Route path="settings" element={<PatientSettingsPage />} />
+          {/* </Route> */}
         </Route>
 
         {/* CATCH-ALL */}

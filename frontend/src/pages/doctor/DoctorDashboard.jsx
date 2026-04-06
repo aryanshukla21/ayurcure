@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useOutletContext } from 'react-router-dom';
 import { Users, Calendar, Clock, Video, TrendingUp } from 'lucide-react';
 import { doctorApi } from '../../api/doctorApi';
 
@@ -8,8 +9,11 @@ import UpcomingAppointmentsTable from '../../components/doctor/dashboard/Upcomin
 import EarningsSummaryCard from '../../components/doctor/dashboard/EarningsSummaryCard';
 
 const DoctorDashboard = () => {
-    // ... [Keep your existing State and UseEffect code exactly as it is] ...
-    const [isLoading, setIsLoading] = useState(false); // Make sure you keep your fetch logic here
+    // Grab the global search query from DoctorLayout
+    const { searchQuery = '' } = useOutletContext() || {};
+
+    const [isLoading, setIsLoading] = useState(false);
+
     const dashboardData = {
         stats: { totalPatients: 1280, appointmentsToday: 14, upcomingConsultations: 8 },
         upcomingAppointments: [
@@ -20,11 +24,16 @@ const DoctorDashboard = () => {
         ],
         earnings: { total: 12450, monthly: 4200 }
     };
+
     const { stats, upcomingAppointments, earnings } = dashboardData;
 
+    // Filter appointments based on global search
+    const filteredAppointments = upcomingAppointments.filter(apt =>
+        (apt.name || '').toLowerCase().includes(searchQuery.toLowerCase())
+    );
+
     return (
-        // {/* Set explicitly to the off-white background and added large padding */ }
-        < div className="max-w-[1600px] mx-auto p-10 bg-[#FDF9EE] min-h-full" >
+        <div className="max-w-[1600px] mx-auto p-10 bg-[#FDF9EE] min-h-full">
 
             <div className="mb-10">
                 <h1 className="text-3xl font-extrabold text-gray-900 mb-3 tracking-tight">Dashboard</h1>
@@ -33,7 +42,6 @@ const DoctorDashboard = () => {
                 </p>
             </div>
 
-            {/* Added gap-8 to space out the top cards */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-10">
                 <StatCard
                     title="Total Patients"
@@ -60,12 +68,12 @@ const DoctorDashboard = () => {
                 />
             </div>
 
-            {/* Added gap-8 for the bottom section */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 pb-2">
-                <UpcomingAppointmentsTable appointments={upcomingAppointments} />
+                {/* Passed the filtered array instead of the raw one */}
+                <UpcomingAppointmentsTable appointments={filteredAppointments} />
                 <EarningsSummaryCard earnings={earnings} />
             </div>
-        </div >
+        </div>
     );
 };
 

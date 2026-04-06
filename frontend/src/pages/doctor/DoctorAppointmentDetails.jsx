@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useOutletContext } from 'react-router-dom';
 import { ChevronRight } from 'lucide-react';
 import { doctorApi } from '../../api/doctorApi';
 
@@ -10,11 +10,10 @@ import SymptomsCard from '../../components/doctor/appointment-details/SymptomsCa
 import MedicalInfoCard from '../../components/doctor/appointment-details/MedicalInfoCard';
 import ReportsList from '../../components/doctor/appointment-details/ReportsList';
 
-// DYNAMIC STATIC DATA GENERATOR (Now perfectly synced with your Table data!)
+// DYNAMIC STATIC DATA GENERATOR
 const getDynamicFallbackData = (idStr) => {
     const id = parseInt(idStr) || 1;
 
-    // We map the exact 4 rows from your Appointments Table to their IDs
     const tableRecords = {
         1: { name: 'Rohan Sharma', time: '2023-10-24T10:30:00', mode: 'Video', status: 'Confirmed', gender: 'Male' },
         2: { name: 'Anjali Patel', time: '2023-10-24T11:15:00', mode: 'Physical', status: 'Confirmed', gender: 'Female' },
@@ -22,7 +21,6 @@ const getDynamicFallbackData = (idStr) => {
         4: { name: 'Arjun Singh', time: '2023-10-25T09:00:00', mode: 'Physical', status: 'Cancelled', gender: 'Male' }
     };
 
-    // Grab the exact record based on the clicked ID, or generate a generic one if ID > 4
     const record = tableRecords[id] || {
         name: `Patient #${id}`,
         time: new Date().toISOString(),
@@ -37,9 +35,9 @@ const getDynamicFallbackData = (idStr) => {
         patient_id: `#PAT-${1000 + id}`,
         age: 28 + (id % 12),
         gender: record.gender,
-        start_time: record.time, // Generates the exact matching Date and Time
+        start_time: record.time,
         mode: record.mode,
-        status: record.status, // Matches 'Confirmed', 'Completed', or 'Cancelled' exactly
+        status: record.status,
         pre_consultation_symptoms: "Experiencing recurring digestive discomfort and mild insomnia over the last two weeks. Also reporting occasional joint stiffness in the mornings. Looking for a holistic Ayurvedic approach to rebalance digestion and improve sleep quality.",
         medical_info: {
             allergies: id % 2 === 0 ? 'Dairy, Dust' : 'Peanuts, Penicillin',
@@ -55,7 +53,11 @@ const getDynamicFallbackData = (idStr) => {
 };
 
 const DoctorAppointmentDetails = () => {
-    const { id } = useParams(); // Get the ID from the URL
+    const { id } = useParams();
+
+    // Grab the global search query from DoctorLayout
+    const { searchQuery = '' } = useOutletContext() || {};
+
     const [isLoading, setIsLoading] = useState(true);
     const [appointment, setAppointment] = useState(null);
 
@@ -77,7 +79,6 @@ const DoctorAppointmentDetails = () => {
                     setAppointment(getDynamicFallbackData(id));
                 }
             } catch (error) {
-                // Generates the perfectly matched data based on the URL ID
                 setAppointment(getDynamicFallbackData(id));
             } finally {
                 setIsLoading(false);
@@ -97,6 +98,11 @@ const DoctorAppointmentDetails = () => {
 
     if (!appointment) return <div className="p-10 text-gray-500">Appointment not found.</div>;
 
+    // Filter the reports array based on the global search bar!
+    const filteredReports = (appointment.reports || []).filter(report =>
+        (report.name || '').toLowerCase().includes(searchQuery.toLowerCase())
+    );
+
     return (
         <div className="max-w-[1600px] mx-auto p-10 bg-[#FDF9EE] min-h-full">
 
@@ -113,29 +119,25 @@ const DoctorAppointmentDetails = () => {
             {/* Layout Grid */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
 
-                {/* Top Left: Summary */}
                 <div className="lg:col-span-2">
                     <PatientSummaryCard appointment={appointment} />
                 </div>
 
-                {/* Top Right: Actions */}
                 <div className="lg:col-span-1">
                     <ActionSidebar appointment={appointment} />
                 </div>
 
-                {/* Middle Left: Symptoms */}
                 <div className="lg:col-span-2">
                     <SymptomsCard symptoms={appointment.pre_consultation_symptoms} />
                 </div>
 
-                {/* Middle Right: Medical Info */}
                 <div className="lg:col-span-1">
                     <MedicalInfoCard info={appointment.medical_info} />
                 </div>
 
-                {/* Bottom: Reports */}
                 <div className="lg:col-span-3">
-                    <ReportsList reports={appointment.reports} />
+                    {/* Pass the dynamically filtered array down to the component */}
+                    <ReportsList reports={filteredReports} />
                 </div>
 
             </div>

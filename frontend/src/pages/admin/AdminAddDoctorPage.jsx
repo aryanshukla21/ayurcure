@@ -31,7 +31,7 @@ const AdminAddDoctorPage = () => {
 
   return (
     <div className="p-8 md:p-10 max-w-[1600px] mx-auto flex flex-col h-full">
-      
+
       {/* Header & Breadcrumbs */}
       <div className="mb-10">
         <div className="flex items-center text-gray-500 text-[10px] font-bold uppercase tracking-widest mb-3">
@@ -46,7 +46,7 @@ const AdminAddDoctorPage = () => {
 
       {/* Main Grid Layout */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-x-12 gap-y-10 flex-1 mb-8">
-        
+
         {/* Left Column (Wider) */}
         <div className="lg:col-span-2 flex flex-col gap-12">
           <PersonalInfoSection formData={formData} onChange={handleInputChange} />
@@ -63,7 +63,7 @@ const AdminAddDoctorPage = () => {
 
       {/* Bottom Action Footer */}
       <div className="flex flex-col md:flex-row justify-between items-center pt-8 border-t border-[#EFEBE1] gap-6">
-        
+
         <div className="flex items-center gap-3 text-gray-500">
           <div className="w-8 h-8 rounded-full bg-[#E7F3EB] flex items-center justify-center text-[#3A6447]">
             <ShieldCheck size={16} />
@@ -72,13 +72,13 @@ const AdminAddDoctorPage = () => {
         </div>
 
         <div className="flex items-center gap-4 w-full md:w-auto">
-          <button 
+          <button
             onClick={() => navigate('/admin/doctors')}
             className="flex-1 md:flex-none px-8 py-3.5 bg-white border border-[#EFEBE1] hover:bg-gray-50 text-gray-700 text-sm font-bold rounded-full transition-colors shadow-sm"
           >
             Cancel
           </button>
-          <button 
+          <button
             onClick={handleAddDoctor}
             className="flex-1 md:flex-none px-8 py-3.5 bg-[#3A6447] hover:bg-[#2C4D36] text-white text-sm font-bold rounded-full flex items-center justify-center gap-2 transition-colors shadow-sm"
           >

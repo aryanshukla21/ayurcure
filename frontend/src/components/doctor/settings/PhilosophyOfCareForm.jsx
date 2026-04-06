@@ -1,13 +1,26 @@
-// frontend/src/components/doctor/settings/PhilosophyOfCareForm.jsx
 import React, { useState } from 'react';
 import { Heart } from 'lucide-react';
 import { TextArea, SaveButton, CardHeader } from './SettingsUI';
 
 const PhilosophyOfCareForm = ({ data }) => {
-    const [bio, setBio] = useState(data?.bio || '');
+    const initialBio = data?.bio || '';
+    const [bio, setBio] = useState(initialBio);
+    const [isEditing, setIsEditing] = useState(false);
+
+    const hasChanges = bio !== initialBio;
+
+    const handleSave = () => {
+        console.log('Saving Bio:', bio);
+        setIsEditing(false);
+    };
+
+    const handleCancel = () => {
+        setBio(initialBio);
+        setIsEditing(false);
+    };
 
     return (
-        <div className="bg-white rounded-3xl px-8 py-4 shadow-sm border border-gray-100 flex flex-col">
+        <div className="bg-white rounded-3xl px-8 py-6 shadow-sm border border-gray-100 flex flex-col h-full">
             <CardHeader
                 icon={Heart}
                 title="Philosophy of Care"
@@ -21,11 +34,21 @@ const PhilosophyOfCareForm = ({ data }) => {
                     value={bio}
                     onChange={(e) => setBio(e.target.value)}
                     placeholder="I believe in treating the root cause..."
+                    disabled={!isEditing}
                 />
             </div>
 
-            <div className="flex justify-end mt-6">
-                <SaveButton text="Update Philosophy" colorClass="bg-[#4A7C59] hover:bg-[#3a6146]" onClick={() => console.log('Saving Bio:', bio)} />
+            <div className="flex justify-end mt-6 gap-4">
+                {!isEditing ? (
+                    <SaveButton text="Edit" colorClass="bg-blue-600 hover:bg-blue-700" onClick={() => setIsEditing(true)} />
+                ) : (
+                    <>
+                        {hasChanges && (
+                            <SaveButton text="Update Philosophy" colorClass="bg-[#4A7C59] hover:bg-[#3a6146]" onClick={handleSave} />
+                        )}
+                        <SaveButton text="Don't Update" colorClass="bg-red-500 hover:bg-red-600" onClick={handleCancel} />
+                    </>
+                )}
             </div>
         </div>
     );
