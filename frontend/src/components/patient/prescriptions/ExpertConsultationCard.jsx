@@ -1,7 +1,10 @@
 import React from 'react';
 import { ShieldAlert } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 const ExpertConsultationCard = () => {
+  const navigate = useNavigate();
+
   return (
     <div className="bg-[#3A6447] rounded-[24px] p-8 text-white h-full flex flex-col justify-center shadow-sm">
       <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center mb-5 backdrop-blur-sm">
@@ -13,7 +16,10 @@ const ExpertConsultationCard = () => {
         Book a quick follow-up with Dr. Sharma about your current dosage.
       </p>
 
-      <button className="text-sm font-bold text-white underline underline-offset-4 decoration-white/40 hover:decoration-white transition-all w-fit rounded-full outline-none focus:ring-2 focus:ring-white/50">
+      <button
+        onClick={() => navigate('/patient/book-appointment')}
+        className="text-sm font-bold text-white underline underline-offset-4 decoration-white/40 hover:decoration-white transition-all w-fit rounded-full outline-none focus:ring-2 focus:ring-white/50"
+      >
         Schedule Now
       </button>
     </div>

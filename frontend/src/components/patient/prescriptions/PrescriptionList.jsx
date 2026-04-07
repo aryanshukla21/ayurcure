@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Download } from 'lucide-react';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 
 // Expanded dummy data to demonstrate working pagination (12 items total)
 const ALL_PRESCRIPTIONS = [
@@ -41,6 +43,54 @@ const PrescriptionList = () => {
     setCurrentPage(pageNumber);
   };
 
+  // PDF Generation Logic
+  const handleDownloadPDF = (item) => {
+    const doc = new jsPDF();
+
+    // Brand Header
+    doc.setFontSize(22);
+    doc.setTextColor(74, 124, 89); // Match #4A7C59
+    doc.text('AyurCare360', 14, 22);
+
+    // Title
+    doc.setFontSize(16);
+    doc.setTextColor(40);
+    doc.text('Medical Prescription', 14, 34);
+
+    // Meta Details
+    doc.setFontSize(12);
+    doc.setTextColor(80);
+    doc.text(`Doctor: ${item.doctor}`, 14, 46);
+    doc.text(`Date of Issue: ${item.date}`, 14, 54);
+    doc.text(`Patient ID: AC360-PAT-892`, 14, 62); // Static ID for demo
+
+    // Dummy Prescription Data Table
+    const tableColumn = ["Medicine / Herb", "Dosage", "Frequency", "Duration"];
+    const tableRows = [
+      ["Ashwagandha Vati", "1 Tablet", "Twice daily (After meals)", "30 Days"],
+      ["Triphala Churna", "1 Teaspoon", "Night (With warm water)", "15 Days"],
+      ["Kumkumadi Tailam", "3-4 Drops", "External application", "Ongoing"]
+    ];
+
+    autoTable(doc, {
+      head: [tableColumn],
+      body: tableRows,
+      startY: 72,
+      styles: { fontSize: 10, cellPadding: 5 },
+      headStyles: { fillColor: [74, 124, 89] },
+      alternateRowStyles: { fillColor: [253, 249, 238] }
+    });
+
+    // Add Footer Note
+    doc.setFontSize(10);
+    doc.setTextColor(150);
+    doc.text('This is a digitally generated prescription. Please consult your physician before altering dosages.', 14, doc.lastAutoTable.finalY + 20);
+
+    // Generate safe file name
+    const safeDate = item.date.replace(/, /g, '_').replace(/ /g, '_');
+    doc.save(`Prescription_${item.initials}_${safeDate}.pdf`);
+  };
+
   return (
     <div className="w-full">
       {/* Table Header */}
@@ -51,7 +101,7 @@ const PrescriptionList = () => {
       </div>
 
       {/* List Rows */}
-      <div className="space-y-4 min-h-[300px]"> {/* min-h keeps UI from jumping when on the last page with fewer items */}
+      <div className="space-y-4 min-h-[300px]">
         {currentItems.map((item) => (
           <div key={item.id} className="flex items-center justify-between py-2 group">
 
@@ -72,8 +122,11 @@ const PrescriptionList = () => {
 
             {/* Action */}
             <div className="w-[20%] text-right">
-              <button className="text-sm font-bold bg-gray-100 text-gray-900 hover:text-[#4A7C59] transition-colors rounded-full px-3 py-1 hover:bg-gray-200">
-                View PDF
+              <button
+                onClick={() => handleDownloadPDF(item)}
+                className="flex items-center justify-center gap-2 ml-auto text-sm font-bold bg-gray-100 text-gray-900 hover:text-white transition-colors rounded-full px-4 py-2 hover:bg-[#4A7C59] shadow-sm"
+              >
+                <Download size={14} /> <span className="hidden md:inline">View</span> PDF
               </button>
             </div>
           </div>

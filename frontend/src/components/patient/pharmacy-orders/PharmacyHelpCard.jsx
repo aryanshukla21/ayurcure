@@ -1,20 +1,26 @@
 import React from 'react';
-import { Headset } from 'lucide-react';
+import { HelpCircle } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 const PharmacyHelpCard = () => {
+  const navigate = useNavigate();
+
   return (
-    <div className="bg-[#F4F1EB] rounded-[32px] p-8 border border-[#EFEBE1] h-full flex flex-col justify-center">
-      <div className="flex items-center gap-3 mb-4">
-        <Headset size={20} className="text-[#D9774B]" />
-        <h3 className="text-lg font-bold text-gray-900">Need Help with an Order?</h3>
+    <div className="bg-[#3A6447] rounded-[24px] p-8 text-white h-full flex flex-col justify-center shadow-sm">
+      <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center mb-5 backdrop-blur-sm">
+        <HelpCircle size={20} className="text-white" />
       </div>
 
-      <p className="text-sm text-gray-600 font-medium leading-relaxed mb-6">
-        Our Ayurvedic pharmacists are available for a quick consultation regarding your prescriptions.
+      <h3 className="text-xl font-bold mb-2">Need Assistance?</h3>
+      <p className="text-sm text-white/80 font-medium leading-relaxed mb-6">
+        Have questions about a recent delivery or a specific herbal formulation? Our pharmacy team is here to guide you.
       </p>
 
-      <button className="bg-white hover:bg-gray-50 border border-[#EFEBE1] text-gray-900 font-bold text-sm py-3 px-6 rounded-full transition-colors shadow-sm w-fit">
-        Chat with Pharmacy
+      <button
+        onClick={() => navigate('/patient/pharmacy-store')}
+        className="text-sm font-bold text-white underline underline-offset-4 decoration-white/40 hover:decoration-white transition-all w-fit rounded-full outline-none focus:ring-2 focus:ring-white/50 cursor-pointer"
+      >
+        Contact Pharmacy
       </button>
     </div>
   );

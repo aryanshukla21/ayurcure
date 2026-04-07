@@ -1,7 +1,56 @@
-import React from 'react';
-import { UploadCloud, Info } from 'lucide-react';
+import React, { useRef, useState } from 'react';
+import { UploadCloud, Info, FileText } from 'lucide-react';
 
-const UploadReportCard = () => {
+const UploadReportCard = ({ onUpload }) => {
+  const fileInputRef = useRef(null);
+  const [isDragging, setIsDragging] = useState(false);
+
+  const handleFileChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      processUpload(file);
+    }
+  };
+
+  const processUpload = (file) => {
+    // Generate a new dummy report based on the uploaded file's name
+    const newReport = {
+      id: Date.now(), // Unique ID
+      name: file.name.split('.')[0] || 'Uploaded Document', // File name without extension
+      desc: 'Patient Uploaded File',
+      doctor: 'Self Uploaded',
+      date: new Date().toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' }),
+      icon: FileText,
+      color: 'text-teal-600 bg-teal-50'
+    };
+
+    onUpload(newReport);
+
+    // Optional: Show a quick success alert
+    alert(`Successfully uploaded: ${file.name}`);
+
+    // Reset input so the same file can be uploaded again if needed
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  };
+
+  const handleDragOver = (e) => {
+    e.preventDefault();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = () => {
+    setIsDragging(false);
+  };
+
+  const handleDrop = (e) => {
+    e.preventDefault();
+    setIsDragging(false);
+    const file = e.dataTransfer.files[0];
+    if (file) {
+      processUpload(file);
+    }
+  };
+
   return (
     <div className="bg-white rounded-[24px] p-6 md:p-8 border border-[#EFEBE1] shadow-sm flex flex-col h-full">
       <div className="flex items-center justify-between mb-6">
@@ -11,12 +60,30 @@ const UploadReportCard = () => {
         </span>
       </div>
 
+      {/* Hidden File Input */}
+      <input
+        type="file"
+        ref={fileInputRef}
+        onChange={handleFileChange}
+        accept=".pdf,.jpg,.jpeg,.png"
+        className="hidden"
+      />
+
       {/* Drag & Drop Zone */}
-      <div className="border-2 border-dashed border-[#EFEBE1] rounded-2xl bg-[#FAF7F2] p-8 flex flex-col items-center justify-center text-center cursor-pointer hover:bg-[#F4F1EB] transition-colors mb-6 group">
-        <div className="w-14 h-14 bg-[#3A6447] rounded-full flex items-center justify-center text-white mb-4 shadow-sm group-hover:scale-105 transition-transform">
+      <div
+        onClick={() => fileInputRef.current.click()}
+        onDragOver={handleDragOver}
+        onDragLeave={handleDragLeave}
+        onDrop={handleDrop}
+        className={`border-2 border-dashed rounded-2xl p-8 flex flex-col items-center justify-center text-center cursor-pointer transition-colors mb-6 group 
+          ${isDragging ? 'border-[#4A7C59] bg-[#E7F3EB]' : 'border-[#EFEBE1] bg-[#FAF7F2] hover:bg-[#F4F1EB]'}`}
+      >
+        <div className={`w-14 h-14 rounded-full flex items-center justify-center mb-4 shadow-sm transition-transform ${isDragging ? 'bg-[#2C4D36] text-white scale-110' : 'bg-[#3A6447] text-white group-hover:scale-105'}`}>
           <UploadCloud size={24} />
         </div>
-        <p className="text-sm font-bold text-gray-900 mb-1">Click to upload or drag & drop</p>
+        <p className="text-sm font-bold text-gray-900 mb-1">
+          {isDragging ? 'Drop file here' : 'Click to upload or drag & drop'}
+        </p>
         <p className="text-xs font-medium text-gray-400">PDF, JPG or PNG (MAX. 20MB)</p>
       </div>
 

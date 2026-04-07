@@ -23,9 +23,10 @@ const mockPdfData = {
   },
   upcomingAppointment: {
     _id: 'apt_123',
+    doctorId: 'doc_101',
     doctorName: "Dr. Ananya Sharma",
     specialty: "Ayurvedic Consultant",
-    date: "2023-10-28", 
+    date: "2023-10-28",
     time: "10:30 AM",
     type: "video"
   },
@@ -77,9 +78,9 @@ const PatientDashboard = () => {
         setLoading(true);
         // Try to fetch real dynamic data
         const response = await patientApi.getDashboardData();
-        setDashboardData(response.data || response); 
+        setDashboardData(response.data || response);
       } catch (error) {
-        console.warn("Backend fetch failed. Falling back to static PDF data for testing.",error);
+        console.warn("Backend fetch failed. Falling back to static PDF data for testing.", error);
         // If it fails, populate with our rich static data
         setDashboardData(mockPdfData);
         setIsUsingMockData(true);
@@ -100,23 +101,23 @@ const PatientDashboard = () => {
   }
 
   // Destructure the data
-  const { 
-    profile = {}, 
-    upcomingAppointment = null, 
-    weightTracking = {}, 
-    wellnessActivity = [], 
-    medicalHistory = {}, 
-    quickMetrics = [] 
+  const {
+    profile = {},
+    upcomingAppointment = null,
+    weightTracking = {},
+    wellnessActivity = [],
+    medicalHistory = {},
+    quickMetrics = []
   } = dashboardData || {};
 
   return (
     // MATCHED DOCTOR CSS: max-w-[1600px] mx-auto p-10 bg-[#FDF9EE] min-h-full
     <div className="max-w-[1600px] mx-auto p-10 bg-[#FDF9EE] min-h-full">
-      
+
       {/* MATCHED DOCTOR CSS: Header Typography and spacing */}
 
 
-    {isUsingMockData && (
+      {isUsingMockData && (
         <div className="mb-8 bg-amber-50 border border-amber-200 text-amber-800 text-xs px-4 py-3 rounded-lg flex justify-between items-center shadow-sm">
           <span><strong>Test Mode:</strong> Displaying static UI data because the backend API is currently disconnected.</span>
         </div>

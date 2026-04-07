@@ -11,7 +11,7 @@ const UpcomingAppointmentCard = ({ appointment }) => {
         <CalendarX className="text-gray-400 mb-3" size={32} />
         <h4 className="text-sm font-bold text-gray-900 mb-1">No Upcoming Sessions</h4>
         <p className="text-xs text-gray-500 mb-4">Schedule your next visit.</p>
-        <button 
+        <button
           onClick={() => navigate('/patient/appointments')}
           className="bg-[#2C5F44] text-white text-xs font-medium py-2 px-4 rounded-lg"
         >
@@ -31,17 +31,25 @@ const UpcomingAppointmentCard = ({ appointment }) => {
           {appointment.type === 'video' && <Video size={16} className="text-[#2C5F44]" />}
         </div>
 
-        <div className="flex items-center gap-4 mb-6 relative z-10">
-          <img 
-            src={appointment.doctorProfileImage || "/api/placeholder/48/48"} 
-            alt={appointment.doctorName} 
+        {/* --- ADDED onClick AND STYLING HERE --- */}
+        <div
+          className="flex items-center gap-4 mb-6 relative z-10 cursor-pointer hover:bg-white/40 p-2 -ml-2 rounded-xl transition-all duration-200"
+          onClick={() => navigate(`/patient/doctors/${appointment.doctorId}`)}
+          title="View Doctor Profile"
+        >
+          <img
+            src={appointment.doctorProfileImage || "/api/placeholder/48/48"}
+            alt={appointment.doctorName}
             className="w-12 h-12 rounded-full object-cover border-2 border-white shadow-sm"
           />
           <div>
-            <h4 className="text-sm font-bold text-gray-900">{appointment.doctorName}</h4>
+            <h4 className="text-sm font-bold text-gray-900 hover:text-[#2C5F44] transition-colors">
+              {appointment.doctorName}
+            </h4>
             <p className="text-xs text-gray-600">{appointment.specialty}</p>
           </div>
         </div>
+        {/* -------------------------------------- */}
 
         <div className="space-y-3 mb-6 relative z-10">
           <div className="flex justify-between items-center text-sm">
@@ -57,7 +65,7 @@ const UpcomingAppointmentCard = ({ appointment }) => {
         </div>
       </div>
 
-      <button 
+      <button
         onClick={() => navigate(`/patient/appointments/${appointment._id}`)}
         className="w-full bg-[#4A7C59] hover:bg-[#3d6649] text-white font-medium py-3 px-4 rounded-full flex items-center justify-center gap-2 transition-colors relative z-10 text-sm"
       >

@@ -1,29 +1,74 @@
-import React, { useState } from 'react';
-import { ChevronLeft, ChevronRight, FileText, Activity, HeartPulse, Stethoscope, SlidersHorizontal, Download } from 'lucide-react';
-
-// Dummy data for pagination
-const REPORTS_DATA = [
-  { id: 1, name: 'Blood Test Results', desc: 'Metabolic Panel', doctor: 'Dr. Ananya Sharma', date: 'Oct 15, 2023', icon: Activity, color: 'text-red-500 bg-red-50' },
-  { id: 2, name: 'Chest X-Ray Digital', desc: 'Imaging Diagnostics', doctor: 'Dr. Rajesh Varma', date: 'Sep 28, 2023', icon: FileText, color: 'text-amber-600 bg-amber-50' },
-  { id: 3, name: 'Annual Physical', desc: 'General Wellness', doctor: 'Dr. Sarah K.', date: 'Aug 12, 2023', icon: Stethoscope, color: 'text-orange-600 bg-orange-50' },
-  { id: 4, name: 'Cardiac Stress Test', desc: 'Cardiology Dept', doctor: 'Dr. Ananya Sharma', date: 'Jul 05, 2023', icon: HeartPulse, color: 'text-blue-600 bg-blue-50' },
-  { id: 5, name: 'Thyroid Profile', desc: 'Endocrinology', doctor: 'Dr. Priya Menon', date: 'Jun 20, 2023', icon: Activity, color: 'text-purple-600 bg-purple-50' },
-  { id: 6, name: 'Vitamin D Check', desc: 'Nutrition', doctor: 'Dr. Sarah K.', date: 'May 11, 2023', icon: FileText, color: 'text-green-600 bg-green-50' },
-  { id: 7, name: 'Liver Function', desc: 'Metabolic Panel', doctor: 'Dr. Rajesh Varma', date: 'Apr 02, 2023', icon: Activity, color: 'text-red-500 bg-red-50' },
-  { id: 8, name: 'Allergy Panel', desc: 'Immunology', doctor: 'Dr. Ananya Sharma', date: 'Mar 15, 2023', icon: FileText, color: 'text-amber-600 bg-amber-50' },
-];
+import React, { useState, useRef, useEffect } from 'react';
+import { ChevronLeft, ChevronRight, SlidersHorizontal, Download, X, Check } from 'lucide-react';
+import jsPDF from 'jspdf';
+import 'jspdf-autotable';
 
 const ITEMS_PER_PAGE = 4;
 
-const RecentReportsList = () => {
+const RecentReportsList = ({ reportsData = [] }) => {
   const [currentPage, setCurrentPage] = useState(1);
+  const [showDropdown, setShowDropdown] = useState(false);
+  const [activeFilter, setActiveFilter] = useState('All');
 
-  const totalPages = Math.ceil(REPORTS_DATA.length / ITEMS_PER_PAGE);
+  const dropdownRef = useRef(null);
+
+  // Dynamically extract unique Doctors and Report Names for the dropdown
+  const uniqueDoctors = [...new Set(reportsData.map(r => r.doctor))];
+  const uniqueNames = [...new Set(reportsData.map(r => r.name))];
+
+  // Close dropdown if clicked outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setShowDropdown(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  // 1. Filter Logic: Match activeFilter against Doctor or Report Name
+  const filteredReports = reportsData.filter(report => {
+    if (activeFilter === 'All') return true;
+    return report.doctor === activeFilter || report.name === activeFilter || report.date === activeFilter;
+  });
+
+  // 2. Pagination Logic
+  const totalPages = Math.ceil(filteredReports.length / ITEMS_PER_PAGE);
   const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
-  const currentItems = REPORTS_DATA.slice(startIndex, startIndex + ITEMS_PER_PAGE);
+  const currentItems = filteredReports.slice(startIndex, startIndex + ITEMS_PER_PAGE);
+
+  // 3. Download PDF Logic
+  const handleDownloadPDF = (report) => {
+    const doc = new jsPDF();
+    doc.setFontSize(22);
+    doc.setTextColor(74, 124, 89);
+    doc.text('AyurCare360', 14, 22);
+    doc.setFontSize(16);
+    doc.setTextColor(40);
+    doc.text('Clinical Health Report', 14, 34);
+    doc.setFontSize(12);
+    doc.setTextColor(80);
+    doc.text(`Report Name: ${report.name}`, 14, 46);
+    doc.text(`Category: ${report.desc}`, 14, 54);
+    doc.text(`Physician: ${report.doctor}`, 14, 62);
+    doc.text(`Date of Issue: ${report.date}`, 14, 70);
+    doc.setFontSize(10);
+    doc.setTextColor(150);
+    doc.text('This is a digitally generated summary of your archived clinical report.', 14, 90);
+
+    const safeName = report.name.replace(/ /g, '_');
+    doc.save(`HealthReport_${safeName}_${report.date}.pdf`);
+  };
+
+  const applyFilter = (filterValue) => {
+    setActiveFilter(filterValue);
+    setCurrentPage(1); // Reset to first page
+    setShowDropdown(false);
+  };
 
   return (
-    <div className="bg-white rounded-[24px] p-6 md:p-8 border border-[#EFEBE1] shadow-sm h-full flex flex-col">
+    <div className="bg-white rounded-[24px] p-6 md:p-8 border border-[#EFEBE1] shadow-sm h-full flex flex-col transition-all">
 
       {/* Header */}
       <div className="flex justify-between items-center mb-6">
@@ -31,9 +76,79 @@ const RecentReportsList = () => {
           <h3 className="text-xl font-bold text-gray-900">Recent Reports</h3>
           <p className="text-xs font-medium text-gray-400 mt-1">Showing last 12 months of clinical data</p>
         </div>
-        <button className="p-2 hover:bg-[#EFEBE1] rounded-full transition-colors">
-          <SlidersHorizontal size={18} className="text-gray-600" />
-        </button>
+
+        {/* Dropdown Filter System */}
+        <div className="relative" ref={dropdownRef}>
+          <button
+            onClick={() => setShowDropdown(!showDropdown)}
+            className={`flex items-center gap-2 px-4 py-2 rounded-full transition-colors border ${activeFilter !== 'All'
+                ? 'bg-[#4A7C59] text-white border-[#4A7C59] shadow-sm'
+                : 'hover:bg-[#EFEBE1] border-transparent text-gray-600'
+              }`}
+          >
+            <SlidersHorizontal size={18} />
+            {activeFilter !== 'All' && (
+              <span className="text-sm font-bold max-w-[120px] truncate">{activeFilter}</span>
+            )}
+            {activeFilter !== 'All' && (
+              <div
+                onClick={(e) => { e.stopPropagation(); applyFilter('All'); }}
+                className="ml-1 p-0.5 hover:bg-white/20 rounded-full transition-colors"
+              >
+                <X size={14} />
+              </div>
+            )}
+          </button>
+
+          {/* Dropdown Menu */}
+          {showDropdown && (
+            <div className="absolute right-0 mt-2 w-64 bg-white rounded-2xl shadow-xl border border-[#EFEBE1] z-20 py-2 animate-fade-in origin-top-right">
+
+              <button
+                onClick={() => applyFilter('All')}
+                className={`w-full text-left px-4 py-2.5 text-sm font-bold flex items-center justify-between transition-colors hover:bg-[#FDF9EE] ${activeFilter === 'All' ? 'text-[#4A7C59]' : 'text-gray-700'}`}
+              >
+                All Reports
+                {activeFilter === 'All' && <Check size={16} />}
+              </button>
+
+              {/* Doctors Section */}
+              <div className="px-4 pt-3 pb-1 text-[10px] font-extrabold text-gray-400 uppercase tracking-widest border-t border-[#EFEBE1] mt-1">
+                Filter by Doctor
+              </div>
+              <div className="max-h-40 overflow-y-auto custom-scrollbar">
+                {uniqueDoctors.map(doc => (
+                  <button
+                    key={doc}
+                    onClick={() => applyFilter(doc)}
+                    className={`w-full text-left px-4 py-2 text-sm font-medium flex items-center justify-between transition-colors hover:bg-[#FDF9EE] ${activeFilter === doc ? 'text-[#4A7C59] font-bold bg-[#E7F3EB]' : 'text-gray-700'}`}
+                  >
+                    {doc}
+                    {activeFilter === doc && <Check size={14} />}
+                  </button>
+                ))}
+              </div>
+
+              {/* Report Types Section */}
+              <div className="px-4 pt-3 pb-1 text-[10px] font-extrabold text-gray-400 uppercase tracking-widest border-t border-[#EFEBE1] mt-1">
+                Filter by Report Type
+              </div>
+              <div className="max-h-40 overflow-y-auto custom-scrollbar">
+                {uniqueNames.map(name => (
+                  <button
+                    key={name}
+                    onClick={() => applyFilter(name)}
+                    className={`w-full text-left px-4 py-2 text-sm font-medium flex items-center justify-between transition-colors hover:bg-[#FDF9EE] ${activeFilter === name ? 'text-[#4A7C59] font-bold bg-[#E7F3EB]' : 'text-gray-700'}`}
+                  >
+                    {name}
+                    {activeFilter === name && <Check size={14} />}
+                  </button>
+                ))}
+              </div>
+
+            </div>
+          )}
+        </div>
       </div>
 
       {/* Table Headers */}
@@ -46,62 +161,73 @@ const RecentReportsList = () => {
 
       {/* List */}
       <div className="flex-1 space-y-2 mt-4 min-h-[280px]">
-        {currentItems.map((report) => {
-          const Icon = report.icon;
-          return (
-            <div key={report.id} className="flex items-center py-3 group border-b border-transparent hover:border-[#EFEBE1] transition-all">
+        {currentItems.length > 0 ? (
+          currentItems.map((report) => {
+            const Icon = report.icon;
+            return (
+              <div key={report.id} className="flex items-center py-3 group border-b border-transparent hover:border-[#EFEBE1] transition-all">
 
-              <div className="w-[45%] flex items-center gap-4">
-                <div className={`w-10 h-10 rounded-2xl flex items-center justify-center shrink-0 ${report.color}`}>
-                  <Icon size={18} />
+                <div className="w-[45%] flex items-center gap-4">
+                  <div className={`w-10 h-10 rounded-2xl flex items-center justify-center shrink-0 ${report.color}`}>
+                    <Icon size={18} />
+                  </div>
+                  <div>
+                    <p className="text-sm font-bold text-gray-900">{report.name}</p>
+                    <p className="text-[11px] font-medium text-gray-500">{report.desc}</p>
+                  </div>
                 </div>
-                <div>
-                  <p className="text-sm font-bold text-gray-900">{report.name}</p>
-                  <p className="text-[11px] font-medium text-gray-500">{report.desc}</p>
+
+                <div className="w-[25%] text-xs font-semibold text-amber-800">
+                  {report.doctor.split(' ').map((n, i) => i === 0 ? <React.Fragment key={i}>{n} </React.Fragment> : <span key={i}><br />{n}</span>)}
                 </div>
-              </div>
 
-              <div className="w-[25%] text-xs font-semibold text-amber-800">
-                {report.doctor.split(' ').map((n, i) => i === 0 ? <React.Fragment key={i}>{n} </React.Fragment> : <span key={i}><br />{n}</span>)}
-              </div>
+                <div className="w-[15%] text-xs font-semibold text-gray-600">
+                  {report.date.split(', ')[0]}<br />{report.date.split(', ')[1] || ''}
+                </div>
 
-              <div className="w-[15%] text-xs font-semibold text-gray-600">
-                {report.date.split(', ')[0]}<br />{report.date.split(', ')[1]}
-              </div>
+                <div className="w-[15%] text-right">
+                  <button
+                    onClick={() => handleDownloadPDF(report)}
+                    className="bg-[#3A6447] hover:bg-[#2C4D36] text-white text-xs font-bold py-2 px-4 rounded-full flex items-center justify-center gap-1.5 ml-auto transition-colors shadow-sm"
+                  >
+                    <Download size={14} /> <span className="hidden xl:inline">Download</span>
+                  </button>
+                </div>
 
-              <div className="w-[15%] text-right">
-                <button className="bg-[#3A6447] hover:bg-[#2C4D36] text-white text-xs font-bold py-2 px-4 rounded-full flex items-center justify-center gap-1.5 ml-auto transition-colors shadow-sm">
-                  <Download size={14} /> <span className="hidden xl:inline">Download</span>
-                </button>
               </div>
-
-            </div>
-          );
-        })}
+            );
+          })
+        ) : (
+          <div className="text-center py-20 text-gray-500 font-medium">
+            No reports found for "{activeFilter}".
+          </div>
+        )}
       </div>
 
       {/* Pagination */}
-      <div className="flex justify-between items-center mt-6 pt-6 border-t border-[#EFEBE1]">
-        <p className="text-xs font-semibold text-gray-500">
-          Showing {startIndex + 1}-{Math.min(startIndex + ITEMS_PER_PAGE, REPORTS_DATA.length)} of {REPORTS_DATA.length} archived reports
-        </p>
-        <div className="flex items-center gap-1">
-          <button
-            onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-            disabled={currentPage === 1}
-            className="p-1.5 rounded-full text-gray-400 hover:text-gray-900 hover:bg-gray-100 disabled:opacity-50 transition-colors"
-          >
-            <ChevronLeft size={18} />
-          </button>
-          <button
-            onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-            disabled={currentPage === totalPages}
-            className="p-1.5 rounded-full text-gray-400 hover:text-gray-900 hover:bg-gray-100 disabled:opacity-50 transition-colors"
-          >
-            <ChevronRight size={18} />
-          </button>
+      {filteredReports.length > 0 && (
+        <div className="flex justify-between items-center mt-6 pt-6 border-t border-[#EFEBE1]">
+          <p className="text-xs font-semibold text-gray-500">
+            Showing {startIndex + 1}-{Math.min(startIndex + ITEMS_PER_PAGE, filteredReports.length)} of {filteredReports.length} archived reports
+          </p>
+          <div className="flex items-center gap-1">
+            <button
+              onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+              disabled={currentPage === 1}
+              className="p-1.5 rounded-full text-gray-400 hover:text-gray-900 hover:bg-gray-100 disabled:opacity-50 transition-colors"
+            >
+              <ChevronLeft size={18} />
+            </button>
+            <button
+              onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+              disabled={currentPage === totalPages}
+              className="p-1.5 rounded-full text-gray-400 hover:text-gray-900 hover:bg-gray-100 disabled:opacity-50 transition-colors"
+            >
+              <ChevronRight size={18} />
+            </button>
+          </div>
         </div>
-      </div>
+      )}
 
     </div>
   );

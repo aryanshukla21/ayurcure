@@ -44,19 +44,19 @@ const BookAppointmentPage = () => {
 
   return (
     <div className="bg-[#FDF9EE] min-h-full p-8 md:p-10 font-sans max-w-[1600px] mx-auto">
-      
+
       {/* --- MODALS --- */}
-      
-      {/* 1. View All Practitioners Modal (Page 4) */}
-      <AllPractitionersModal 
-        isOpen={isPractitionersModalOpen} 
+
+      {/* 1. View All Practitioners Modal */}
+      <AllPractitionersModal
+        isOpen={isPractitionersModalOpen}
         onClose={() => setIsPractitionersModalOpen(false)}
         onSelectDoctor={setSelectedDoctorId}
         doctors={DOCTORS}
       />
 
-      {/* 2. Success Modal (Page 5) */}
-      <AppointmentSuccessModal 
+      {/* 2. Success Modal */}
+      <AppointmentSuccessModal
         isOpen={isSuccessModalOpen}
         appointmentDetails={{
           doctorName: selectedDoctor.name,
@@ -65,11 +65,19 @@ const BookAppointmentPage = () => {
         }}
         onViewAppointment={() => {
           setIsSuccessModalOpen(false);
-          navigate('/patient/appointments/1'); // Navigates to Upcoming Appointment details
+          // Use replace: true so the booking page is replaced by the appointment page in the history stack
+          navigate('/patient/appointments/1', { replace: true });
         }}
         onGoToDashboard={() => {
           setIsSuccessModalOpen(false);
-          navigate('/patient/dashboard'); // Navigates to main dashboard
+          // 1. Replace the current booking page with the specific appointment page in history
+          navigate('/patient/appointments/1', { replace: true });
+
+          // 2. Immediately push the dashboard page onto the stack.
+          // Now if the user clicks back from the dashboard, they land on the appointment details.
+          setTimeout(() => {
+            navigate('/patient/dashboard');
+          }, 0);
         }}
       />
 
@@ -81,27 +89,27 @@ const BookAppointmentPage = () => {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 pb-10">
-        
+
         {/* LEFT COLUMN */}
         <div className="lg:col-span-2 space-y-10 overflow-hidden">
-          
+
           {/* Doctor Selection Panel */}
           <section>
             <div className="flex justify-between items-end mb-6">
               <h2 className="text-2xl font-bold text-gray-900">Doctor Selection</h2>
-              <button 
-                onClick={() => setIsPractitionersModalOpen(true)} 
+              <button
+                onClick={() => setIsPractitionersModalOpen(true)}
                 className="text-[#4A7C59] font-semibold text-sm hover:underline cursor-pointer"
               >
                 View All Practitioners
               </button>
             </div>
-            
+
             {/* Horizontal Scroll List */}
             <div className="flex overflow-x-auto gap-6 pb-4 snap-x snap-mandatory [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
               {DOCTORS.map(doctor => (
                 <div key={doctor.id} className="snap-start">
-                  <DoctorSelectionCard 
+                  <DoctorSelectionCard
                     doctor={doctor}
                     isSelected={selectedDoctorId === doctor.id}
                     onSelect={setSelectedDoctorId}
@@ -118,9 +126,9 @@ const BookAppointmentPage = () => {
               <label className="block text-[11px] font-bold text-gray-500 uppercase tracking-widest mb-4">
                 Reason for Visit (Symptoms or Consultation Goal)
               </label>
-              <textarea 
-                rows="4" 
-                value={reason} 
+              <textarea
+                rows="4"
+                value={reason}
                 onChange={(e) => setReason(e.target.value)}
                 className="w-full bg-[#FAF7F2] border border-[#EFEBE1] rounded-2xl p-5 text-gray-700 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#4A7C59] resize-none transition-colors"
                 placeholder="Please describe your symptoms, health history, or wellness goals for this session..."
@@ -132,27 +140,26 @@ const BookAppointmentPage = () => {
 
         {/* RIGHT COLUMN */}
         <div className="lg:col-span-1">
-          
+
           {/* Appointment Summary Box */}
           <div className="bg-white rounded-[32px] p-8 border border-[#EFEBE1] shadow-sm mb-6">
-            
+
             {/* Time Slots */}
             <h3 className="text-xl font-bold text-gray-900 mb-6">Available Time Slots</h3>
             <div className="flex items-center justify-between mb-4">
               <span className="text-sm font-semibold text-gray-600">Today, Oct 24</span>
               <Calendar size={16} className="text-gray-400" />
             </div>
-            
+
             <div className="grid grid-cols-2 gap-3 mb-10">
               {TIME_SLOTS.map((time) => (
                 <button
-                  key={time} 
+                  key={time}
                   onClick={() => setSelectedTime(time)}
-                  className={`py-3 rounded-xl text-sm font-bold transition-all ${
-                    selectedTime === time 
-                      ? 'bg-[#3A6447] text-white shadow-md' 
+                  className={`py-3 rounded-xl text-sm font-bold transition-all ${selectedTime === time
+                      ? 'bg-[#3A6447] text-white shadow-md'
                       : 'bg-[#FDF9EE] text-gray-700 hover:bg-[#F4F1EB]'
-                  }`}
+                    }`}
                 >
                   {time}
                 </button>
@@ -178,7 +185,7 @@ const BookAppointmentPage = () => {
             </div>
 
             {/* Confirm Button */}
-            <button 
+            <button
               onClick={handleConfirmAppointment}
               className="w-full bg-[#3A6447] hover:bg-[#2C4D36] text-white font-bold py-4 rounded-2xl flex items-center justify-center gap-2 shadow-md transition-colors"
             >
