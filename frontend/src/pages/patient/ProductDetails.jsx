@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
-import { Sparkles, Zap, Moon, Shield } from 'lucide-react';
+import { Sparkles, Zap, Moon, Shield, CheckCircle2 } from 'lucide-react';
 import { ecommerceApi } from '../../api/ecommerceApi';
+import { useCart } from '../../context/CartContext';
 
 // Import Components
 import ProductBreadcrumb from '../../components/patient/pharmacy-store/ProductBreadcrumb';
@@ -9,8 +10,8 @@ import ProductGallery from '../../components/patient/pharmacy-store/ProductGalle
 import ProductInfo from '../../components/patient/pharmacy-store/ProductInfo';
 import WellnessMatrix from '../../components/patient/pharmacy-store/WellnessMatrix';
 import IngredientsList from '../../components/patient/pharmacy-store/IngredientsList';
+import FloatingCart from '../../components/patient/pharmacy-store/FloatingCart';
 
-// Deep mock data designed to exactly match the Page 15 UI requirements
 const MOCK_PRODUCT_DETAILS = {
     id: '1',
     name: 'Premium Ashwagandha Root Churna',
@@ -44,6 +45,9 @@ const ProductDetails = () => {
     const [product, setProduct] = useState(null);
     const [loading, setLoading] = useState(true);
 
+    const { addToCart, cartTotal, cartCount } = useCart();
+    const [toast, setToast] = useState({ show: false, message: '' });
+
     useEffect(() => {
         fetchProductDetails();
     }, [id]);
@@ -53,11 +57,7 @@ const ProductDetails = () => {
         try {
             const data = await ecommerceApi.getProductDetails(id);
             if (data && data.product) {
-                // Combine backend data with mock arrays to satisfy the UI layout requirements
-                setProduct({
-                    ...MOCK_PRODUCT_DETAILS,
-                    ...data.product
-                });
+                setProduct({ ...MOCK_PRODUCT_DETAILS, ...data.product });
             } else {
                 setProduct(MOCK_PRODUCT_DETAILS);
             }
@@ -67,6 +67,13 @@ const ProductDetails = () => {
         } finally {
             setLoading(false);
         }
+    };
+
+    // --- REFACTORED TO ACCEPT A VARIANT PRODUCT ---
+    const handleAddToCart = (productVariant, quantity = 1) => {
+        addToCart(productVariant, quantity);
+        setToast({ show: true, message: 'Added to cart successfully!' });
+        setTimeout(() => setToast({ show: false, message: '' }), 3000);
     };
 
     if (loading) {
@@ -80,22 +87,29 @@ const ProductDetails = () => {
     if (!product) return <div className="p-8">Product not found.</div>;
 
     return (
-        <div className="min-h-screen p-4 md:p-8 font-sans pb-24">
+        <div className="min-h-screen p-4 md:p-8 font-sans pb-24 relative">
+            {toast.show && (
+                <div className="fixed top-24 left-1/2 -translate-x-1/2 bg-gray-900 text-white px-6 py-3 rounded-full shadow-2xl flex items-center gap-2 z-[60] animate-fade-in">
+                    <CheckCircle2 size={18} className="text-green-400" />
+                    <span className="text-sm font-medium tracking-wide">{toast.message}</span>
+                </div>
+            )}
 
             <ProductBreadcrumb />
 
-            {/* Top Section: Images & Details */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 mb-12">
                 <ProductGallery images={product.images} name={product.name} />
-                <ProductInfo product={product} />
+
+                {/* Passing handleAddToCart reference directly to ProductInfo */}
+                <ProductInfo product={product} onAddToCart={handleAddToCart} />
             </div>
 
-            {/* Bottom Section: Matrix & Ingredients */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                 <WellnessMatrix benefits={product.benefits} />
                 <IngredientsList ingredients={product.ingredients} />
             </div>
 
+            <FloatingCart cartTotal={cartTotal} cartCount={cartCount} />
         </div>
     );
 };

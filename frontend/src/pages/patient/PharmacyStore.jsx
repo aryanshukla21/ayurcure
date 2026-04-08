@@ -5,6 +5,7 @@ import ProductCard from '../../components/patient/pharmacy-store/ProductCard';
 import FloatingCart from '../../components/patient/pharmacy-store/FloatingCart';
 import { ecommerceApi } from '../../api/ecommerceApi';
 import { CheckCircle2 } from 'lucide-react';
+import { useCart } from '../../context/CartContext'; // <-- IMPORT CONTEXT
 
 const MOCK_PRODUCTS = [
     { id: '1', name: 'Organic Ashwagandha Capsules', category: 'Herbal Supplements', description: 'Stress relief and vitality booster formulated fo...', price: 15.00, tag: 'BEST SELLER', image: 'https://images.unsplash.com/photo-1611078443555-b16eb3291244?ixlib=rb-4.0.3&auto=format&fit=crop&w=300&q=80' },
@@ -38,8 +39,8 @@ const PharmacyStore = () => {
     const [loading, setLoading] = useState(true);
     const [activeCategory, setActiveCategory] = useState('All');
 
-    // Global Cart State for the Store (Now includes quantity!)
-    const [cartItems, setCartItems] = useState([]);
+    // --- REPLACED LOCAL CART WITH GLOBAL CONTEXT ---
+    const { cartItems, addToCart, updateQuantity, cartCount, cartTotal } = useCart();
     const [toast, setToast] = useState({ show: false, message: '' });
 
     useEffect(() => {
@@ -74,19 +75,9 @@ const PharmacyStore = () => {
         setProducts(filtered);
     };
 
-    // Calculate dynamic cart totals
-    const cartCount = cartItems.reduce((acc, item) => acc + item.quantity, 0);
-    const cartTotal = cartItems.reduce((acc, item) => acc + (item.price * item.quantity), 0);
-
-    // Add To Cart Handler
+    // Add To Cart Handler (Now uses global Context)
     const handleAddToCart = (product) => {
-        setCartItems(prev => {
-            const existing = prev.find(item => item.id === product.id);
-            if (existing) {
-                return prev.map(item => item.id === product.id ? { ...item, quantity: item.quantity + 1 } : item);
-            }
-            return [...prev, { ...product, quantity: 1 }];
-        });
+        addToCart(product, 1);
 
         // Trigger Toast Notification
         setToast({ show: true, message: 'Item added successfully!' });
@@ -95,14 +86,7 @@ const PharmacyStore = () => {
 
     // Quantity Update Handler (+ / -)
     const handleUpdateQuantity = (productId, newQuantity) => {
-        setCartItems(prev => {
-            if (newQuantity <= 0) {
-                // Remove item completely if quantity hits 0
-                return prev.filter(item => item.id !== productId);
-            }
-            // Otherwise, update the quantity
-            return prev.map(item => item.id === productId ? { ...item, quantity: newQuantity } : item);
-        });
+        updateQuantity(productId, newQuantity);
     };
 
     return (

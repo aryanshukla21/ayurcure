@@ -1,7 +1,7 @@
 import React, { useRef } from 'react';
 import { Download, Camera } from 'lucide-react';
 
-const ProfileOverviewCard = ({ profile, isEditing, onEditToggle, onChange, onImageUpload }) => {
+const ProfileOverviewCard = ({ profile, isEditing, onEditToggle, onChange, onImageUpload, onDownloadPDF }) => {
   const fileInputRef = useRef(null);
 
   return (
@@ -10,7 +10,7 @@ const ProfileOverviewCard = ({ profile, isEditing, onEditToggle, onChange, onIma
       {/* Image Section */}
       <div className="relative w-40 h-72 rounded-2xl overflow-hidden shrink-0 group">
         <img
-          src={profile.avatar}
+          src={profile.avatar || "https://ui-avatars.com/api/?name=Alex+Thompson&background=EAE5D9&color=4A7C59&size=150"}
           alt={profile.name}
           className="w-full h-full object-cover transition-all duration-300"
         />
@@ -84,8 +84,13 @@ const ProfileOverviewCard = ({ profile, isEditing, onEditToggle, onChange, onIma
           >
             {isEditing ? 'Save Profile' : 'Edit Profile'}
           </button>
-          <button className="px-6 py-3 bg-[#EAE5D9] hover:bg-[#D1CFC8] text-gray-800 text-sm font-bold rounded-full transition-colors shadow-sm flex items-center justify-center gap-2 flex-1 cursor-pointer">
-            Download PDF
+
+          {/* TRIGGER PDF DOWNLOAD HERE */}
+          <button
+            onClick={onDownloadPDF}
+            className="px-6 py-3 bg-[#EAE5D9] hover:bg-[#D1CFC8] text-gray-800 text-sm font-bold rounded-full transition-colors shadow-sm flex items-center justify-center gap-2 flex-1 cursor-pointer"
+          >
+            <Download size={16} /> Download PDF
           </button>
         </div>
       </div>

@@ -1,43 +1,64 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { Bell } from 'lucide-react';
 
-const ToggleSwitch = ({ checked, onChange }) => (
-  <div
-    onClick={onChange}
-    className={`w-11 h-6 flex items-center rounded-full p-1 cursor-pointer transition-colors duration-300 ease-in-out ${checked ? 'bg-[#3A6447]' : 'bg-gray-300'}`}
-  >
-    <div className={`bg-white w-4 h-4 rounded-full shadow-md transform transition-transform duration-300 ease-in-out ${checked ? 'translate-x-5' : 'translate-x-0'}`}></div>
-  </div>
-);
+const NotificationPrefsCard = ({ data, isEditing, onChange }) => {
+  if (!data) return null;
 
-const NotificationPrefsCard = () => {
-  const [prefs, setPrefs] = useState({ appointments: true, orders: true });
+  // Reusable Toggle Component
+  const ToggleSwitch = ({ label, description, field, value }) => (
+    <div className="flex items-center justify-between py-4 border-b border-[#EFEBE1] last:border-0 last:pb-0">
+      <div className="pr-4">
+        <h4 className="text-sm font-bold text-gray-900 mb-1">{label}</h4>
+        <p className="text-xs text-gray-500 font-medium leading-relaxed">{description}</p>
+      </div>
+      <button
+        onClick={() => isEditing && onChange(field, !value)}
+        disabled={!isEditing}
+        className={`relative inline-flex h-6 w-11 shrink-0 rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${value ? 'bg-[#4A7C59]' : 'bg-gray-200'
+          } ${!isEditing ? 'opacity-60 cursor-not-allowed' : 'cursor-pointer'}`}
+      >
+        <span
+          className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${value ? 'translate-x-5' : 'translate-x-0'
+            }`}
+        />
+      </button>
+    </div>
+  );
 
   return (
-    <div className="bg-white rounded-[32px] p-8 border border-[#EFEBE1] shadow-sm h-full">
-      <div className="flex items-center gap-3 mb-8">
-        <Bell size={20} className="text-[#D9774B]" />
-        <h3 className="text-xl font-bold text-gray-900">Notification Preferences</h3>
+    <div className="bg-white rounded-[24px] p-6 md:p-8 border border-[#EFEBE1] shadow-sm h-full">
+      <div className="flex items-center gap-3 mb-6 pb-4 border-b border-[#EFEBE1]">
+        <div className="w-10 h-10 rounded-full bg-[#FFF4E5] flex items-center justify-center text-[#D9774B]">
+          <Bell size={20} />
+        </div>
+        <h2 className="text-xl font-bold text-gray-900">Notifications</h2>
       </div>
 
-      <div className="flex flex-col gap-6">
-        <div className="flex justify-between items-center gap-4">
-          <div>
-            <h4 className="text-sm font-bold text-gray-900">Appointment reminders</h4>
-            <p className="text-xs font-medium text-gray-500 mt-0.5">Get notified 24 hours before your session</p>
-          </div>
-          <ToggleSwitch checked={prefs.appointments} onChange={() => setPrefs({ ...prefs, appointments: !prefs.appointments })} />
-        </div>
-
-        <div className="w-full h-[1px] bg-[#EFEBE1]"></div>
-
-        <div className="flex justify-between items-center gap-4">
-          <div>
-            <h4 className="text-sm font-bold text-gray-900">Order updates</h4>
-            <p className="text-xs font-medium text-gray-500 mt-0.5">Pharmacy dispatch and delivery alerts</p>
-          </div>
-          <ToggleSwitch checked={prefs.orders} onChange={() => setPrefs({ ...prefs, orders: !prefs.orders })} />
-        </div>
+      <div className="flex flex-col">
+        <ToggleSwitch
+          label="Appointment Updates"
+          description="Receive alerts about schedule changes, cancellations, or doctor notes."
+          field="appointmentUpdates"
+          value={data.appointmentUpdates}
+        />
+        <ToggleSwitch
+          label="Email Alerts"
+          description="Get health reports and prescription summaries delivered to your inbox."
+          field="emailAlerts"
+          value={data.emailAlerts}
+        />
+        <ToggleSwitch
+          label="SMS Reminders"
+          description="Text message reminders 24 hours before your scheduled consultation."
+          field="smsReminders"
+          value={data.smsReminders}
+        />
+        <ToggleSwitch
+          label="Marketing & Offers"
+          description="Occasional updates about pharmacy discounts and wellness camps."
+          field="marketingEmails"
+          value={data.marketingEmails}
+        />
       </div>
     </div>
   );

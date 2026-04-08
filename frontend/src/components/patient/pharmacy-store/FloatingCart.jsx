@@ -2,7 +2,8 @@ import React from 'react';
 import { ShoppingCart } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
-const FloatingCart = ({ cartTotal }) => {
+// Added cartCount to the destructured props
+const FloatingCart = ({ cartTotal, cartCount }) => {
     const navigate = useNavigate();
 
     // Do not render the cart widget if the cart is empty
@@ -19,8 +20,10 @@ const FloatingCart = ({ cartTotal }) => {
             >
                 <div className="relative">
                     <ShoppingCart className="w-5 h-5 text-gray-300" />
-                    {/* Static cart badge for UI demonstration */}
-                    <span className="absolute -top-2 -right-2 bg-[#2D5A27] text-[10px] font-bold w-4 h-4 flex items-center justify-center rounded-full">2</span>
+                    {/* Replaced static '2' with dynamic {cartCount} */}
+                    <span className="absolute -top-2 -right-2 bg-[#2D5A27] text-[10px] font-bold w-4 h-4 flex items-center justify-center rounded-full">
+                        {cartCount}
+                    </span>
                 </div>
                 <div>
                     <p className="text-[10px] text-gray-400 font-medium tracking-wider mb-0.5">YOUR CART</p>

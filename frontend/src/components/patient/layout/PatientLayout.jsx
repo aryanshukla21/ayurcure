@@ -1,11 +1,18 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { Bell, Search, ShoppingCart, ChevronLeft } from 'lucide-react';
 import PatientSidebar from './PatientSidebar';
+import { useCart } from '../../../context/CartContext'; // <-- Imported Cart Context
 
 const PatientLayout = () => {
   const location = useLocation();
   const navigate = useNavigate();
+
+  // Access dynamic cart count
+  const { cartCount } = useCart();
+
+  // State to hold the search query
+  const [globalSearchQuery, setGlobalSearchQuery] = useState('');
 
   // Helper to get the current page title for the header
   const getPageTitle = () => {
@@ -18,19 +25,29 @@ const PatientLayout = () => {
     if (path.includes('pharmacy-store')) return 'Pharmacy Store';
     if (path.includes('profile')) return 'Patient Profile';
     if (path.includes('settings')) return 'Settings';
+    if (path.includes('cart')) return 'Your Cart'; // Added title for cart
+    if (path.includes('checkout')) return 'Checkout'; // Added title for checkout
     return 'Patient Portal';
   };
 
-  // Helper to dynamically set the search placeholder
+  // Helper to dynamically set the search placeholder based on the page
   const getSearchPlaceholder = () => {
-    if (location.pathname.includes('pharmacy-store')) {
-      return 'Search medicines, supplements, or Ayurvedic products...';
-    }
+    const path = location.pathname;
+    if (path.includes('pharmacy-store')) return 'Search medicines, supplements, or Ayurvedic products...';
+    if (path.includes('appointments')) return 'Search doctors or past consultations...';
+    if (path.includes('prescriptions')) return 'Search medicines in your prescriptions...';
+    if (path.includes('health-records')) return 'Search clinical data or report names...';
+    if (path.includes('pharmacy-orders')) return 'Search by Order ID or product name...';
     return 'Search medical history, doctors...';
   };
 
   // Check if we are on a specific product detail page
   const isProductDetailsPage = location.pathname.includes('/pharmacy-store/') && location.pathname !== '/patient/pharmacy-store';
+
+  // Handle Search Input changes
+  const handleSearchChange = (e) => {
+    setGlobalSearchQuery(e.target.value);
+  };
 
   return (
     <div className="flex h-screen bg-[#FDF9EE] font-sans">
@@ -58,6 +75,8 @@ const PatientLayout = () => {
                 <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
                 <input
                   type="text"
+                  value={globalSearchQuery}
+                  onChange={handleSearchChange}
                   placeholder={getSearchPlaceholder()}
                   className="w-full pl-12 pr-4 py-3 bg-[#F3F0E9] border-none rounded-full text-sm font-medium text-gray-700 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-[#4A7C59]/20 transition-all"
                 />
@@ -71,10 +90,17 @@ const PatientLayout = () => {
 
             {/* Notification and Cart Icons */}
             <div className="flex items-center gap-4">
-              <button className="text-gray-600 hover:text-[#4A7C59] transition-colors relative">
+              <button
+                onClick={() => navigate('/patient/cart')} // <-- Added navigation to cart
+                className="text-gray-600 hover:text-[#4A7C59] transition-colors relative cursor-pointer"
+              >
                 <ShoppingCart size={20} />
-                {/* Static cart badge for UI consistency, no functionality yet */}
-                <span className="absolute -top-2 -right-2 bg-[#4A7C59] text-white text-[10px] font-bold w-4 h-4 flex items-center justify-center rounded-full border border-white">2</span>
+                {/* Dynamically render badge only if cart has items */}
+                {cartCount > 0 && (
+                  <span className="absolute -top-2 -right-2 bg-[#4A7C59] text-white text-[10px] font-bold w-4 h-4 flex items-center justify-center rounded-full border border-white">
+                    {cartCount}
+                  </span>
+                )}
               </button>
             </div>
 
@@ -90,7 +116,8 @@ const PatientLayout = () => {
 
         {/* Page Content */}
         <div className="flex-1 overflow-y-auto custom-scrollbar">
-          <Outlet />
+          {/* Passed search query context down to child routes */}
+          <Outlet context={{ globalSearchQuery }} />
         </div>
       </main>
     </div>
