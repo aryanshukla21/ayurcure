@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Search, ChevronDown, ChevronLeft, ChevronRight } from 'lucide-react';
 
@@ -31,34 +31,67 @@ const OrdersTable = () => {
   const [ordersData] = useState(INITIAL_ORDERS);
   const [currentPage, setCurrentPage] = useState(1);
 
-  // Pagination calculations
-  const totalPages = Math.ceil(ordersData.length / ITEMS_PER_PAGE);
-  const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
-  const currentItems = ordersData.slice(startIndex, startIndex + ITEMS_PER_PAGE);
+  // Filter States
+  const [searchQuery, setSearchQuery] = useState('');
+  const [orderStatusFilter, setOrderStatusFilter] = useState('Order Status');
+  const [paymentStatusFilter, setPaymentStatusFilter] = useState('Payment Status');
 
+  // Filter Logic
+  const processedOrders = useMemo(() => {
+    return ordersData.filter(order => {
+      // 1. Search Logic
+      const matchesSearch = order.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        order.patient.toLowerCase().includes(searchQuery.toLowerCase());
+
+      // 2. Order Status Filter
+      const matchesOrderStatus = orderStatusFilter === 'Order Status' || order.orderStatus === orderStatusFilter.toUpperCase();
+
+      // 3. Payment Status Filter
+      const matchesPaymentStatus = paymentStatusFilter === 'Payment Status' || order.paymentStatus === paymentStatusFilter.toUpperCase();
+
+      return matchesSearch && matchesOrderStatus && matchesPaymentStatus;
+    });
+  }, [ordersData, searchQuery, orderStatusFilter, paymentStatusFilter]);
+
+  // Pagination calculations based on processedOrders
+  const totalPages = Math.max(1, Math.ceil(processedOrders.length / ITEMS_PER_PAGE));
+  const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
+  const currentItems = processedOrders.slice(startIndex, startIndex + ITEMS_PER_PAGE);
+
+  // Handlers
   const handlePrevPage = () => { if (currentPage > 1) setCurrentPage(currentPage - 1); };
   const handleNextPage = () => { if (currentPage < totalPages) setCurrentPage(currentPage + 1); };
 
+  const handleSearchChange = (e) => { setSearchQuery(e.target.value); setCurrentPage(1); };
+  const handleOrderStatusChange = (e) => { setOrderStatusFilter(e.target.value); setCurrentPage(1); };
+  const handlePaymentStatusChange = (e) => { setPaymentStatusFilter(e.target.value); setCurrentPage(1); };
+
   return (
     <div className="bg-white rounded-[32px] p-8 border border-[#EFEBE1] shadow-sm flex flex-col h-full">
-      
+
       {/* Top Toolbar */}
       <div className="flex flex-col xl:flex-row justify-between gap-4 mb-8">
-        
+
         {/* Search */}
         <div className="relative w-full max-w-md">
           <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
-          <input 
-            type="text" 
-            placeholder="Search Order" 
+          <input
+            type="text"
+            placeholder="Search Order"
+            value={searchQuery}
+            onChange={handleSearchChange}
             className="w-full bg-[#FAF7F2] border border-[#EFEBE1] rounded-full py-3.5 pl-12 pr-4 text-sm font-bold text-gray-700 focus:outline-none focus:ring-2 focus:ring-[#3A6447]/20 transition-all"
           />
         </div>
-        
+
         {/* Filters */}
         <div className="flex gap-3 w-full xl:w-auto">
           <div className="relative flex-1 xl:w-40">
-            <select className="w-full bg-[#FAF7F2] border border-[#EFEBE1] rounded-full py-3.5 pl-5 pr-10 text-sm font-bold text-gray-700 appearance-none focus:outline-none focus:ring-2 focus:ring-[#3A6447]/20 cursor-pointer">
+            <select
+              value={orderStatusFilter}
+              onChange={handleOrderStatusChange}
+              className="w-full bg-[#FAF7F2] border border-[#EFEBE1] rounded-full py-3.5 pl-5 pr-10 text-sm font-bold text-gray-700 appearance-none focus:outline-none focus:ring-2 focus:ring-[#3A6447]/20 cursor-pointer"
+            >
               <option>Order Status</option>
               <option>Completed</option>
               <option>Pending</option>
@@ -66,7 +99,11 @@ const OrdersTable = () => {
             <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" size={18} />
           </div>
           <div className="relative flex-1 xl:w-40">
-            <select className="w-full bg-[#FAF7F2] border border-[#EFEBE1] rounded-full py-3.5 pl-5 pr-10 text-sm font-bold text-gray-700 appearance-none focus:outline-none focus:ring-2 focus:ring-[#3A6447]/20 cursor-pointer">
+            <select
+              value={paymentStatusFilter}
+              onChange={handlePaymentStatusChange}
+              className="w-full bg-[#FAF7F2] border border-[#EFEBE1] rounded-full py-3.5 pl-5 pr-10 text-sm font-bold text-gray-700 appearance-none focus:outline-none focus:ring-2 focus:ring-[#3A6447]/20 cursor-pointer"
+            >
               <option>Payment Status</option>
               <option>Paid</option>
               <option>COD</option>
@@ -88,79 +125,86 @@ const OrdersTable = () => {
         <div className="w-[10%] text-right pr-2">Action</div>
       </div>
 
-      {/* Table Rows */}
-      <div className="flex-1 mt-2 space-y-1 min-h-[380px]">
-        {currentItems.map((order) => (
-          <div key={order.id} className="flex items-center py-4 border-b border-transparent hover:border-[#EFEBE1] hover:bg-[#FDF9EE]/50 rounded-2xl transition-colors group px-2 -mx-2">
-            
-            <div className="w-[15%] text-sm font-bold text-gray-900 pl-2">{order.id}</div>
-            <div className="w-[20%] text-sm font-medium text-gray-500 group-hover:text-[#3A6447] transition-colors">{order.patient}</div>
-            <div className="w-[15%] text-sm font-medium text-gray-600">{order.date}</div>
-            <div className="w-[10%] text-sm font-extrabold text-gray-900">{order.amount}</div>
-            
-            <div className="w-[15%]">
-              <span className={`px-3 py-1.5 rounded-full text-[9px] font-extrabold uppercase tracking-widest ${getOrderStatusColor(order.orderStatus)}`}>
-                {order.orderStatus}
-              </span>
-            </div>
+      {/* Table Rows (Removed min-h-[380px] to let it hug the content) */}
+      <div className="flex-1 mt-2 space-y-1">
+        {currentItems.length > 0 ? (
+          currentItems.map((order) => (
+            <div key={order.id} className="flex items-center py-4 border-b border-transparent hover:border-[#EFEBE1] hover:bg-[#FDF9EE]/50 rounded-2xl transition-colors group px-2 -mx-2">
 
-            <div className="w-[15%]">
-              <span className={`px-3 py-1.5 rounded-full text-[9px] font-extrabold uppercase tracking-widest ${getPaymentStatusColor(order.paymentStatus)}`}>
-                {order.paymentStatus}
-              </span>
-            </div>
-            
-            <div className="w-[10%] text-right pr-2">
-              <button 
-                onClick={() => navigate(`/admin/orders/${order.id.replace('#', '')}`)}
-                className="text-xs font-bold text-amber-700 hover:text-[#3A6447] transition-colors cursor-pointer"
-              >
-                View Details
-              </button>
-            </div>
+              <div className="w-[15%] text-sm font-bold text-gray-900 pl-2">{order.id}</div>
+              <div className="w-[20%] text-sm font-medium text-gray-500 group-hover:text-[#3A6447] transition-colors">{order.patient}</div>
+              <div className="w-[15%] text-sm font-medium text-gray-600">{order.date}</div>
+              <div className="w-[10%] text-sm font-extrabold text-gray-900">{order.amount}</div>
 
+              <div className="w-[15%]">
+                <span className={`px-3 py-1.5 rounded-full text-[9px] font-extrabold uppercase tracking-widest ${getOrderStatusColor(order.orderStatus)}`}>
+                  {order.orderStatus}
+                </span>
+              </div>
+
+              <div className="w-[15%]">
+                <span className={`px-3 py-1.5 rounded-full text-[9px] font-extrabold uppercase tracking-widest ${getPaymentStatusColor(order.paymentStatus)}`}>
+                  {order.paymentStatus}
+                </span>
+              </div>
+
+              <div className="w-[10%] text-right pr-2">
+                <button
+                  onClick={() => navigate(`/admin/orders/${order.id.replace('#', '')}`)}
+                  className="text-xs font-bold text-amber-700 hover:text-[#3A6447] transition-colors cursor-pointer"
+                >
+                  View Details
+                </button>
+              </div>
+
+            </div>
+          ))
+        ) : (
+          <div className="text-center py-10 text-sm font-bold text-gray-400">
+            No orders match your search criteria.
           </div>
-        ))}
+        )}
       </div>
 
-      {/* Pagination Footer */}
-      <div className="flex flex-col md:flex-row justify-between items-center mt-6 pt-6 border-t border-[#EFEBE1] gap-4">
+      {/* Pagination Footer (Changed mt-6 to mt-2 to remove gap) */}
+      <div className="flex flex-col md:flex-row justify-between items-center mt-2 pt-6 border-t border-[#EFEBE1] gap-4">
         <p className="text-[11px] font-bold text-gray-400 uppercase tracking-widest">
-          Showing {startIndex + 1} to {Math.min(startIndex + ITEMS_PER_PAGE, ordersData.length)} of 142 orders
+          Showing {processedOrders.length > 0 ? startIndex + 1 : 0} to {Math.min(startIndex + ITEMS_PER_PAGE, processedOrders.length)} of {processedOrders.length} orders
         </p>
-        
-        <div className="flex items-center gap-1 text-sm font-bold">
-          <button 
-            onClick={handlePrevPage}
-            disabled={currentPage === 1}
-            className={`p-1.5 rounded-full transition-colors ${currentPage === 1 ? 'text-gray-300 cursor-not-allowed' : 'text-gray-400 hover:text-gray-900 hover:bg-gray-100'}`}
-          >
-            <ChevronLeft size={18} />
-          </button>
 
-          {Array.from({ length: totalPages }).map((_, index) => {
-            const pageNumber = index + 1;
-            return (
-              <button
-                key={pageNumber}
-                onClick={() => setCurrentPage(pageNumber)}
-                className={`w-8 h-8 rounded-full flex items-center justify-center transition-colors ${
-                  currentPage === pageNumber ? 'bg-[#3A6447] text-white shadow-sm' : 'text-gray-600 hover:bg-[#EFEBE1]'
-                }`}
-              >
-                {pageNumber}
-              </button>
-            );
-          })}
+        {totalPages > 1 && (
+          <div className="flex items-center gap-1 text-sm font-bold">
+            <button
+              onClick={handlePrevPage}
+              disabled={currentPage === 1}
+              className={`p-1.5 rounded-full transition-colors ${currentPage === 1 ? 'text-gray-300 cursor-not-allowed' : 'text-gray-400 hover:text-gray-900 hover:bg-gray-100'}`}
+            >
+              <ChevronLeft size={18} />
+            </button>
 
-          <button 
-            onClick={handleNextPage}
-            disabled={currentPage === totalPages}
-            className={`p-1.5 rounded-full transition-colors ${currentPage === totalPages ? 'text-gray-300 cursor-not-allowed' : 'text-gray-400 hover:text-gray-900 hover:bg-gray-100'}`}
-          >
-            <ChevronRight size={18} />
-          </button>
-        </div>
+            {Array.from({ length: totalPages }).map((_, index) => {
+              const pageNumber = index + 1;
+              return (
+                <button
+                  key={pageNumber}
+                  onClick={() => setCurrentPage(pageNumber)}
+                  className={`w-8 h-8 rounded-full flex items-center justify-center transition-colors ${currentPage === pageNumber ? 'bg-[#3A6447] text-white shadow-sm' : 'text-gray-600 hover:bg-[#EFEBE1]'
+                    }`}
+                >
+                  {pageNumber}
+                </button>
+              );
+            })}
+
+            <button
+              onClick={handleNextPage}
+              disabled={currentPage === totalPages}
+              className={`p-1.5 rounded-full transition-colors ${currentPage === totalPages ? 'text-gray-300 cursor-not-allowed' : 'text-gray-400 hover:text-gray-900 hover:bg-gray-100'}`}
+            >
+              <ChevronRight size={18} />
+            </button>
+          </div>
+        )}
       </div>
 
     </div>

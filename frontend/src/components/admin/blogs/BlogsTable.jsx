@@ -1,167 +1,164 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Search, ChevronDown, Plus, Edit2, ChevronLeft, ChevronRight } from 'lucide-react';
+import React, { useState, useMemo } from 'react';
+import { useNavigate, Link } from 'react-router-dom';
+import { Search, ChevronDown, Plus, Calendar, User, Edit2, Trash2 } from 'lucide-react';
 
-// Extended dummy data to make pagination functional
+// Dummy Data for Blogs
 const INITIAL_BLOGS = [
-  { id: 1, title: 'Understanding Pitta Dosha: Balance Through Food', author: 'Dr. Varma', category: 'Ayurveda', date: 'Oct 24, 2023', status: 'PUBLISHED' },
-  { id: 2, title: 'Morning Rituals: The Dinacharya Guide', author: 'Dr. Shanti', category: 'Lifestyle', date: 'Oct 21, 2023', status: 'PUBLISHED' },
-  { id: 3, title: 'The 5 Best Yoga Asanas for Digestion', author: 'Juure Singh', category: 'Yoga', date: 'Pending', status: 'DRAFT' },
-  { id: 4, title: 'Herbal Tea Blends for Better Sleep', author: 'Dr. Varma', category: 'Nutrition', date: 'Oct 18, 2023', status: 'PUBLISHED' },
-  { id: 5, title: 'Modern Science & Ancient Ayurveda', author: 'Editorial Team', category: 'Ayurveda', date: 'Pending', status: 'DRAFT' },
-  { id: 6, title: 'Ayurvedic Skincare for a Natural Glow', author: 'Dr. Priya', category: 'Lifestyle', date: 'Oct 15, 2023', status: 'PUBLISHED' },
-  { id: 7, title: 'Managing Stress with Adaptogenic Herbs', author: 'Dr. Amit', category: 'Nutrition', date: 'Oct 12, 2023', status: 'PUBLISHED' },
-  { id: 8, title: 'The Importance of a Consistent Sleep Routine', author: 'Dr. Shanti', category: 'Lifestyle', date: 'Pending', status: 'DRAFT' },
-  { id: 9, title: 'Healing Spices You Already Have in Your Kitchen', author: 'Dr. Varma', category: 'Nutrition', date: 'Oct 05, 2023', status: 'PUBLISHED' },
+  { id: 'BLG-001', title: 'The Healing Power of Ashwagandha', category: 'Herbs', author: 'Dr. Anjali Sharma', date: 'Oct 24, 2023', status: 'Published', image: 'https://images.unsplash.com/photo-1611078519445-6677db6fc434?q=80&w=400&auto=format&fit=crop' },
+  { id: 'BLG-002', title: 'Understanding Your Prakriti (Dosha)', category: 'Wellness', author: 'Dr. Rajesh Kumar', date: 'Oct 22, 2023', status: 'Draft', image: 'https://images.unsplash.com/photo-1545205597-3d9d02c29597?q=80&w=400&auto=format&fit=crop' },
+  { id: 'BLG-003', title: 'An Ayurvedic Winter Diet Plan', category: 'Diet', author: 'Dr. Meera Nair', date: 'Oct 15, 2023', status: 'Published', image: 'https://images.unsplash.com/photo-1512621776951-a57141f2eefd?q=80&w=400&auto=format&fit=crop' },
+  { id: 'BLG-004', title: 'Yoga Asanas for Better Digestion', category: 'Yoga', author: 'Dr. David Thorne', date: 'Oct 10, 2023', status: 'Published', image: 'https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?q=80&w=400&auto=format&fit=crop' },
+  { id: 'BLG-005', title: 'Natural Remedies for Glowing Skin', category: 'Skincare', author: 'Dr. Anjali Sharma', date: 'Sep 28, 2023', status: 'Published', image: 'https://images.unsplash.com/photo-1556228578-0d85b1a4d571?q=80&w=400&auto=format&fit=crop' },
+  { id: 'BLG-006', title: 'The Science Behind Panchakarma', category: 'Therapy', author: 'Dr. Rajesh Kumar', date: 'Sep 15, 2023', status: 'Draft', image: 'https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?q=80&w=400&auto=format&fit=crop' },
 ];
-
-const ITEMS_PER_PAGE = 5;
 
 const BlogsTable = () => {
   const navigate = useNavigate();
-  const [blogsData] = useState(INITIAL_BLOGS);
-  const [currentPage, setCurrentPage] = useState(1);
+  const [blogsData, setBlogsData] = useState(INITIAL_BLOGS);
 
-  // Pagination Logic
-  const totalPages = Math.ceil(blogsData.length / ITEMS_PER_PAGE);
-  const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
-  const currentItems = blogsData.slice(startIndex, startIndex + ITEMS_PER_PAGE);
+  // Filter States
+  const [searchQuery, setSearchQuery] = useState('');
+  const [categoryFilter, setCategoryFilter] = useState('All Categories');
 
-  const handlePrevPage = () => {
-    if (currentPage > 1) setCurrentPage(currentPage - 1);
-  };
+  // Filter Logic
+  const processedBlogs = useMemo(() => {
+    return blogsData.filter(blog => {
+      // 1. Search Logic (by Title or Author)
+      const matchesSearch = blog.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        blog.author.toLowerCase().includes(searchQuery.toLowerCase());
 
-  const handleNextPage = () => {
-    if (currentPage < totalPages) setCurrentPage(currentPage + 1);
+      // 2. Category Filter
+      const matchesCategory = categoryFilter === 'All Categories' || blog.category === categoryFilter;
+
+      return matchesSearch && matchesCategory;
+    });
+  }, [blogsData, searchQuery, categoryFilter]);
+
+  const handleSearchChange = (e) => setSearchQuery(e.target.value);
+  const handleCategoryChange = (e) => setCategoryFilter(e.target.value);
+
+  const handleDelete = (e, id) => {
+    e.stopPropagation(); // Prevents the tile click event from firing when clicking trash
+    if (window.confirm("Are you sure you want to delete this blog post?")) {
+      setBlogsData(blogsData.filter(blog => blog.id !== id));
+    }
   };
 
   return (
     <div className="bg-white rounded-[32px] p-8 border border-[#EFEBE1] shadow-sm flex flex-col h-full">
-      
+
       {/* Top Toolbar */}
-      <div className="flex flex-col xl:flex-row justify-between gap-4 mb-8">
-        
-        {/* Search & Filter */}
-        <div className="flex flex-1 gap-4">
-          <div className="relative w-full max-w-md">
+      <div className="flex flex-col xl:flex-row justify-between items-start xl:items-center gap-4 mb-8">
+
+        {/* Search & Filters */}
+        <div className="flex flex-col md:flex-row gap-4 w-full xl:w-auto">
+          <div className="relative w-full md:w-80">
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
-            <input 
-              type="text" 
-              placeholder="Search Blog" 
-              className="w-full bg-[#FAF7F2] border border-[#EFEBE1] rounded-full py-3.5 pl-12 pr-4 text-sm font-bold text-gray-700 focus:outline-none focus:ring-2 focus:ring-[#3A6447]/20 transition-all"
+            <input
+              type="text"
+              placeholder="Search articles or authors..."
+              value={searchQuery}
+              onChange={handleSearchChange}
+              className="w-full bg-[#FAF7F2] border border-[#EFEBE1] rounded-full py-3.5 pl-12 pr-4 text-sm font-bold text-gray-700 focus:outline-none focus:ring-2 focus:ring-[#3A6447]/20 transition-all shadow-sm"
             />
           </div>
-          <div className="relative w-48 hidden md:block">
-            <select className="w-full bg-[#FAF7F2] border border-[#EFEBE1] rounded-full py-3.5 pl-5 pr-10 text-sm font-bold text-gray-700 appearance-none focus:outline-none focus:ring-2 focus:ring-[#3A6447]/20 cursor-pointer">
-              <option>Category</option>
-              <option>Ayurveda</option>
-              <option>Lifestyle</option>
-              <option>Nutrition</option>
+
+          <div className="relative w-full md:w-48">
+            <select
+              value={categoryFilter}
+              onChange={handleCategoryChange}
+              className="w-full bg-[#FAF7F2] border border-[#EFEBE1] rounded-full py-3.5 pl-5 pr-10 text-sm font-bold text-gray-700 appearance-none focus:outline-none focus:ring-2 focus:ring-[#3A6447]/20 cursor-pointer shadow-sm"
+            >
+              <option value="All Categories">All Categories</option>
+              <option value="Herbs">Herbs</option>
+              <option value="Wellness">Wellness</option>
+              <option value="Diet">Diet</option>
+              <option value="Yoga">Yoga</option>
+              <option value="Skincare">Skincare</option>
+              <option value="Therapy">Therapy</option>
             </select>
             <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" size={18} />
           </div>
         </div>
 
-        {/* Add Blog Button -> Routes to Page 19 */}
-        <button 
-          onClick={() => navigate('/admin/blogs/add')}
-          className="bg-[#3A6447] hover:bg-[#2C4D36] text-white font-bold py-3.5 px-6 rounded-full flex items-center justify-center gap-2 shadow-sm transition-colors text-sm shrink-0 cursor-pointer"
+        {/* Add Blog Button */}
+        <Link
+          to="/admin/blogs/add"
+          className="bg-[#3A6447] hover:bg-[#2C4D36] text-white font-bold py-3.5 px-6 rounded-full flex items-center justify-center gap-2 shadow-sm transition-colors text-sm w-full xl:w-auto cursor-pointer"
         >
-          <Plus size={18} /> Add Blog
-        </button>
+          <Plus size={18} /> Create New Post
+        </Link>
       </div>
 
-      {/* Table Headers */}
-      <div className="flex items-center text-[10px] font-bold text-gray-400 uppercase tracking-widest pb-4 border-b border-[#EFEBE1]">
-        <div className="w-[40%] pl-2">Title</div>
-        <div className="w-[15%]">Category</div>
-        <div className="w-[20%]">Date Published</div>
-        <div className="w-[15%]">Status</div>
-        <div className="w-[10%] text-right pr-2">Action</div>
-      </div>
+      {/* Blog Tiles Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+        {processedBlogs.length > 0 ? (
+          processedBlogs.map((blog) => (
+            <div
+              key={blog.id}
+              onClick={() => navigate(`/admin/blogs/edit/${blog.id}`)}
+              className="bg-white border border-[#EFEBE1] rounded-3xl overflow-hidden hover:shadow-lg transition-all cursor-pointer group flex flex-col h-full"
+            >
+              {/* Image Section */}
+              <div className="h-48 overflow-hidden relative">
+                <img
+                  src={blog.image}
+                  alt={blog.title}
+                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                />
+                <div className="absolute top-4 right-4">
+                  <span className={`px-3 py-1.5 rounded-full text-[10px] font-extrabold uppercase tracking-widest shadow-sm ${blog.status === 'Published' ? 'bg-[#E7F3EB] text-[#3A6447]' : 'bg-[#FDF1E8] text-[#D9774B]'
+                    }`}>
+                    {blog.status}
+                  </span>
+                </div>
+              </div>
 
-      {/* Table Rows */}
-      <div className="flex-1 mt-2 space-y-1 min-h-[380px]">
-        {currentItems.map((blog) => (
-          <div key={blog.id} className="flex items-center py-4 border-b border-transparent hover:border-[#EFEBE1] hover:bg-[#FDF9EE]/50 rounded-2xl transition-colors group px-2 -mx-2">
-            
-            <div className="w-[40%] pl-2">
-              <h4 className="text-sm font-bold text-gray-900 group-hover:text-[#3A6447] transition-colors">{blog.title}</h4>
-              <p className="text-[11px] font-medium text-gray-500 mt-0.5">Author: {blog.author}</p>
-            </div>
-            
-            <div className="w-[15%] text-sm font-medium text-gray-600">{blog.category}</div>
-            
-            <div className="w-[20%] text-sm font-medium text-gray-600">{blog.date}</div>
-            
-            <div className="w-[15%]">
-              <span className={`px-3 py-1.5 rounded-full text-[9px] font-extrabold uppercase tracking-widest ${
-                blog.status === 'PUBLISHED' ? 'bg-[#E7F3EB] text-[#3A6447]' : 'bg-[#FEF5D3] text-[#A67C00]'
-              }`}>
-                {blog.status}
-              </span>
-            </div>
-            
-            <div className="w-[10%] text-right pr-4 flex justify-end">
-              {/* Edit Icon Button -> Routes to Page 20 with Tooltip */}
-              <div className="relative group/tooltip">
-                <button 
-                  onClick={() => navigate(`/admin/blogs/edit/${blog.id}`)}
-                  className="text-gray-400 hover:text-[#3A6447] transition-colors p-2 rounded-full hover:bg-gray-100 outline-none cursor-pointer"
-                >
-                  <Edit2 size={16} />
-                </button>
-                
-                {/* Tooltip that appears on hover */}
-                <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2.5 py-1.5 bg-gray-900 text-white text-[10px] font-bold rounded-lg opacity-0 group-hover/tooltip:opacity-100 transition-opacity whitespace-nowrap pointer-events-none z-10 shadow-sm">
-                  Edit Blog
-                  <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-gray-900"></div>
+              {/* Content Section */}
+              <div className="p-6 flex flex-col flex-1">
+                <span className="text-xs font-extrabold text-[#D9774B] uppercase tracking-widest mb-2">
+                  {blog.category}
+                </span>
+
+                <h3 className="text-lg font-extrabold text-gray-900 leading-tight mb-4 group-hover:text-[#3A6447] transition-colors line-clamp-2">
+                  {blog.title}
+                </h3>
+
+                <div className="mt-auto pt-4 border-t border-[#EFEBE1] flex items-center justify-between">
+                  <div className="flex flex-col gap-1">
+                    <div className="flex items-center gap-1.5 text-xs font-bold text-gray-600">
+                      <User size={14} className="text-gray-400" /> {blog.author}
+                    </div>
+                    <div className="flex items-center gap-1.5 text-[11px] font-medium text-gray-500">
+                      <Calendar size={12} className="text-gray-400" /> {blog.date}
+                    </div>
+                  </div>
+
+                  {/* Action Buttons */}
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={(e) => { e.stopPropagation(); navigate(`/admin/blogs/edit/${blog.id}`); }}
+                      className="p-2 text-gray-400 hover:text-[#3A6447] bg-gray-50 hover:bg-[#E7F3EB] rounded-xl transition-colors"
+                    >
+                      <Edit2 size={16} />
+                    </button>
+                    <button
+                      onClick={(e) => handleDelete(e, blog.id)}
+                      className="p-2 text-gray-400 hover:text-[#D92D20] bg-gray-50 hover:bg-[#FEE4E2] rounded-xl transition-colors"
+                    >
+                      <Trash2 size={16} />
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
-
+          ))
+        ) : (
+          <div className="col-span-full py-20 text-center flex flex-col items-center justify-center">
+            <p className="text-lg font-bold text-gray-900 mb-1">No articles found</p>
+            <p className="text-sm font-medium text-gray-500">Try adjusting your search or category filter.</p>
           </div>
-        ))}
-      </div>
-
-      {/* Pagination Footer */}
-      <div className="flex flex-col md:flex-row justify-between items-center mt-6 pt-6 border-t border-[#EFEBE1] gap-4">
-        <p className="text-[11px] font-bold text-gray-400 uppercase tracking-widest">
-          Showing {startIndex + 1} to {Math.min(startIndex + ITEMS_PER_PAGE, blogsData.length)} of {blogsData.length} Articles
-        </p>
-        
-        <div className="flex items-center gap-1 text-sm font-bold">
-          <button 
-            onClick={handlePrevPage}
-            disabled={currentPage === 1}
-            className={`p-1.5 rounded-full transition-colors ${currentPage === 1 ? 'text-gray-300 cursor-not-allowed' : 'text-gray-400 hover:text-gray-900 hover:bg-gray-100 cursor-pointer'}`}
-          >
-            <ChevronLeft size={18} />
-          </button>
-
-          {Array.from({ length: totalPages }).map((_, index) => {
-            const pageNumber = index + 1;
-            return (
-              <button
-                key={pageNumber}
-                onClick={() => setCurrentPage(pageNumber)}
-                className={`w-8 h-8 rounded-full flex items-center justify-center transition-colors cursor-pointer ${
-                  currentPage === pageNumber ? 'bg-[#3A6447] text-white shadow-sm' : 'text-gray-600 hover:bg-[#EFEBE1]'
-                }`}
-              >
-                {pageNumber}
-              </button>
-            );
-          })}
-
-          <button 
-            onClick={handleNextPage}
-            disabled={currentPage === totalPages}
-            className={`p-1.5 rounded-full transition-colors ${currentPage === totalPages ? 'text-gray-300 cursor-not-allowed' : 'text-gray-400 hover:text-gray-900 hover:bg-gray-100 cursor-pointer'}`}
-          >
-            <ChevronRight size={18} />
-          </button>
-        </div>
+        )}
       </div>
 
     </div>

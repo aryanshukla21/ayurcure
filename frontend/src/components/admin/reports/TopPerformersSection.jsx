@@ -1,4 +1,5 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 
 const TOP_PRODUCTS = [
   { name: 'Ashwagandha Gold Capsules', category: 'HERBAL SUPPLEMENT', revenue: '₹84,200', sales: '240 units sold' },
@@ -13,14 +14,21 @@ const TOP_CONSULTANTS = [
 ];
 
 const TopPerformersSection = () => {
+  const navigate = useNavigate();
+
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-      
+
       {/* Top Performing Products */}
       <div className="bg-white rounded-[32px] p-8 border border-[#EFEBE1] shadow-sm">
         <div className="flex justify-between items-center mb-6">
           <h3 className="text-lg font-bold text-gray-900">Top Performing Products</h3>
-          <button className="text-xs font-bold text-[#3A6447] hover:text-[#2C4D36] transition-colors">View Inventory</button>
+          <button
+            onClick={() => navigate('/admin/inventory')}
+            className="text-xs font-bold text-[#3A6447] hover:text-[#2C4D36] transition-colors cursor-pointer"
+          >
+            View Inventory
+          </button>
         </div>
 
         <div className="space-y-4">
@@ -46,7 +54,12 @@ const TopPerformersSection = () => {
       <div className="bg-white rounded-[32px] p-8 border border-[#EFEBE1] shadow-sm">
         <div className="flex justify-between items-center mb-6">
           <h3 className="text-lg font-bold text-gray-900">Top Consultants</h3>
-          <button className="text-xs font-bold text-[#3A6447] hover:text-[#2C4D36] transition-colors">Manage Doctors</button>
+          <button
+            onClick={() => navigate('/admin/doctors')}
+            className="text-xs font-bold text-[#3A6447] hover:text-[#2C4D36] transition-colors cursor-pointer"
+          >
+            Manage Doctors
+          </button>
         </div>
 
         <div className="space-y-4">

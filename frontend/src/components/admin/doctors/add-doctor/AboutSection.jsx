@@ -1,23 +1,24 @@
 import React from 'react';
-import { FileText } from 'lucide-react';
 
-const AboutSection = ({ formData, onChange }) => {
+const AboutSection = ({ formData, onChange, isEditing = true }) => {
+  const inputBaseClass = `w-full mt-1 p-3.5 rounded-xl border text-sm font-medium transition-colors outline-none focus:ring-2 focus:ring-[#3A6447]/20 resize-none ${!isEditing ? 'bg-gray-50 border-transparent text-gray-500 cursor-not-allowed' : 'bg-[#FAF7F2] border-[#EFEBE1] text-gray-900'
+    }`;
+
   return (
-    <div className="bg-[#EAE5D9] rounded-[24px] p-6 border border-[#DFD9CB] shadow-sm flex flex-col h-full">
-      <div className="flex items-center gap-3 mb-6">
-        <FileText size={18} className="text-[#79563E]" />
-        <h3 className="text-lg font-bold text-gray-900">About Doctor</h3>
-      </div>
+    <div className="bg-white rounded-[32px] p-8 border border-[#EFEBE1] shadow-sm">
+      <h3 className="text-lg font-bold text-gray-900 mb-6">About the Doctor</h3>
 
-      <div className="flex flex-col gap-1.5 flex-1">
-        <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Professional Bio</label>
-        <textarea 
-          name="about" 
-          value={formData.about} 
-          onChange={onChange} 
-          placeholder="Write a brief description of the doctor's journey, expertise, and philosophy..." 
-          className="w-full bg-white border border-[#DFD9CB] rounded-xl px-4 py-3 text-sm font-medium text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#79563E] resize-none flex-1 min-h-[120px]" 
-        />
+      <div>
+        <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Biography & Philosophy</label>
+        <textarea
+          name="about"
+          value={formData.about}
+          onChange={onChange}
+          disabled={!isEditing}
+          placeholder="Briefly describe the doctor's philosophy, specialties, and background..."
+          rows="6"
+          className={inputBaseClass}
+        ></textarea>
       </div>
     </div>
   );

@@ -1,4 +1,5 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 
 const PATIENTS = [
   { name: 'Eleanor Pena', phone: '(555) 012-3456', lastActive: '2 hours ago' },
@@ -7,11 +8,18 @@ const PATIENTS = [
 ];
 
 const RecentPatientsList = () => {
+  const navigate = useNavigate();
+
   return (
     <div className="bg-white rounded-[32px] p-8 border border-[#EFEBE1] shadow-sm h-full flex flex-col">
       <div className="flex justify-between items-center mb-6">
         <h3 className="text-lg font-bold text-gray-900">Recent Patients</h3>
-        <button className="text-xs font-bold text-gray-500 hover:text-[#3A6447] uppercase tracking-widest transition-colors">View All</button>
+        <button
+          onClick={() => navigate('/admin/patients')}
+          className="text-xs font-bold text-gray-500 hover:text-[#3A6447] uppercase tracking-widest transition-colors"
+        >
+          View All
+        </button>
       </div>
 
       <div className="flex text-[10px] font-bold text-gray-400 uppercase tracking-widest pb-4 border-b border-[#EFEBE1]">

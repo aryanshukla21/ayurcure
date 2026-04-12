@@ -73,13 +73,13 @@ export const patientApi = {
         return response.data;
     },
 
-    // Update existing profile details
+    // 13 Update existing profile details
     updateProfile: async (profileData) => {
         const response = await axiosInstance.put('/api/patients/profile', profileData);
         return response.data;
     },
 
-    // Retrieve historical health logs
+    // 14 Retrieve historical health logs
     getHealthLogs: async () => {
         const response = await axiosInstance.get('/api/patients/health-logs');
         return response.data;

@@ -1,4 +1,5 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 
 const DOCTORS = [
   { name: 'Dr. James Wilson', spec: 'Cardiology', status: 'ACTIVE', img: 'https://ui-avatars.com/api/?name=JW&background=FDF9EE&color=3A6447' },
@@ -7,11 +8,18 @@ const DOCTORS = [
 ];
 
 const RecentDoctorsList = () => {
+  const navigate = useNavigate();
+
   return (
     <div className="bg-white rounded-[32px] p-8 border border-[#EFEBE1] shadow-sm h-full flex flex-col">
       <div className="flex justify-between items-center mb-6">
         <h3 className="text-lg font-bold text-gray-900">Recent Doctors</h3>
-        <button className="text-xs font-bold text-gray-500 hover:text-[#3A6447] uppercase tracking-widest transition-colors">View All</button>
+        <button
+          onClick={() => navigate('/admin/doctors')}
+          className="text-xs font-bold text-gray-500 hover:text-[#3A6447] uppercase tracking-widest transition-colors"
+        >
+          View All
+        </button>
       </div>
 
       <div className="flex text-[10px] font-bold text-gray-400 uppercase tracking-widest pb-4 border-b border-[#EFEBE1]">
@@ -29,9 +37,8 @@ const RecentDoctorsList = () => {
             </div>
             <div className="w-[30%] text-xs font-medium text-gray-500">{doc.spec}</div>
             <div className="w-[20%] text-right">
-              <span className={`px-3 py-1 rounded-full text-[9px] font-extrabold uppercase tracking-widest ${
-                doc.status === 'ACTIVE' ? 'bg-[#E7F3EB] text-[#3A6447]' : 'bg-[#FDF1E8] text-[#D9774B]'
-              }`}>
+              <span className={`px-3 py-1 rounded-full text-[9px] font-extrabold uppercase tracking-widest ${doc.status === 'ACTIVE' ? 'bg-[#E7F3EB] text-[#3A6447]' : 'bg-[#FDF1E8] text-[#D9774B]'
+                }`}>
                 {doc.status}
               </span>
             </div>

@@ -1,15 +1,15 @@
 import React from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
-import { 
-    LayoutDashboard, 
-    Calendar, 
-    FileText, 
-    Activity, 
-    ShoppingBag, 
-    Store, 
-    User, 
-    Settings, 
-    LogOut 
+import {
+    LayoutDashboard,
+    Calendar,
+    FileText,
+    Activity,
+    ShoppingBag,
+    Store,
+    User,
+    Settings,
+    LogOut
 } from 'lucide-react';
 
 const PatientSidebar = () => {
@@ -39,7 +39,11 @@ const PatientSidebar = () => {
         <aside className="w-64 bg-[#4A7C59] text-white flex flex-col h-full shadow-lg z-20">
             {/* Logo Area */}
             <div className="p-6 flex items-center gap-3">
-                <div className="w-8 h-8 bg-white text-[#4A7C59] rounded-full flex items-center justify-center font-bold text-xl">🌿</div>
+                <img
+                    src="/Favicon_up.png"
+                    alt="Ayurcare360 Logo"
+                    className="w-10 h-10 rounded-full object-cover shadow-md border border-white/20 bg-white"
+                />
                 <span className="text-xl font-bold tracking-wide">Ayurcare360</span>
             </div>
 

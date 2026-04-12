@@ -6,9 +6,16 @@ import RecentPatientsList from '../../components/admin/dashboard/RecentPatientsL
 import RecentOrdersTable from '../../components/admin/dashboard/RecentOrdersTable';
 
 const AdminDashboardPage = () => {
+  // Get dynamic current date
+  const currentDate = new Date().toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric'
+  });
+
   return (
     <div className="p-8 md:p-10 max-w-[1600px] mx-auto">
-      
+
       {/* Header aligned parallel with Date */}
       <div className="mb-8 flex flex-col md:flex-row md:items-end justify-between gap-4">
         <div>
@@ -16,10 +23,10 @@ const AdminDashboardPage = () => {
           <h1 className="text-3xl md:text-[32px] font-extrabold text-gray-900 tracking-tight leading-none">Dashboard</h1>
         </div>
 
-        {/* Date moved here */}
+        {/* Dynamic Date */}
         <div className="flex items-center gap-2 text-gray-500 bg-white px-4 py-2.5 rounded-full border border-[#EFEBE1] shadow-sm w-fit h-fit mb-1">
           <Calendar size={16} />
-          <span className="text-xs font-bold tracking-wide">Today: Oct 24, 2023</span>
+          <span className="text-xs font-bold tracking-wide">Today: {currentDate}</span>
         </div>
       </div>
 

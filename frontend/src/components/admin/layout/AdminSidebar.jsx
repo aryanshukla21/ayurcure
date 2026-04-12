@@ -1,6 +1,6 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
-import { LayoutDashboard, Users, Stethoscope, ShoppingCart, FileText, BarChart3, Settings, ShieldCheck } from 'lucide-react';
+import { LayoutDashboard, Users, Stethoscope, ShoppingCart, Package, FileText, BarChart3, Settings } from 'lucide-react';
 
 const AdminSidebar = () => {
   const navItems = [
@@ -8,6 +8,7 @@ const AdminSidebar = () => {
     { name: 'Doctors', path: '/admin/doctors', icon: Stethoscope },
     { name: 'Patients', path: '/admin/patients', icon: Users },
     { name: 'Orders', path: '/admin/orders', icon: ShoppingCart },
+    { name: 'Inventory', path: '/admin/inventory', icon: Package },
     { name: 'Blogs', path: '/admin/blogs', icon: FileText },
     { name: 'Reports', path: '/admin/reports', icon: BarChart3 },
     { name: 'Settings', path: '/admin/settings', icon: Settings },
@@ -15,9 +16,15 @@ const AdminSidebar = () => {
 
   return (
     <div className="w-64 bg-[#3A6447] min-h-screen text-white flex flex-col fixed left-0 top-0 bottom-0 z-50">
+
       {/* Logo Area */}
       <div className="p-8 flex items-center gap-3">
-        <div className="w-8 h-8 bg-white text-[#3A6447] rounded-lg flex items-center justify-center font-bold text-xl">A</div>
+        {/* Replaced the "A" box with your new logo image */}
+        <img
+          src="/Favicon_up.png"
+          alt="Ayurcare360 Logo"
+          className="w-10 h-10 rounded-full object-cover shadow-md border border-white/20 bg-white"
+        />
         <div>
           <h1 className="text-lg font-bold leading-tight">Ayurcare360</h1>
           <p className="text-[10px] text-white/70 uppercase tracking-widest font-bold">Health Admin</p>
@@ -51,6 +58,7 @@ const AdminSidebar = () => {
           </div>
         </div>
       </div>
+
     </div>
   );
 };
