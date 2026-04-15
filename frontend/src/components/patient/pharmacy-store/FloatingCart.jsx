@@ -27,7 +27,7 @@ const FloatingCart = ({ cartTotal, cartCount }) => {
                 </div>
                 <div>
                     <p className="text-[10px] text-gray-400 font-medium tracking-wider mb-0.5">YOUR CART</p>
-                    <p className="font-bold text-sm leading-none">${cartTotal.toFixed(2)}</p>
+                    <p className="font-bold text-sm leading-none">₹{cartTotal.toFixed(2)}</p>
                 </div>
             </div>
 

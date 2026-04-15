@@ -4,16 +4,16 @@ import { useNavigate } from 'react-router-dom';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 
-// Extended dummy data
+// Extended dummy data with ₹ instead of $
 const INITIAL_ORDERS = [
-  { id: '#AY-98321', date: 'Oct 24, 2023', status: 'SHIPPED', amount: '$145.20', statusColor: 'bg-[#F3E8FF] text-[#9333EA]' },
-  { id: '#AY-98104', date: 'Oct 22, 2023', status: 'PROCESSING', amount: '$89.00', statusColor: 'bg-[#FEF5D3] text-[#A67C00]' },
-  { id: '#AY-97992', date: 'Oct 15, 2023', status: 'DELIVERED', amount: '$210.50', statusColor: 'bg-[#E7F3EB] text-[#3A6447]' },
-  { id: '#AY-97554', date: 'Sep 28, 2023', status: 'DELIVERED', amount: '$65.00', statusColor: 'bg-[#E7F3EB] text-[#3A6447]' },
-  { id: '#AY-97121', date: 'Sep 12, 2023', status: 'DELIVERED', amount: '$312.40', statusColor: 'bg-[#E7F3EB] text-[#3A6447]' },
-  { id: '#AY-96880', date: 'Aug 30, 2023', status: 'DELIVERED', amount: '$45.00', statusColor: 'bg-[#E7F3EB] text-[#3A6447]' },
-  { id: '#AY-96542', date: 'Aug 15, 2023', status: 'DELIVERED', amount: '$120.00', statusColor: 'bg-[#E7F3EB] text-[#3A6447]' },
-  { id: '#AY-96112', date: 'Jul 28, 2023', status: 'DELIVERED', amount: '$89.50', statusColor: 'bg-[#E7F3EB] text-[#3A6447]' },
+  { id: '#AY-98321', date: 'Oct 24, 2023', status: 'SHIPPED', amount: '₹145.20', statusColor: 'bg-[#F3E8FF] text-[#9333EA]' },
+  { id: '#AY-98104', date: 'Oct 22, 2023', status: 'PROCESSING', amount: '₹89.00', statusColor: 'bg-[#FEF5D3] text-[#A67C00]' },
+  { id: '#AY-97992', date: 'Oct 15, 2023', status: 'DELIVERED', amount: '₹210.50', statusColor: 'bg-[#E7F3EB] text-[#3A6447]' },
+  { id: '#AY-97554', date: 'Sep 28, 2023', status: 'DELIVERED', amount: '₹65.00', statusColor: 'bg-[#E7F3EB] text-[#3A6447]' },
+  { id: '#AY-97121', date: 'Sep 12, 2023', status: 'DELIVERED', amount: '₹312.40', statusColor: 'bg-[#E7F3EB] text-[#3A6447]' },
+  { id: '#AY-96880', date: 'Aug 30, 2023', status: 'DELIVERED', amount: '₹45.00', statusColor: 'bg-[#E7F3EB] text-[#3A6447]' },
+  { id: '#AY-96542', date: 'Aug 15, 2023', status: 'DELIVERED', amount: '₹120.00', statusColor: 'bg-[#E7F3EB] text-[#3A6447]' },
+  { id: '#AY-96112', date: 'Jul 28, 2023', status: 'DELIVERED', amount: '₹89.50', statusColor: 'bg-[#E7F3EB] text-[#3A6447]' },
 ];
 
 const ITEMS_PER_PAGE = 5;
@@ -22,13 +22,11 @@ const OrderHistoryList = () => {
   const navigate = useNavigate();
   const dropdownRef = useRef(null);
 
-  // States
   const [currentPage, setCurrentPage] = useState(1);
   const [showFilterDropdown, setShowFilterDropdown] = useState(false);
-  const [activeFilter, setActiveFilter] = useState('All'); // 'All', 'DELIVERED', 'SHIPPED', 'PROCESSING'
-  const [activeSort, setActiveSort] = useState('Date: Newest First'); // 'Date: Newest First', 'Date: Oldest First', 'Amount: High to Low', 'Amount: Low to High'
+  const [activeFilter, setActiveFilter] = useState('All');
+  const [activeSort, setActiveSort] = useState('Date: Newest First');
 
-  // Close dropdown if clicked outside
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
@@ -39,18 +37,17 @@ const OrderHistoryList = () => {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  // 1. FILTERING LOGIC
   let processedOrders = INITIAL_ORDERS.filter(order => {
     if (activeFilter === 'All') return true;
     return order.status === activeFilter;
   });
 
-  // 2. SORTING LOGIC
   processedOrders = processedOrders.sort((a, b) => {
     const dateA = new Date(a.date);
     const dateB = new Date(b.date);
-    const amtA = parseFloat(a.amount.replace('$', ''));
-    const amtB = parseFloat(b.amount.replace('$', ''));
+    // Changed sort logic to remove ₹ instead of $
+    const amtA = parseFloat(a.amount.replace('₹', ''));
+    const amtB = parseFloat(b.amount.replace('₹', ''));
 
     switch (activeSort) {
       case 'Date: Newest First': return dateB - dateA;
@@ -61,7 +58,6 @@ const OrderHistoryList = () => {
     }
   });
 
-  // 3. PAGINATION LOGIC
   const totalPages = Math.ceil(processedOrders.length / ITEMS_PER_PAGE);
   const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
   const currentItems = processedOrders.slice(startIndex, startIndex + ITEMS_PER_PAGE);
@@ -69,11 +65,10 @@ const OrderHistoryList = () => {
   const applyFilter = (filterType, value) => {
     if (filterType === 'status') setActiveFilter(value);
     if (filterType === 'sort') setActiveSort(value);
-    setCurrentPage(1); // Reset page on filter change
+    setCurrentPage(1);
     setShowFilterDropdown(false);
   };
 
-  // 4. EXPORT PDF LOGIC (Always exports all previous orders)
   const handleExportPDF = () => {
     const doc = new jsPDF();
     doc.setFontSize(22);
@@ -83,7 +78,6 @@ const OrderHistoryList = () => {
     doc.setTextColor(40);
     doc.text('Complete Pharmacy Order History', 14, 34);
 
-    // Add Info
     doc.setFontSize(10);
     doc.setTextColor(100);
     doc.text(`Generated on: ${new Date().toLocaleDateString()}`, 14, 42);
@@ -91,8 +85,9 @@ const OrderHistoryList = () => {
     const tableColumn = ["Order ID", "Date", "Status", "Amount"];
     const tableRows = [];
 
-    // Export ALL orders from INITIAL_ORDERS (ignoring active filters)
     INITIAL_ORDERS.forEach(order => {
+      // Note: jsPDF autoTable might have issues rendering the ₹ symbol depending on the font. 
+      // If it shows as a question mark in the PDF, you'll need to load a custom Unicode font or strip the symbol.
       tableRows.push([order.id, order.date, order.status, order.amount]);
     });
 
@@ -108,18 +103,15 @@ const OrderHistoryList = () => {
     doc.save(`Complete_Pharmacy_Orders_${new Date().toISOString().split('T')[0]}.pdf`);
   };
 
-  // Helper strings for UI rendering
   const isFiltering = activeFilter !== 'All' || activeSort !== 'Date: Newest First';
 
   return (
     <div className="bg-white rounded-[32px] p-8 border border-[#EFEBE1] shadow-sm flex flex-col h-full">
 
-      {/* Header & Actions */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4 relative">
         <h2 className="text-xl font-bold text-gray-900">Order History</h2>
         <div className="flex items-center gap-3">
 
-          {/* Dropdown Container */}
           <div className="relative" ref={dropdownRef}>
             <button
               onClick={() => setShowFilterDropdown(!showFilterDropdown)}
@@ -128,11 +120,9 @@ const OrderHistoryList = () => {
               <SlidersHorizontal size={16} /> {isFiltering ? 'Filtered' : 'Filter / Sort'}
             </button>
 
-            {/* Dropdown Menu */}
             {showFilterDropdown && (
               <div className="absolute right-0 mt-2 w-64 bg-white rounded-2xl shadow-xl border border-[#EFEBE1] z-20 py-2 animate-fade-in origin-top-right">
 
-                {/* Reset Button */}
                 {isFiltering && (
                   <button
                     onClick={() => { applyFilter('status', 'All'); applyFilter('sort', 'Date: Newest First'); }}
@@ -142,7 +132,6 @@ const OrderHistoryList = () => {
                   </button>
                 )}
 
-                {/* Filter by Status */}
                 <div className="px-4 pt-3 pb-1 text-[10px] font-extrabold text-gray-400 uppercase tracking-widest">
                   Filter by Status
                 </div>
@@ -157,7 +146,6 @@ const OrderHistoryList = () => {
                   </button>
                 ))}
 
-                {/* Sort by Metric */}
                 <div className="px-4 pt-3 pb-1 text-[10px] font-extrabold text-gray-400 uppercase tracking-widest border-t border-[#EFEBE1] mt-1">
                   Sort By
                 </div>
@@ -185,7 +173,6 @@ const OrderHistoryList = () => {
         </div>
       </div>
 
-      {/* Table Headers */}
       <div className="flex items-center text-[11px] font-bold text-gray-400 uppercase tracking-widest pb-4 border-b border-[#EFEBE1]">
         <div className="w-[20%] pl-2">Order ID</div>
         <div className="w-[25%]">Date</div>
@@ -194,7 +181,6 @@ const OrderHistoryList = () => {
         <div className="w-[20%] text-right pr-2">Action</div>
       </div>
 
-      {/* List Rows */}
       <div className="flex-1 space-y-2 mt-4 min-h-[340px]">
         {currentItems.length > 0 ? (
           currentItems.map((order) => (
@@ -236,7 +222,6 @@ const OrderHistoryList = () => {
         )}
       </div>
 
-      {/* Pagination Footer */}
       {processedOrders.length > 0 && (
         <div className="flex flex-col md:flex-row justify-between items-center mt-6 pt-6 border-t border-[#EFEBE1] gap-4">
           <p className="text-xs font-semibold text-gray-500">

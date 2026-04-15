@@ -43,27 +43,27 @@ const OrderInfoSidePanel = () => {
           <h3 className="text-lg font-bold">Payment Summary</h3>
         </div>
 
-        {/* Breakdown */}
+        {/* Breakdown - Changed $ to ₹ */}
         <div className="space-y-4 mb-6">
           <div className="flex justify-between text-sm font-medium text-white/80">
             <span>Product Total</span>
-            <span className="text-white font-bold">$49.99</span>
+            <span className="text-white font-bold">₹49.99</span>
           </div>
           <div className="flex justify-between text-sm font-medium text-white/80">
             <span>Delivery Charges</span>
-            <span className="text-white font-bold">$4.50</span>
+            <span className="text-white font-bold">₹4.50</span>
           </div>
           <div className="flex justify-between text-sm font-medium text-white/80">
             <span>Tax (GST 5%)</span>
-            <span className="text-white font-bold">$0.00</span>
+            <span className="text-white font-bold">₹0.00</span>
           </div>
         </div>
 
-        {/* Total Amount Box */}
+        {/* Total Amount Box - Changed $ to ₹ */}
         <div className="flex justify-between items-center py-5 border-t border-b border-white/10 mb-8">
           <p className="text-sm font-medium text-white/90 leading-tight">Total<br />Amount Paid</p>
           <div className="bg-white rounded-xl py-3.5 px-6 flex items-center justify-center shadow-inner">
-            <span className="text-3xl font-extrabold text-[#3A6447] tracking-tight">$54.49</span>
+            <span className="text-3xl font-extrabold text-[#3A6447] tracking-tight">₹54.49</span>
           </div>
         </div>
 

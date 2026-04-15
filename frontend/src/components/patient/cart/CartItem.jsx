@@ -33,9 +33,9 @@ const CartItem = ({ item, updateQuantity, removeItem }) => {
                     </button>
                 </div>
 
-                {/* Price */}
+                {/* Price (Changed $ to ₹) */}
                 <div className="font-bold text-gray-900 text-base sm:text-lg w-20 text-right">
-                    ${(item.price * item.quantity).toFixed(2)}
+                    ₹{(item.price * item.quantity).toFixed(2)}
                 </div>
 
                 {/* Delete Button */}

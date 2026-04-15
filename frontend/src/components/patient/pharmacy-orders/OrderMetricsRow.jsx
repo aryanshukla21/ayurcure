@@ -34,7 +34,8 @@ const OrderMetricsRow = () => {
         </div>
         <div>
           <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Total Spent</p>
-          <h3 className="text-xl font-extrabold text-gray-900">$1,240.50</h3>
+          {/* Changed $ to ₹ */}
+          <h3 className="text-xl font-extrabold text-gray-900">₹1,240.50</h3>
         </div>
       </div>
 

@@ -17,7 +17,7 @@ const PharmacyHelpCard = () => {
       </p>
 
       <button
-        onClick={() => navigate('/patient/pharmacy-store')}
+        onClick={() => navigate('/contact')}
         className="text-sm font-bold text-white underline underline-offset-4 decoration-white/40 hover:decoration-white transition-all w-fit rounded-full outline-none focus:ring-2 focus:ring-white/50 cursor-pointer"
       >
         Contact Pharmacy

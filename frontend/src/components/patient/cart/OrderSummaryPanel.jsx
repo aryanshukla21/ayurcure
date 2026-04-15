@@ -15,11 +15,13 @@ const OrderSummaryPanel = ({ subtotal, taxes, total }) => {
                 <div className="space-y-4 mb-6">
                     <div className="flex justify-between text-sm">
                         <span className="text-gray-600">Subtotal</span>
-                        <span className="font-bold text-gray-900">${subtotal.toFixed(2)}</span>
+                        {/* Changed $ to ₹ */}
+                        <span className="font-bold text-gray-900">₹{subtotal.toFixed(2)}</span>
                     </div>
                     <div className="flex justify-between text-sm">
                         <span className="text-gray-600">Estimated Taxes</span>
-                        <span className="font-bold text-gray-900">${taxes.toFixed(2)}</span>
+                        {/* Changed $ to ₹ */}
+                        <span className="font-bold text-gray-900">₹{taxes.toFixed(2)}</span>
                     </div>
                     <div className="flex justify-end text-xs text-gray-500 italic mt-1 text-right">
                         Shipping Calculated at next step
@@ -28,7 +30,8 @@ const OrderSummaryPanel = ({ subtotal, taxes, total }) => {
 
                 <div className="flex justify-between items-center border-t border-[#E8E3D8] pt-6 mb-8">
                     <span className="font-bold text-gray-900">Total<br />Amount</span>
-                    <span className="text-2xl font-bold text-[#2D5A27]">${total.toFixed(2)}</span>
+                    {/* Changed $ to ₹ */}
+                    <span className="text-2xl font-bold text-[#2D5A27]">₹{total.toFixed(2)}</span>
                 </div>
 
                 <div className="space-y-3">

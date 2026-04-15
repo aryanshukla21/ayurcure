@@ -14,7 +14,8 @@ const ConsultationFeeCard = ({ profile }) => {
                 <span className="text-sm font-bold uppercase tracking-widest bg-white/20 px-5 py-1 rounded-full">Consultation</span>
             </div>
             <div className="relative z-8">
-                <h2 className="text-2xl font-black mb-2">${Number(profile.consultation_fee).toFixed(2)}</h2>
+                {/* Changed $ to ₹ */}
+                <h2 className="text-2xl font-black mb-2">₹{Number(profile.consultation_fee).toFixed(2)}</h2>
                 <p className="text-white/80 text-sm mb-6 mt-2">Standard Tele-Consultation Fee</p>
 
                 <div className="flex items-center gap-3 bg-[#4A7C59]  p-3 rounded-2xl">
