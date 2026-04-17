@@ -1,30 +1,20 @@
 import React from 'react';
-import { AlertCircle, XCircle } from 'lucide-react';
+import { ShieldAlert } from 'lucide-react';
 
-const CancellationPolicyCard = ({ onCancelClick }) => {
+const CancellationPolicyCard = () => {
   return (
-    <div className="bg-[#FAF7F2] rounded-[24px] p-6 md:p-8 border border-[#EFEBE1] flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
-      
-      <div className="flex gap-4">
-        <div className="mt-1">
-          <AlertCircle size={24} className="text-[#D9774B]" />
+    <div className="bg-[#FDFBF7] rounded-[32px] p-8 border border-[#EFEBE1] shadow-sm">
+      <div className="flex items-center gap-3 mb-4">
+        <div className="bg-white p-2 rounded-xl text-[#8B6A47] shadow-sm">
+          <ShieldAlert size={18} />
         </div>
-        <div>
-          <h4 className="text-base font-bold text-gray-900 mb-1">Cancellation Policy</h4>
-          <p className="text-sm text-gray-500 font-medium max-w-2xl leading-relaxed">
-            Cancellations made less than 24 hours before the appointment may incur a charge of $25. Please review our full policy for more details.
-          </p>
-        </div>
+        <h4 className="text-sm font-bold text-gray-900 uppercase tracking-widest">Cancellation Policy</h4>
       </div>
-
-      <button 
-        onClick={onCancelClick}
-        className="shrink-0 w-full md:w-auto bg-[#E88B60] hover:bg-[#D9774B] text-white font-bold py-3.5 px-8 rounded-full transition-colors flex items-center justify-center gap-2 shadow-sm cursor-pointer"
-      >
-        <XCircle size={18} />
-        Cancel Appointment
-      </button>
-
+      <p className="text-xs text-gray-500 font-medium leading-relaxed">
+        Cancellations made within 24 hours of the appointment time may be subject to a nominal fee.
+        Refunds for prepaid consultations are processed within 3-5 business days.
+        For emergencies, please contact our help desk directly.
+      </p>
     </div>
   );
 };

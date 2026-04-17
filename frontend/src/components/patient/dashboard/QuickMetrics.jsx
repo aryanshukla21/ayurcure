@@ -1,48 +1,44 @@
 import React from 'react';
-import { Pill, Droplets, Moon, Activity } from 'lucide-react';
+import { Pill, Droplets, Moon } from 'lucide-react';
 
-const QuickMetrics = ({ metrics }) => {
-  // Helper to get styling and icon based on metric type
-  const getMetricStyle = (type) => {
+const QuickMetrics = ({ metrics, isLoading }) => {
+  if (isLoading) {
+    return (
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        {[1, 2, 3].map(i => (
+          <div key={i} className="bg-white rounded-[24px] p-6 border border-[#EFEBE1] shadow-sm animate-pulse h-28"></div>
+        ))}
+      </div>
+    );
+  }
+
+  const getIcon = (type) => {
     switch (type) {
-      case 'medication':
-        return { icon: Pill, iconBg: 'bg-green-100', iconColor: 'text-[#2C5F44]' };
-      case 'hydration':
-        return { icon: Droplets, iconBg: 'bg-amber-100', iconColor: 'text-[#A88B5D]' };
-      case 'sleep':
-        return { icon: Moon, iconBg: 'bg-indigo-100', iconColor: 'text-indigo-600' };
-      default:
-        return { icon: Activity, iconBg: 'bg-gray-100', iconColor: 'text-gray-600' };
+      case 'medication': return <div className="bg-[#E7F3EB] text-[#4A7C59] p-3 rounded-2xl"><Pill size={22} /></div>;
+      case 'hydration': return <div className="bg-[#EBF4FF] text-[#3B82F6] p-3 rounded-2xl"><Droplets size={22} /></div>;
+      case 'sleep': return <div className="bg-[#F3E8FF] text-[#9333EA] p-3 rounded-2xl"><Moon size={22} /></div>;
+      default: return null; // Default case
     }
   };
 
-  // Default fallback if backend returns empty array
-  const defaultMetrics = [
-    { title: 'Next Medication', value: '--', subtitle: 'No active schedule', type: 'medication' },
-    { title: 'Hydration Goal', value: '--', subtitle: 'No data', type: 'hydration' },
-    { title: 'Sleep Quality', value: '--', subtitle: 'No data', type: 'sleep' },
-  ];
-
-  const metricsToRender = metrics && metrics.length > 0 ? metrics : defaultMetrics;
-
   return (
     <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-      {metricsToRender.map((metric, index) => {
-        const { icon: Icon, iconBg, iconColor } = getMetricStyle(metric.type);
-
-        return (
-          <div key={index} className="bg-[#F3F0E9] rounded-2xl p-5 flex items-center gap-4">
-            <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${iconBg} ${iconColor}`}>
-              <Icon size={24} />
-            </div>
+      {metrics && metrics.length > 0 ? (
+        metrics.map((metric, idx) => (
+          <div key={idx} className="bg-white rounded-[24px] p-6 border border-[#EFEBE1] shadow-sm flex items-center gap-5 hover:-translate-y-1 transition-transform duration-300">
+            {getIcon(metric.type)}
             <div>
-              <h4 className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1">{metric.title}</h4>
-              <p className="text-sm font-bold text-gray-900 leading-tight">{metric.value}</p>
-              <p className="text-xs text-gray-500 mt-0.5">{metric.subtitle}</p>
+              <p className="text-[10px] font-extrabold text-gray-400 uppercase tracking-widest mb-1">{metric.title}</p>
+              <h4 className="text-lg font-bold text-gray-900 leading-tight truncate max-w-[150px]">{metric.value}</h4>
+              <p className="text-xs text-gray-500 font-medium mt-1">{metric.subtitle}</p>
             </div>
           </div>
-        );
-      })}
+        ))
+      ) : (
+        <div className="col-span-3 text-center py-6 text-gray-400 font-medium text-sm border border-dashed border-gray-300 rounded-2xl">
+          No quick metrics available to display.
+        </div>
+      )}
     </div>
   );
 };

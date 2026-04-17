@@ -1,54 +1,64 @@
 import React from 'react';
+import { Activity } from 'lucide-react';
 
-const WellnessActivity = ({ activityData }) => {
-  // Default fallback if backend data is empty or missing
-  const defaultData = [
-    { day: 'Mon', yoga: 0, meditation: 0 },
-    { day: 'Tue', yoga: 0, meditation: 0 },
-    { day: 'Wed', yoga: 0, meditation: 0 },
-    { day: 'Thu', yoga: 0, meditation: 0 },
-    { day: 'Fri', yoga: 0, meditation: 0 },
-    { day: 'Sat', yoga: 0, meditation: 0 },
-    { day: 'Sun', yoga: 0, meditation: 0 },
-  ];
+const WellnessActivity = ({ activityData, isLoading }) => {
+  if (isLoading) {
+    return (
+      <div className="bg-white rounded-[32px] p-8 border border-[#EFEBE1] shadow-sm animate-pulse h-64 flex flex-col">
+        <div className="h-6 bg-gray-200 rounded w-1/2 mb-4"></div>
+        <div className="flex-1 bg-gray-50 rounded-2xl"></div>
+      </div>
+    );
+  }
 
-  const dataToRender = activityData && activityData.length > 0 ? activityData : defaultData;
+  const safeData = activityData || [];
 
   return (
-    <div className="bg-white rounded-2xl p-6 shadow-sm border border-[#EFEBE1] h-full flex flex-col">
-      <div className="flex justify-between items-start mb-8">
-        <h3 className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Weekly Wellness Activity</h3>
-        <div className="flex items-center gap-4 text-xs font-semibold text-gray-600">
-          <div className="flex items-center gap-1.5">
-            <div className="w-2 h-2 rounded-full bg-[#2C5F44]"></div>
-            Yoga
+    <div className="bg-white rounded-[32px] p-8 border border-[#EFEBE1] shadow-sm flex flex-col h-full">
+      <div className="flex justify-between items-center mb-6">
+        <div className="flex items-center gap-3">
+          <div className="bg-[#FDF9EE] p-2.5 rounded-xl text-[#8B6A47]">
+            <Activity size={20} />
           </div>
-          <div className="flex items-center gap-1.5">
-            <div className="w-2 h-2 rounded-full bg-[#A88B5D]"></div>
-            Meditation
+          <h3 className="text-xl font-bold text-gray-900">Weekly Activity</h3>
+        </div>
+        <div className="flex gap-4">
+          <div className="flex items-center gap-1.5 text-[10px] font-bold text-gray-500 uppercase tracking-wider">
+            <span className="w-2.5 h-2.5 rounded-full bg-[#4A7C59]"></span> Yoga
+          </div>
+          <div className="flex items-center gap-1.5 text-[10px] font-bold text-gray-500 uppercase tracking-wider">
+            <span className="w-2.5 h-2.5 rounded-full bg-[#EBCB8B]"></span> Meditation
           </div>
         </div>
       </div>
 
-      {/* Bar Chart Container */}
-      <div className="flex-1 flex items-end justify-between gap-2 mt-4">
-        {dataToRender.map((data, index) => (
-          <div key={index} className="flex flex-col items-center flex-1">
-            <div className="w-full flex justify-center gap-1 h-24 items-end mb-3">
-              {/* Yoga Bar */}
-              <div 
-                className="w-3 rounded-t-sm bg-[#2C5F44] transition-all hover:opacity-80" 
-                style={{ height: `${data.yoga}%` }}
-              ></div>
-              {/* Meditation Bar */}
-              <div 
-                className="w-3 rounded-t-sm bg-[#A88B5D] transition-all hover:opacity-80" 
-                style={{ height: `${data.meditation}%` }}
-              ></div>
+      {/* Tailwind Stacked Bar Chart */}
+      <div className="flex-1 flex items-end justify-between gap-1.5 sm:gap-3 h-40 pt-4">
+        {safeData.length > 0 ? (
+          safeData.map((item, index) => (
+            <div key={index} className="flex flex-col items-center flex-1 h-full justify-end group">
+              <div className="w-full max-w-[28px] sm:max-w-[40px] flex flex-col justify-end h-full gap-1">
+                {/* Yoga Bar */}
+                <div
+                  className="bg-[#4A7C59] rounded-t-md opacity-90 group-hover:opacity-100 transition-opacity w-full"
+                  style={{ height: `${item.yoga}%` }}
+                  title={`Yoga: ${item.yoga} mins`}
+                ></div>
+                {/* Meditation Bar */}
+                <div
+                  className="bg-[#EBCB8B] rounded-b-md opacity-90 group-hover:opacity-100 transition-opacity w-full"
+                  style={{ height: `${item.meditation}%` }}
+                  title={`Meditation: ${item.meditation} mins`}
+                ></div>
+              </div>
+              <span className="text-[10px] sm:text-xs font-semibold text-gray-400 mt-2">{item.day}</span>
             </div>
-            <span className="text-[10px] font-bold text-gray-400 uppercase">{data.day}</span>
+          ))
+        ) : (
+          <div className="w-full h-full flex items-center justify-center text-sm font-medium text-gray-400">
+            No activity logged this week.
           </div>
-        ))}
+        )}
       </div>
     </div>
   );

@@ -1,76 +1,82 @@
-import React, { useState } from 'react';
-import { Lock, ArrowRight } from 'lucide-react';
+import React from 'react';
 import { useNavigate } from 'react-router-dom';
+import { ArrowRight, Tag } from 'lucide-react';
 
-const OrderSummaryPanel = ({ subtotal, taxes, total }) => {
+const OrderSummaryPanel = ({ subtotal, taxes, total, isLoading }) => {
     const navigate = useNavigate();
-    const [promoCode, setPromoCode] = useState('AYUR20');
+
+    if (isLoading) {
+        return (
+            <div className="bg-white rounded-[32px] p-8 border border-[#EFEBE1] shadow-sm animate-pulse h-[400px]">
+                <div className="h-6 bg-gray-200 rounded w-1/2 mb-6"></div>
+                <div className="space-y-4 mb-6">
+                    <div className="h-4 bg-gray-100 rounded w-full"></div>
+                    <div className="h-4 bg-gray-100 rounded w-full"></div>
+                </div>
+                <div className="pt-6 border-t border-[#EFEBE1] mb-8">
+                    <div className="h-8 bg-gray-200 rounded w-full"></div>
+                </div>
+                <div className="h-14 bg-gray-200 rounded-2xl w-full"></div>
+            </div>
+        );
+    }
+
+    const safeSubtotal = parseFloat(subtotal) || 0;
+    const safeTaxes = parseFloat(taxes) || 0;
+    const safeTotal = parseFloat(total) || 0;
 
     return (
-        <div className="w-full">
-            {/* Summary Box */}
-            <div className="bg-[#F9F7F2] rounded-3xl p-6 md:p-8 border border-[#E8E3D8] mb-6">
-                <h3 className="text-xl font-bold text-gray-900 mb-6">Order Summary</h3>
+        <div className="bg-white rounded-[32px] p-8 border border-[#EFEBE1] shadow-sm sticky top-8">
+            <h3 className="text-xl font-bold text-gray-900 mb-6">Order Summary</h3>
 
-                <div className="space-y-4 mb-6">
-                    <div className="flex justify-between text-sm">
-                        <span className="text-gray-600">Subtotal</span>
-                        {/* Changed $ to ₹ */}
-                        <span className="font-bold text-gray-900">₹{subtotal.toFixed(2)}</span>
-                    </div>
-                    <div className="flex justify-between text-sm">
-                        <span className="text-gray-600">Estimated Taxes</span>
-                        {/* Changed $ to ₹ */}
-                        <span className="font-bold text-gray-900">₹{taxes.toFixed(2)}</span>
-                    </div>
-                    <div className="flex justify-end text-xs text-gray-500 italic mt-1 text-right">
-                        Shipping Calculated at next step
-                    </div>
+            <div className="space-y-4 mb-6">
+                <div className="flex justify-between text-sm font-medium text-gray-600">
+                    <span>Subtotal</span>
+                    <span className="text-gray-900 font-bold">₹{safeSubtotal.toFixed(2)}</span>
                 </div>
-
-                <div className="flex justify-between items-center border-t border-[#E8E3D8] pt-6 mb-8">
-                    <span className="font-bold text-gray-900">Total<br />Amount</span>
-                    {/* Changed $ to ₹ */}
-                    <span className="text-2xl font-bold text-[#2D5A27]">₹{total.toFixed(2)}</span>
+                <div className="flex justify-between text-sm font-medium text-gray-600">
+                    <span>Estimated Tax</span>
+                    <span className="text-gray-900 font-bold">₹{safeTaxes.toFixed(2)}</span>
                 </div>
-
-                <div className="space-y-3">
-                    <button
-                        onClick={() => navigate('/patient/checkout')}
-                        className="w-full bg-[#2D5A27] text-white py-3.5 rounded-2xl font-bold flex items-center justify-between px-6 hover:bg-[#1E4620] transition-colors shadow-sm"
-                    >
-                        Proceed to Checkout
-                        <ArrowRight size={18} />
-                    </button>
-                    <button
-                        onClick={() => navigate('/patient/pharmacy-store')}
-                        className="w-full bg-white text-gray-700 py-3.5 rounded-2xl font-medium border border-gray-200 hover:bg-gray-50 transition-colors shadow-sm"
-                    >
-                        Continue Shopping
-                    </button>
-                </div>
-
-                <div className="flex items-center justify-center gap-2 mt-6 text-xs text-gray-500">
-                    <Lock size={14} />
-                    <span>Secure encrypted checkout<br />powered by AyurPay</span>
+                <div className="flex justify-between text-sm font-medium text-gray-600">
+                    <span>Shipping</span>
+                    <span className="text-[#4A7C59] font-bold">Calculated at checkout</span>
                 </div>
             </div>
 
-            {/* Promo Code Box */}
-            <div className="bg-[#F3EFE6] rounded-2xl p-6 border border-[#E8E3D8]">
-                <span className="text-xs font-bold tracking-wider text-gray-500 mb-3 block uppercase">APPLY PROMO CODE</span>
-                <div className="flex gap-2">
-                    <input
-                        type="text"
-                        value={promoCode}
-                        onChange={(e) => setPromoCode(e.target.value)}
-                        className="flex-1 bg-white rounded-xl px-4 py-2.5 text-sm font-medium text-gray-700 border border-gray-200 focus:outline-none focus:ring-2 focus:ring-[#8B6A47]/30 uppercase"
-                    />
-                    <button className="bg-[#8B6A47] text-white px-6 py-2.5 rounded-xl text-sm font-bold hover:bg-[#705538] transition-colors shadow-sm">
-                        Apply
-                    </button>
+            <div className="mb-6 relative">
+                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                    <Tag size={16} className="text-gray-400" />
                 </div>
+                <input
+                    type="text"
+                    placeholder="Promo Code"
+                    className="w-full pl-11 pr-24 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-[#4A7C59] transition-all uppercase shadow-inner"
+                />
+                <button className="absolute inset-y-1 right-1 px-4 bg-gray-900 hover:bg-gray-800 text-white text-xs font-bold rounded-lg transition-colors shadow-sm">
+                    APPLY
+                </button>
             </div>
+
+            <div className="flex justify-between items-center pt-6 border-t border-[#EFEBE1] mb-8">
+                <span className="text-base font-bold text-gray-900">Total</span>
+                <span className="text-2xl font-extrabold text-gray-900">₹{safeTotal.toFixed(2)}</span>
+            </div>
+
+            <button
+                onClick={() => navigate('/patient/checkout')}
+                disabled={safeTotal === 0}
+                className={`w-full font-bold py-4 rounded-2xl flex items-center justify-center gap-2 shadow-md transition-colors ${safeTotal > 0
+                        ? 'bg-[#3A6447] hover:bg-[#2C4D36] text-white'
+                        : 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                    }`}
+            >
+                Proceed to Checkout <ArrowRight size={18} />
+            </button>
+
+            <p className="text-[10px] text-gray-400 text-center mt-4 px-4 leading-relaxed">
+                Secure checkout powered by AyurCure. Shipping & taxes calculated at the next step.
+            </p>
         </div>
     );
 };

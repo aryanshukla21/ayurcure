@@ -7,7 +7,7 @@ const AppointmentSuccessModal = ({ isOpen, appointmentDetails, onViewAppointment
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
       <div className="bg-[#FDF9EE] w-full max-w-[420px] rounded-[32px] shadow-2xl p-8 md:p-10 flex flex-col items-center text-center animate-in fade-in zoom-in-95 duration-200">
-        
+
         {/* Success Checkmark */}
         <div className="w-16 h-16 rounded-full bg-[#EAE5D9] flex items-center justify-center mb-6">
           <div className="w-10 h-10 rounded-full bg-[#4A7C59] flex items-center justify-center shadow-sm">
@@ -25,19 +25,15 @@ const AppointmentSuccessModal = ({ isOpen, appointmentDetails, onViewAppointment
 
         {/* Appointment Details Card (Inner White Box) */}
         <div className="bg-white rounded-[24px] p-6 w-full shadow-sm border border-[#EFEBE1] mb-8 text-left">
-          
+
           {/* Doctor Info */}
           <div className="flex items-center gap-4 mb-6">
-            <div className="w-12 h-12 rounded-xl bg-[#EFEBE1] overflow-hidden shrink-0">
-              <img 
-                src={`https://ui-avatars.com/api/?name=${appointmentDetails?.doctorName?.replace(' ', '+') || 'Ananya+Sharma'}&background=EAE5D9&color=4A7C59&size=150`} 
-                alt="Doctor" 
-                className="w-full h-full object-cover" 
-              />
+            <div className="w-12 h-12 rounded-xl bg-[#EAE5D9] text-[#4A7C59] flex items-center justify-center text-xl font-bold shrink-0">
+              {appointmentDetails?.doctorName ? appointmentDetails.doctorName.charAt(4) : 'D'}
             </div>
             <div>
               <p className="text-[12px] font-bold text-gray-400 uppercase tracking-widest mb-0.5">Primary Consultant</p>
-              <h3 className="text-sm font-bold text-gray-900">Dr. {appointmentDetails?.doctorName || 'Ananya Sharma'}</h3>
+              <h3 className="text-sm font-bold text-gray-900">{appointmentDetails?.doctorName || 'Practitioner'}</h3>
             </div>
           </div>
 
@@ -47,14 +43,14 @@ const AppointmentSuccessModal = ({ isOpen, appointmentDetails, onViewAppointment
               <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2">Date</p>
               <div className="flex items-center gap-2 text-xs font-bold text-gray-900">
                 <Calendar size={14} className="text-[#4A7C59]" />
-                {appointmentDetails?.date || 'Oct 28, 2023'}
+                {appointmentDetails?.date || '--'}
               </div>
             </div>
             <div>
               <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2">Time</p>
               <div className="flex items-center gap-2 text-xs font-bold text-gray-900">
                 <Clock size={14} className="text-[#4A7C59]" />
-                {appointmentDetails?.time || '10:30 AM'}
+                {appointmentDetails?.time || '--'}
               </div>
             </div>
           </div>
@@ -62,14 +58,14 @@ const AppointmentSuccessModal = ({ isOpen, appointmentDetails, onViewAppointment
 
         {/* Action Buttons */}
         <div className="w-full space-y-3">
-          <button 
+          <button
             onClick={onViewAppointment}
             className="w-full bg-[#3A6447] hover:bg-[#2C4D36] text-white font-bold py-3.5 rounded-full transition-colors text-sm shadow-sm"
           >
             View Appointment
           </button>
-          
-          <button 
+
+          <button
             onClick={onGoToDashboard}
             className="w-full bg-[#EAE5D9] hover:bg-[#D1CFC8] text-gray-700 font-bold py-3.5 rounded-full transition-colors text-sm"
           >

@@ -1,50 +1,68 @@
 import React from 'react';
-import { Lock } from 'lucide-react';
+import { ShieldCheck, Loader2 } from 'lucide-react';
 
-const CheckoutSummary = ({ subtotal, tax, total, onPayNow, isSubmitting }) => {
+const CheckoutSummary = ({ subtotal, tax, total, onPayNow, isSubmitting, isLoading }) => {
+    if (isLoading) {
+        return (
+            <div className="bg-white rounded-[32px] p-6 md:p-8 border border-[#EFEBE1] shadow-sm sticky top-8 animate-pulse">
+                <div className="h-6 bg-gray-200 rounded w-1/2 mb-6"></div>
+                <div className="space-y-4 mb-6">
+                    <div className="h-4 bg-gray-100 rounded w-full"></div>
+                    <div className="h-4 bg-gray-100 rounded w-full"></div>
+                </div>
+                <div className="pt-5 border-t border-[#EFEBE1] mb-8">
+                    <div className="h-8 bg-gray-200 rounded w-full"></div>
+                </div>
+                <div className="h-14 bg-gray-200 rounded-2xl w-full"></div>
+            </div>
+        );
+    }
+
+    const safeSubtotal = parseFloat(subtotal) || 0;
+    const safeTax = parseFloat(tax) || 0;
+    const safeTotal = parseFloat(total) || 0;
+
     return (
-        <div className="bg-[#ebe7db] rounded-3xl p-6 md:p-8 border border-[#E8E3D8]">
+        <div className="bg-white rounded-[32px] p-6 md:p-8 border border-[#EFEBE1] shadow-sm sticky top-8">
             <h3 className="text-xl font-bold text-gray-900 mb-6">Order Summary</h3>
 
             <div className="space-y-4 mb-6">
-                <div className="flex justify-between text-sm">
-                    <span className="text-gray-600">Product Total</span>
-                    <span className="font-bold text-gray-900">${subtotal.toFixed(2)}</span>
+                <div className="flex justify-between text-sm font-medium text-gray-600">
+                    <span>Cart Subtotal</span>
+                    <span className="text-gray-900 font-bold">₹{safeSubtotal.toFixed(2)}</span>
                 </div>
-                <div className="flex justify-between text-sm">
-                    <span className="text-gray-600">Delivery Charges</span>
-                    <span className="font-bold text-[#2D5A27]">FREE</span>
+                <div className="flex justify-between text-sm font-medium text-gray-600">
+                    <span>Shipping & Handling</span>
+                    <span className="text-[#4A7C59] font-bold">Free</span>
                 </div>
-                <div className="flex justify-between text-sm">
-                    <span className="text-gray-600">Platform Tax (5%)</span>
-                    <span className="font-bold text-gray-900">${tax.toFixed(2)}</span>
+                <div className="flex justify-between text-sm font-medium text-gray-600">
+                    <span>Estimated Tax</span>
+                    <span className="text-gray-900 font-bold">₹{safeTax.toFixed(2)}</span>
                 </div>
             </div>
 
-            <div className="flex justify-between items-center border-t border-[#E8E3D8] pt-6 mb-8">
-                <span className="text-xs font-bold tracking-wider text-gray-400 uppercase">FINAL AMOUNT</span>
-                <div className="flex items-center gap-3">
-                    <span className="text-3xl font-bold text-gray-900">${total.toFixed(2)}</span>
-                    <span className="bg-[#2D5A27] text-white text-[10px] font-bold px-2 py-0.5 rounded uppercase">Cart + Fee</span>
-                </div>
+            <div className="flex justify-between items-center pt-5 border-t border-[#EFEBE1] mb-8">
+                <span className="text-base font-bold text-gray-900">Total to Pay</span>
+                <span className="text-2xl font-extrabold text-gray-900">₹{safeTotal.toFixed(2)}</span>
             </div>
 
             <button
                 onClick={onPayNow}
-                disabled={isSubmitting}
-                className="w-full bg-[#4A7C59] text-white py-4 rounded-full font-bold flex items-center justify-center gap-2 hover:bg-[#3E6E38] transition-colors shadow-md disabled:opacity-70"
+                disabled={isSubmitting || safeTotal === 0}
+                className={`w-full font-bold py-4 rounded-2xl flex items-center justify-center gap-2 shadow-md transition-colors ${isSubmitting || safeTotal === 0
+                        ? 'bg-gray-400 cursor-not-allowed text-white'
+                        : 'bg-[#3A6447] hover:bg-[#2C4D36] text-white'
+                    }`}
             >
                 {isSubmitting ? (
-                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                    <><Loader2 size={18} className="animate-spin" /> Processing...</>
                 ) : (
-                    <>
-                        <Lock size={16} />
-                        Pay Now
-                    </>
+                    <><ShieldCheck size={18} /> Pay Securely</>
                 )}
             </button>
-            <p className="text-[10px] text-center text-gray-400 mt-4 leading-relaxed px-4">
-                By clicking Pay Now, you agree to Ayurcare360's Terms of Service and Privacy Policy.
+
+            <p className="text-[10px] text-gray-400 text-center mt-4 px-2 leading-relaxed">
+                By placing your order, you agree to our Terms of Service and Privacy Policy. All payments are encrypted.
             </p>
         </div>
     );

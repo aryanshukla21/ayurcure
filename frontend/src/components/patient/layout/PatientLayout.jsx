@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { Bell, Search, ShoppingCart, ChevronLeft } from 'lucide-react';
 import PatientSidebar from './PatientSidebar';
-import { useCart } from '../../../context/CartContext'; // <-- Imported Cart Context
+import { useCart } from '../../../context/CartContext';
+import { patientApi } from '../../../api/patientApi'; // <-- Imported API
 
 const PatientLayout = () => {
   const location = useLocation();
@@ -13,6 +14,25 @@ const PatientLayout = () => {
 
   // State to hold the search query
   const [globalSearchQuery, setGlobalSearchQuery] = useState('');
+
+  // Profile state for dynamic fetching
+  const [profile, setProfile] = useState(null);
+  const [isLoadingProfile, setIsLoadingProfile] = useState(true);
+
+  // Fetch the global profile on layout mount
+  useEffect(() => {
+    const fetchGlobalProfile = async () => {
+      try {
+        const data = await patientApi.getProfilePersonal();
+        setProfile(data.profile || data);
+      } catch (error) {
+        console.error("Failed to load user profile for layout", error);
+      } finally {
+        setIsLoadingProfile(false);
+      }
+    };
+    fetchGlobalProfile();
+  }, []);
 
   // Helper to get the current page title for the header
   const getPageTitle = () => {
@@ -25,8 +45,8 @@ const PatientLayout = () => {
     if (path.includes('pharmacy-store')) return 'Pharmacy Store';
     if (path.includes('profile')) return 'Patient Profile';
     if (path.includes('settings')) return 'Settings';
-    if (path.includes('cart')) return 'Your Cart'; // Added title for cart
-    if (path.includes('checkout')) return 'Checkout'; // Added title for checkout
+    if (path.includes('cart')) return 'Your Cart';
+    if (path.includes('checkout')) return 'Checkout';
     return 'Patient Portal';
   };
 
@@ -91,7 +111,7 @@ const PatientLayout = () => {
             {/* Notification and Cart Icons */}
             <div className="flex items-center gap-4">
               <button
-                onClick={() => navigate('/patient/cart')} // <-- Added navigation to cart
+                onClick={() => navigate('/patient/cart')}
                 className="text-gray-600 hover:text-[#4A7C59] transition-colors relative cursor-pointer"
               >
                 <ShoppingCart size={20} />
@@ -104,13 +124,24 @@ const PatientLayout = () => {
               </button>
             </div>
 
-            {/* Profile Photo (Clickable) */}
-            <img
-              src="/api/placeholder/36/36"
-              alt="Profile"
-              onClick={() => navigate('/patient/profile')}
-              className="w-9 h-9 rounded-full border border-gray-200 shadow-sm object-cover cursor-pointer hover:opacity-80 transition-opacity"
-            />
+            {/* Profile Photo (Dynamic with Skeleton) */}
+            {isLoadingProfile ? (
+              <div className="w-9 h-9 rounded-full bg-gray-200 animate-pulse border border-gray-200 shadow-sm shrink-0"></div>
+            ) : profile?.avatar ? (
+              <img
+                src={profile.avatar}
+                alt="Profile"
+                onClick={() => navigate('/patient/profile')}
+                className="w-9 h-9 rounded-full border border-gray-200 shadow-sm object-cover cursor-pointer hover:opacity-80 transition-opacity shrink-0"
+              />
+            ) : (
+              <div
+                onClick={() => navigate('/patient/profile')}
+                className="w-9 h-9 rounded-full border border-[#EFEBE1] shadow-sm bg-[#E7F3EB] text-[#4A7C59] flex items-center justify-center font-bold text-sm cursor-pointer hover:opacity-80 transition-opacity shrink-0"
+              >
+                {(profile?.name || profile?.full_name || 'U').charAt(0)}
+              </div>
+            )}
           </div>
         </header>
 

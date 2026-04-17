@@ -1,34 +1,30 @@
 import React from 'react';
-import { AlignLeft } from 'lucide-react';
+import { HelpCircle } from 'lucide-react';
 
-const ReasonForVisitCard = ({ text, tags = [] }) => {
-  return (
-    <div className="bg-white rounded-[24px] p-8 border border-[#EFEBE1] shadow-sm h-full flex flex-col">
-      <div className="flex items-center gap-3 mb-6">
-        <AlignLeft className="text-gray-400" size={20} />
-        <h3 className="text-lg font-bold text-gray-900">Reason for Visit</h3>
+const ReasonForVisitCard = ({ reason, isLoading }) => {
+  if (isLoading) {
+    return (
+      <div className="bg-white rounded-[32px] p-8 border border-[#EFEBE1] shadow-sm animate-pulse h-full">
+        <div className="h-6 bg-gray-200 rounded w-48 mb-6"></div>
+        <div className="h-20 bg-gray-100 rounded-2xl w-full"></div>
       </div>
-      
-      {/* Quote Box */}
-      <div className="bg-[#FAF7F2] border-l-4 border-[#4A7C59] p-6 rounded-r-2xl mb-6 flex-grow">
-        <p className="text-gray-700 italic font-medium leading-relaxed">
-          "{text || 'Experiencing persistent fatigue and digestive issues. Seeking dietary recommendations and herbal remedies.'}"
+    );
+  }
+
+  return (
+    <div className="bg-white rounded-[32px] p-8 border border-[#EFEBE1] shadow-sm h-full">
+      <div className="flex items-center gap-3 mb-6">
+        <div className="bg-[#FEF5D3] p-2.5 rounded-xl text-[#A67C00]">
+          <HelpCircle size={20} />
+        </div>
+        <h3 className="text-xl font-bold text-gray-900">Reason for Visit</h3>
+      </div>
+
+      <div className="bg-gray-50 border border-gray-100 rounded-2xl p-5">
+        <p className="text-sm text-gray-700 font-medium italic">
+          "{reason || 'No reason provided by the patient.'}"
         </p>
       </div>
-
-      {/* Tags */}
-      {tags.length > 0 && (
-        <div className="flex flex-wrap gap-2">
-          {tags.map((tag, index) => (
-            <span 
-              key={index} 
-              className="px-4 py-1.5 bg-[#F0F4F1] text-[#4A7C59] text-[10px] font-extrabold uppercase tracking-widest rounded-md"
-            >
-              {tag}
-            </span>
-          ))}
-        </div>
-      )}
     </div>
   );
 };

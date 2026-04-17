@@ -13,7 +13,7 @@ const AppointmentsHeader = () => {
           Manage your upcoming holistic consultations and review your wellness journey history.
         </p>
       </div>
-      <button 
+      <button
         onClick={() => navigate('/patient/book-appointment')}
         className="bg-[#4A7C59] hover:bg-[#3d6649] text-white px-6 py-3 rounded-full text-sm font-bold flex items-center gap-2 transition-colors shadow-sm"
       >

@@ -1,50 +1,71 @@
 import React from 'react';
-import { Trash2, Minus, Plus } from 'lucide-react';
+import { Trash2, Plus, Minus } from 'lucide-react';
 
-const CartItem = ({ item, updateQuantity, removeItem }) => {
-    return (
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between py-6 border-b border-gray-100 gap-4">
-            <div className="flex items-center gap-4 flex-1">
-                <div className="w-20 h-20 bg-gray-50 rounded-xl overflow-hidden shrink-0 flex items-center justify-center p-2 border border-gray-100">
-                    <img src={item.image} alt={item.name} className="max-h-full max-w-full object-contain mix-blend-multiply" />
-                </div>
-                <div>
-                    <h3 className="font-bold text-gray-900 text-sm md:text-base">{item.name}</h3>
-                    <p className="text-gray-500 text-xs md:text-sm mt-0.5">{item.description}</p>
+const CartItem = ({ item, updateQuantity, removeItem, isLoading }) => {
+    if (isLoading) {
+        return (
+            <div className="flex flex-col sm:flex-row gap-6 py-6 border-b border-[#EFEBE1] last:border-0 animate-pulse">
+                <div className="w-24 h-24 bg-gray-200 rounded-2xl shrink-0"></div>
+                <div className="flex-1 flex flex-col justify-between">
+                    <div>
+                        <div className="h-5 bg-gray-200 rounded w-3/4 mb-2"></div>
+                        <div className="h-4 bg-gray-100 rounded w-1/2 mb-4"></div>
+                    </div>
+                    <div className="flex justify-between items-center mt-4 sm:mt-0">
+                        <div className="h-8 bg-gray-200 rounded-full w-24"></div>
+                        <div className="h-6 bg-gray-200 rounded w-16"></div>
+                    </div>
                 </div>
             </div>
+        );
+    }
 
-            <div className="flex items-center justify-between w-full sm:w-auto sm:gap-8">
-                {/* Quantity Control */}
-                <div className="flex items-center bg-[#F3EFE6] rounded-full px-3 py-1.5 gap-4">
-                    <button
-                        onClick={() => updateQuantity(item.id, item.quantity - 1)}
-                        disabled={item.quantity <= 1}
-                        className="text-gray-500 hover:text-gray-900 disabled:opacity-50 transition-colors"
-                    >
-                        <Minus size={14} />
-                    </button>
-                    <span className="text-sm font-bold w-4 text-center">{item.quantity}</span>
-                    <button
-                        onClick={() => updateQuantity(item.id, item.quantity + 1)}
-                        className="text-gray-500 hover:text-gray-900 transition-colors"
-                    >
-                        <Plus size={14} />
-                    </button>
+    const safeItem = item || {};
+    const imageSrc = safeItem.image || safeItem.image_url || 'https://via.placeholder.com/150';
+    const price = parseFloat(safeItem.price || 0).toFixed(2);
+
+    return (
+        <div className="flex flex-col sm:flex-row gap-6 py-6 border-b border-[#E8E3D8] last:border-0 hover:bg-[#FDF9EE]/50 transition-colors rounded-2xl px-2">
+            <div className="w-24 h-24 bg-white rounded-2xl border border-[#E8E3D8] p-2 shrink-0 overflow-hidden shadow-sm">
+                <img src={imageSrc} alt={safeItem.name} className="w-full h-full object-cover rounded-xl" />
+            </div>
+
+            <div className="flex-1 flex flex-col sm:flex-row justify-between">
+                <div className="mb-4 sm:mb-0 pr-4">
+                    <h3 className="text-lg font-bold text-gray-900 mb-1">{safeItem.name}</h3>
+                    <p className="text-sm font-medium text-gray-500">{safeItem.description || safeItem.category || 'Wellness Product'}</p>
                 </div>
 
-                {/* Price (Changed $ to ₹) */}
-                <div className="font-bold text-gray-900 text-base sm:text-lg w-20 text-right">
-                    ₹{(item.price * item.quantity).toFixed(2)}
-                </div>
+                <div className="flex sm:flex-col justify-between items-end gap-4">
+                    <span className="text-xl font-extrabold text-gray-900">₹{price}</span>
 
-                {/* Delete Button */}
-                <button
-                    onClick={() => removeItem(item.id)}
-                    className="text-[#B8860B] hover:text-red-500 transition-colors p-2"
-                >
-                    <Trash2 size={18} />
-                </button>
+                    <div className="flex items-center gap-4">
+                        <div className="flex items-center bg-white border border-[#E8E3D8] rounded-full p-1 shadow-sm">
+                            <button
+                                onClick={() => updateQuantity(safeItem.id || safeItem._id, Math.max(1, (safeItem.quantity || 1) - 1))}
+                                className="w-8 h-8 flex items-center justify-center text-gray-500 hover:text-gray-900 hover:bg-gray-50 rounded-full transition-colors"
+                            >
+                                <Minus size={14} />
+                            </button>
+                            <span className="w-8 text-center text-sm font-bold text-gray-900">
+                                {safeItem.quantity || 1}
+                            </span>
+                            <button
+                                onClick={() => updateQuantity(safeItem.id || safeItem._id, (safeItem.quantity || 1) + 1)}
+                                className="w-8 h-8 flex items-center justify-center text-gray-500 hover:text-gray-900 hover:bg-gray-50 rounded-full transition-colors"
+                            >
+                                <Plus size={14} />
+                            </button>
+                        </div>
+                        <button
+                            onClick={() => removeItem(safeItem.id || safeItem._id)}
+                            className="w-10 h-10 flex items-center justify-center bg-red-50 text-red-500 hover:bg-red-100 hover:text-red-600 rounded-full transition-colors shadow-sm border border-red-100"
+                            title="Remove Item"
+                        >
+                            <Trash2 size={16} />
+                        </button>
+                    </div>
+                </div>
             </div>
         </div>
     );

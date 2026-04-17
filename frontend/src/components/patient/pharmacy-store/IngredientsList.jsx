@@ -1,27 +1,42 @@
 import React from 'react';
+import { Leaf } from 'lucide-react';
 
-const IngredientsList = ({ ingredients }) => {
-    if (!ingredients || ingredients.length === 0) return null;
-
-    return (
-        <div className="bg-green-800 rounded-3xl p-8 text-white flex flex-col justify-between shadow-md h-full">
-            <div>
-                <span className="text-[10px] font-bold tracking-wider text-[#A5C1A7] mb-2 block uppercase">ACTIVE COMPOSITION</span>
-                <h3 className="text-xl font-bold mb-8">Ethically Sourced Ingredients</h3>
-
-                <div className="space-y-4 mb-8">
-                    {ingredients.map((ing, idx) => (
-                        <div key={idx} className="flex justify-between items-center border-b border-[#3E6E38] pb-3">
-                            <span className="text-[#E8F0E9] text-sm">{ing.name}</span>
-                            <span className="font-bold">{ing.percentage}</span>
-                        </div>
-                    ))}
+const IngredientsList = ({ ingredients, isLoading }) => {
+    if (isLoading) {
+        return (
+            <div className="lg:col-span-1 bg-[#FAF7F2] rounded-[32px] p-8 border border-[#EFEBE1] shadow-sm animate-pulse h-64">
+                <div className="h-6 bg-gray-200 rounded w-40 mb-6"></div>
+                <div className="space-y-4">
+                    <div className="h-8 bg-gray-200 rounded w-full"></div>
+                    <div className="h-8 bg-gray-200 rounded w-full"></div>
                 </div>
             </div>
+        );
+    }
 
-            <div className="bg-green-900 p-4 rounded-xl text-xs text-[#A5C1A7] leading-relaxed border border-[#3E6E38]">
-                Free from GMOs, gluten, and synthetic fillers. Laboratory tested for heavy metals and purity.
-            </div>
+    const safeIngredients = Array.isArray(ingredients) && ingredients.length > 0 ? ingredients : [
+        { name: 'Proprietary Herbal Blend', percentage: '100%' }
+    ];
+
+    return (
+        <div className="lg:col-span-1 bg-[#FAF7F2] rounded-[32px] p-8 border border-[#EFEBE1] shadow-sm">
+            <h3 className="text-xl font-bold text-gray-900 mb-6 flex items-center gap-3">
+                <div className="p-2 bg-white text-[#8B6A47] rounded-xl shadow-sm"><Leaf size={20} /></div>
+                Key Ingredients
+            </h3>
+
+            <ul className="space-y-4">
+                {safeIngredients.map((item, idx) => (
+                    <li key={idx} className="flex justify-between items-center pb-4 border-b border-[#EFEBE1] last:border-0 last:pb-0">
+                        <span className="text-sm font-bold text-gray-800">{item.name || item}</span>
+                        {item.percentage && (
+                            <span className="text-[10px] font-extrabold text-gray-400 uppercase tracking-widest bg-white px-2 py-1 rounded-md shadow-sm">
+                                {item.percentage}
+                            </span>
+                        )}
+                    </li>
+                ))}
+            </ul>
         </div>
     );
 };

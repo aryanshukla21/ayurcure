@@ -1,64 +1,79 @@
 import React from 'react';
-import { Bell } from 'lucide-react';
+import { Bell, Mail, Smartphone, MessageCircle } from 'lucide-react';
 
-const NotificationPrefsCard = ({ data, isEditing, onChange }) => {
-  if (!data) return null;
-
-  // Reusable Toggle Component
-  const ToggleSwitch = ({ label, description, field, value }) => (
-    <div className="flex items-center justify-between py-4 border-b border-[#EFEBE1] last:border-0 last:pb-0">
-      <div className="pr-4">
-        <h4 className="text-sm font-bold text-gray-900 mb-1">{label}</h4>
-        <p className="text-xs text-gray-500 font-medium leading-relaxed">{description}</p>
+const NotificationPrefsCard = ({ data, isEditing, onChange, isLoading }) => {
+  if (isLoading) {
+    return (
+      <div className="bg-white rounded-[32px] p-6 md:p-8 border border-[#EFEBE1] shadow-sm animate-pulse h-full">
+        <div className="h-6 bg-gray-200 rounded w-48 mb-6"></div>
+        <div className="space-y-4">
+          {[1, 2, 3].map(i => (
+            <div key={i} className="h-16 bg-gray-50 rounded-2xl w-full"></div>
+          ))}
+        </div>
       </div>
-      <button
-        onClick={() => isEditing && onChange(field, !value)}
-        disabled={!isEditing}
-        className={`relative inline-flex h-6 w-11 shrink-0 rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${value ? 'bg-[#4A7C59]' : 'bg-gray-200'
-          } ${!isEditing ? 'opacity-60 cursor-not-allowed' : 'cursor-pointer'}`}
-      >
-        <span
-          className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${value ? 'translate-x-5' : 'translate-x-0'
-            }`}
-        />
-      </button>
-    </div>
+    );
+  }
+
+  const safeData = data || {};
+
+  // Toggle switch UI component
+  const Toggle = ({ enabled, onClick }) => (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={!isEditing}
+      className={`w-12 h-6 rounded-full transition-colors flex items-center px-1 disabled:opacity-50 ${enabled ? 'bg-[#4A7C59]' : 'bg-gray-200'}`}
+    >
+      <div className={`w-4 h-4 bg-white rounded-full transition-transform shadow-sm ${enabled ? 'translate-x-6' : 'translate-x-0'}`}></div>
+    </button>
   );
 
   return (
-    <div className="bg-white rounded-[24px] p-6 md:p-8 border border-[#EFEBE1] shadow-sm h-full">
-      <div className="flex items-center gap-3 mb-6 pb-4 border-b border-[#EFEBE1]">
-        <div className="w-10 h-10 rounded-full bg-[#FFF4E5] flex items-center justify-center text-[#D9774B]">
+    <div className="bg-white rounded-[32px] p-6 md:p-8 border border-[#EFEBE1] shadow-sm h-full">
+      <div className="flex items-center gap-3 mb-6 pb-6 border-b border-[#EFEBE1]">
+        <div className="bg-[#E7F3EB] p-2.5 rounded-xl text-[#4A7C59]">
           <Bell size={20} />
         </div>
-        <h2 className="text-xl font-bold text-gray-900">Notifications</h2>
+        <div>
+          <h3 className="text-xl font-bold text-gray-900">Notifications</h3>
+          <p className="text-xs text-gray-500 font-medium mt-0.5">Manage how we communicate with you.</p>
+        </div>
       </div>
 
-      <div className="flex flex-col">
-        <ToggleSwitch
-          label="Appointment Updates"
-          description="Receive alerts about schedule changes, cancellations, or doctor notes."
-          field="appointmentUpdates"
-          value={data.appointmentUpdates}
-        />
-        <ToggleSwitch
-          label="Email Alerts"
-          description="Get health reports and prescription summaries delivered to your inbox."
-          field="emailAlerts"
-          value={data.emailAlerts}
-        />
-        <ToggleSwitch
-          label="SMS Reminders"
-          description="Text message reminders 24 hours before your scheduled consultation."
-          field="smsReminders"
-          value={data.smsReminders}
-        />
-        <ToggleSwitch
-          label="Marketing & Offers"
-          description="Occasional updates about pharmacy discounts and wellness camps."
-          field="marketingEmails"
-          value={data.marketingEmails}
-        />
+      <div className="space-y-3">
+        <div className="flex items-center justify-between p-4 rounded-2xl bg-[#FAF7F2] border border-[#EFEBE1] transition-colors">
+          <div className="flex items-center gap-4">
+            <div className="bg-white p-2 rounded-lg text-gray-400 shadow-sm"><Mail size={16} /></div>
+            <div>
+              <h4 className="text-sm font-bold text-gray-900">Email Alerts</h4>
+              <p className="text-[11px] text-gray-500 font-medium">Prescriptions, reports & appointment summaries.</p>
+            </div>
+          </div>
+          <Toggle enabled={safeData.emailAlerts !== false} onClick={() => onChange('emailAlerts', !(safeData.emailAlerts !== false))} />
+        </div>
+
+        <div className="flex items-center justify-between p-4 rounded-2xl bg-[#FAF7F2] border border-[#EFEBE1] transition-colors">
+          <div className="flex items-center gap-4">
+            <div className="bg-white p-2 rounded-lg text-gray-400 shadow-sm"><Smartphone size={16} /></div>
+            <div>
+              <h4 className="text-sm font-bold text-gray-900">SMS Reminders</h4>
+              <p className="text-[11px] text-gray-500 font-medium">Upcoming sessions and refill alerts.</p>
+            </div>
+          </div>
+          <Toggle enabled={safeData.smsAlerts !== false} onClick={() => onChange('smsAlerts', !(safeData.smsAlerts !== false))} />
+        </div>
+
+        <div className="flex items-center justify-between p-4 rounded-2xl bg-[#FAF7F2] border border-[#EFEBE1] transition-colors">
+          <div className="flex items-center gap-4">
+            <div className="bg-white p-2 rounded-lg text-green-500 shadow-sm"><MessageCircle size={16} /></div>
+            <div>
+              <h4 className="text-sm font-bold text-gray-900">WhatsApp Updates</h4>
+              <p className="text-[11px] text-gray-500 font-medium">Get instant delivery tracking and doctor notes.</p>
+            </div>
+          </div>
+          <Toggle enabled={safeData.whatsappAlerts} onClick={() => onChange('whatsappAlerts', !safeData.whatsappAlerts)} />
+        </div>
       </div>
     </div>
   );

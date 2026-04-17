@@ -1,32 +1,53 @@
 import React from 'react';
-import { CreditCard, Wallet, Banknote } from 'lucide-react';
+import { CreditCard, Wallet, Truck } from 'lucide-react';
 
-const PaymentMethods = ({ selectedPayment, setSelectedPayment }) => {
+const PaymentMethods = ({ selectedPayment, setSelectedPayment, isLoading }) => {
+    if (isLoading) {
+        return (
+            <div className="bg-white rounded-[32px] p-6 md:p-8 border border-[#EFEBE1] shadow-sm animate-pulse">
+                <div className="h-6 bg-gray-200 rounded w-48 mb-6"></div>
+                <div className="space-y-4">
+                    {[1, 2, 3].map(i => (
+                        <div key={i} className="h-16 bg-gray-100 rounded-2xl w-full"></div>
+                    ))}
+                </div>
+            </div>
+        );
+    }
+
     const methods = [
-        { id: 'wallet', label: 'Digital Wallet', icon: Wallet },
-        { id: 'card', label: 'Card Payment', icon: CreditCard },
-        { id: 'cod', label: 'Cash on Delivery', icon: Banknote },
+        { id: 'card', label: 'Credit / Debit Card', icon: CreditCard },
+        { id: 'wallet', label: 'UPI / Wallets', icon: Wallet },
+        { id: 'cod', label: 'Cash on Delivery', icon: Truck },
     ];
 
     return (
-        <div className="bg-[#fdf6e5] rounded-3xl p-6 md:p-8 border border-[#E8E3D8]">
-            <h3 className="text-xs font-bold tracking-wider text-gray-400 uppercase block mb-4">Preferred Payment</h3>
-            <div className="flex flex-wrap gap-3">
+        <div className="bg-white rounded-[32px] p-6 md:p-8 border border-[#EFEBE1] shadow-sm">
+            <h2 className="text-xl font-bold text-gray-900 mb-6">Payment Method</h2>
+
+            <div className="space-y-4">
                 {methods.map((method) => {
                     const Icon = method.icon;
-                    const isActive = selectedPayment === method.id;
+                    const isSelected = selectedPayment === method.id;
+
                     return (
-                        <button
+                        <div
                             key={method.id}
                             onClick={() => setSelectedPayment(method.id)}
-                            className={`flex items-center gap-2 px-5 py-3 rounded-full text-sm font-medium transition-all ${isActive
-                                ? 'bg-white border-2 border-[#37822e] text-gray-900 shadow-sm'
-                                : 'bg-white border border-gray-200 text-gray-600 hover:border-gray-300 shadow-sm'
+                            className={`flex items-center gap-4 p-4 rounded-2xl border-2 cursor-pointer transition-all ${isSelected
+                                    ? 'border-[#4A7C59] bg-[#E7F3EB]/30'
+                                    : 'border-[#EFEBE1] hover:border-[#D1CFC8] hover:bg-gray-50'
                                 }`}
                         >
-                            <Icon size={16} className={isActive ? 'text-[#2D5A27]' : 'text-gray-500'} />
-                            {method.label}
-                        </button>
+                            <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 ${isSelected ? 'border-[#4A7C59]' : 'border-gray-300'
+                                }`}>
+                                {isSelected && <div className="w-2.5 h-2.5 bg-[#4A7C59] rounded-full"></div>}
+                            </div>
+                            <div className={`p-2.5 rounded-xl ${isSelected ? 'bg-white text-[#4A7C59] shadow-sm' : 'bg-gray-100 text-gray-500'}`}>
+                                <Icon size={18} />
+                            </div>
+                            <span className="font-bold text-sm text-gray-900">{method.label}</span>
+                        </div>
                     );
                 })}
             </div>

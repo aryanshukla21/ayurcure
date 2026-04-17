@@ -1,27 +1,79 @@
 import React from 'react';
-import { Contact2 } from 'lucide-react';
+import { AlertTriangle } from 'lucide-react';
 
-const EmergencyContactCard = ({ emergency, isEditing, onChange }) => (
-  <div className="bg-white rounded-[32px] p-8 shadow-sm h-full flex flex-col">
-    <Contact2 size={20} className="text-[#D9774B] mb-6" />
-    <h3 className="text-sm font-bold text-gray-900 mb-6">Emergency Contact</h3>
-    <div className="bg-[#FAF7F2] rounded-2xl p-5 border border-[#EFEBE1]">
-      {isEditing ? (
-        <div className="space-y-3">
-          <input type="text" name="emergencyName" value={emergency.name} onChange={onChange} placeholder="Name" className="w-full bg-white p-2 rounded-lg text-sm font-bold outline-none" />
-          <input type="text" name="emergencyRelation" value={emergency.relation} onChange={onChange} placeholder="Relation" className="w-full bg-white p-2 rounded-lg text-sm font-medium outline-none" />
-          <input type="text" name="emergencyPhone" value={emergency.phone} onChange={onChange} placeholder="Phone" className="w-full bg-white p-2 rounded-lg text-sm font-bold outline-none" />
+const EmergencyContactCard = ({ emergency, isEditing, onChange, isLoading }) => {
+  if (isLoading) {
+    return (
+      <div className="bg-[#FAF7F2] rounded-[32px] p-8 border border-[#EFEBE1] shadow-sm animate-pulse">
+        <div className="h-6 bg-gray-200 rounded w-48 mb-8"></div>
+        <div className="space-y-5">
+          {[1, 2, 3].map(i => (
+            <div key={i}>
+              <div className="h-3 bg-gray-200 rounded w-24 mb-2"></div>
+              <div className="h-12 bg-white rounded-2xl w-full"></div>
+            </div>
+          ))}
         </div>
-      ) : (
-        <>
-          <h4 className="text-sm font-bold text-gray-900">{emergency.name}</h4>
-          <p className="text-xs font-medium text-gray-500 mb-3">{emergency.relation}</p>
-          <div className="flex items-center gap-2 text-sm font-bold text-gray-900">
-            {emergency.phone}
-          </div>
-        </>
-      )}
+      </div>
+    );
+  }
+
+  const safeEmergency = emergency || {};
+
+  return (
+    <div className="bg-[#FAF7F2] rounded-[32px] p-8 border border-[#EFEBE1] shadow-sm h-full relative overflow-hidden">
+      <div className="flex items-center gap-3 mb-8 relative z-10">
+        <div className="bg-red-100 p-2.5 rounded-xl text-red-500">
+          <AlertTriangle size={20} />
+        </div>
+        <h3 className="text-xl font-bold text-gray-900">Emergency Contact</h3>
+      </div>
+
+      <div className="space-y-5 relative z-10">
+        <div>
+          <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-2 ml-1">
+            Contact Name
+          </label>
+          <input
+            type="text"
+            name="emergencyName"
+            value={safeEmergency.emergencyName || safeEmergency.name || ''}
+            onChange={onChange}
+            disabled={!isEditing}
+            className="w-full px-4 py-3.5 bg-white border border-[#EFEBE1] rounded-2xl text-sm font-medium text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#4A7C59] transition-all disabled:opacity-70 disabled:bg-gray-50"
+          />
+        </div>
+
+        <div>
+          <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-2 ml-1">
+            Relationship
+          </label>
+          <input
+            type="text"
+            name="emergencyRelation"
+            value={safeEmergency.emergencyRelation || safeEmergency.relation || ''}
+            onChange={onChange}
+            disabled={!isEditing}
+            className="w-full px-4 py-3.5 bg-white border border-[#EFEBE1] rounded-2xl text-sm font-medium text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#4A7C59] transition-all disabled:opacity-70 disabled:bg-gray-50"
+          />
+        </div>
+
+        <div>
+          <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-2 ml-1">
+            Contact Number
+          </label>
+          <input
+            type="tel"
+            name="emergencyPhone"
+            value={safeEmergency.emergencyPhone || safeEmergency.phone || ''}
+            onChange={onChange}
+            disabled={!isEditing}
+            className="w-full px-4 py-3.5 bg-white border border-[#EFEBE1] rounded-2xl text-sm font-medium text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#4A7C59] transition-all disabled:opacity-70 disabled:bg-gray-50"
+          />
+        </div>
+      </div>
     </div>
-  </div>
-);
+  );
+};
+
 export default EmergencyContactCard;

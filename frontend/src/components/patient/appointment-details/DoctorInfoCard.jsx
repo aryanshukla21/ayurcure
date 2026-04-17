@@ -1,41 +1,48 @@
 import React from 'react';
-import { Shield, Languages, Star } from 'lucide-react';
+import { Award, Globe, Star } from 'lucide-react';
 
-const DoctorInfoCard = ({ info }) => {
-  if (!info) return null;
+const DoctorInfoCard = ({ info, isLoading }) => {
+  if (isLoading) {
+    return (
+      <div className="bg-white rounded-[32px] p-8 border border-[#EFEBE1] shadow-sm animate-pulse h-full">
+        <div className="h-6 bg-gray-200 rounded w-32 mb-6"></div>
+        <div className="space-y-4">
+          <div className="h-12 bg-gray-100 rounded-xl"></div>
+          <div className="h-12 bg-gray-100 rounded-xl"></div>
+          <div className="h-12 bg-gray-100 rounded-xl"></div>
+        </div>
+      </div>
+    );
+  }
+
+  const safeInfo = info || {};
 
   return (
-    <div className="bg-white rounded-3xl p-8 shadow-sm border border-[#EFEBE1] h-full">
-      <h3 className="text-sm font-bold text-gray-900 mb-6">Practitioner Info</h3>
-      
-      <div className="space-y-6">
-        <div className="flex items-start gap-4">
-          <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center text-blue-600 shrink-0">
-            <Shield size={20} />
-          </div>
+    <div className="bg-white rounded-[32px] p-8 border border-[#EFEBE1] shadow-sm h-full">
+      <h3 className="text-lg font-bold text-gray-900 mb-6">Practitioner Info</h3>
+
+      <div className="space-y-4">
+        <div className="flex items-center gap-4 bg-gray-50 p-4 rounded-2xl border border-gray-100">
+          <div className="bg-white p-2 rounded-lg text-[#8B6A47] shadow-sm"><Award size={18} /></div>
           <div>
-            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Experience</p>
-            <p className="text-sm font-bold text-gray-900">{info.experience}</p>
+            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Experience</p>
+            <p className="font-bold text-gray-900 text-sm">{safeInfo.experience || 'Verified Professional'}</p>
           </div>
         </div>
 
-        <div className="flex items-start gap-4">
-          <div className="w-10 h-10 rounded-xl bg-purple-50 flex items-center justify-center text-purple-600 shrink-0">
-            <Languages size={20} />
-          </div>
+        <div className="flex items-center gap-4 bg-gray-50 p-4 rounded-2xl border border-gray-100">
+          <div className="bg-white p-2 rounded-lg text-[#4A7C59] shadow-sm"><Globe size={18} /></div>
           <div>
-            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Languages</p>
-            <p className="text-sm font-bold text-gray-900">{info.languages}</p>
+            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Languages</p>
+            <p className="font-bold text-gray-900 text-sm">{safeInfo.languages || 'English'}</p>
           </div>
         </div>
 
-        <div className="flex items-start gap-4">
-          <div className="w-10 h-10 rounded-xl bg-amber-50 flex items-center justify-center text-amber-500 shrink-0">
-            <Star size={20} />
-          </div>
+        <div className="flex items-center gap-4 bg-gray-50 p-4 rounded-2xl border border-gray-100">
+          <div className="bg-white p-2 rounded-lg text-amber-500 shadow-sm"><Star size={18} /></div>
           <div>
-            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Rating</p>
-            <p className="text-sm font-bold text-gray-900">{info.rating}</p>
+            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Patient Rating</p>
+            <p className="font-bold text-gray-900 text-sm">{safeInfo.rating || 'New on Platform'}</p>
           </div>
         </div>
       </div>

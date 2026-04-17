@@ -84,4 +84,26 @@ export const patientApi = {
         const response = await axiosInstance.get('/api/patients/health-logs');
         return response.data;
     },
+
+    getDocuments: async () => {
+        const response = await axiosInstance.get('/api/patients/documents');
+        return response.data;
+    },
+    uploadDocument: async (formData) => {
+        // Must pass headers for file uploads
+        const response = await axiosInstance.post('/api/patients/documents', formData, {
+            headers: { 'Content-Type': 'multipart/form-data' }
+        });
+        return response.data;
+    },
+
+    // ---User Settings ---
+    getSettings: async () => {
+        const response = await axiosInstance.get('/api/patients/settings');
+        return response.data;
+    },
+    updateSettings: async (settingsData) => {
+        const response = await axiosInstance.put('/api/patients/settings', settingsData);
+        return response.data;
+    }
 };

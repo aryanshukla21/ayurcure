@@ -7,7 +7,7 @@ const FloatingCart = ({ cartTotal, cartCount }) => {
     const navigate = useNavigate();
 
     // Do not render the cart widget if the cart is empty
-    if (cartTotal <= 0) return null;
+    if (cartCount === 0) return null;
 
     return (
         <div className="fixed bottom-8 right-8 bg-[#1E231E] text-white rounded-2xl p-3 shadow-2xl flex items-center gap-5 border border-gray-700 animate-fade-in-up z-50 hover:scale-105 transition-transform">

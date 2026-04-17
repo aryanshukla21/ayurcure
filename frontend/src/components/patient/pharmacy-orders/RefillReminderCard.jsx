@@ -2,8 +2,27 @@ import React from 'react';
 import { PackageOpen } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
-const RefillReminderCard = () => {
+const RefillReminderCard = ({ data, isLoading }) => {
   const navigate = useNavigate();
+
+  if (isLoading) {
+    return (
+      <div className="bg-[#EAE5D9] rounded-[24px] p-8 relative overflow-hidden h-full min-h-[220px] flex flex-col justify-center animate-pulse border border-[#DFD9CB]">
+        <div className="w-10 h-10 rounded-xl bg-white/50 mb-5"></div>
+        <div className="h-6 bg-gray-300/50 rounded w-1/2 mb-4"></div>
+        <div className="space-y-2 mb-6">
+          <div className="h-4 bg-gray-300/50 rounded w-3/4"></div>
+          <div className="h-4 bg-gray-300/50 rounded w-1/2"></div>
+        </div>
+        <div className="h-10 bg-gray-300/50 rounded-full w-32"></div>
+      </div>
+    );
+  }
+
+  // Safe mapping for dynamic backend properties
+  const productName = data?.productName || 'Ashwagandha Churna';
+  const orderId = data?.orderId || 'AC-97121';
+  const daysLeft = data?.daysLeft || 5;
 
   return (
     <div className="bg-[#EAE5D9] rounded-[24px] p-8 relative overflow-hidden h-full flex flex-col justify-center">
@@ -16,7 +35,7 @@ const RefillReminderCard = () => {
 
         <h3 className="text-xl font-bold text-gray-900 mb-3">Refill Reminder</h3>
         <p className="text-sm text-gray-700 font-medium leading-relaxed mb-6 max-w-[280px]">
-          Your 'Ashwagandha Churna' from Order #AY-97121 is estimated to run out in 5 days.
+          Your '{productName}' from Order #{orderId} is estimated to run out in {daysLeft} days.
         </p>
 
         <button

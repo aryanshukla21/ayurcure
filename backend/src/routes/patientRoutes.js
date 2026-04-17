@@ -1,29 +1,45 @@
 const express = require('express');
 const router = express.Router();
-const patientController = require('../controllers/patientController');
-const { requireAuth, requireRole } = require('../middlewares/authMiddleware');
+const ctrl = require('../controllers/patientController');
+const { requireAuth } = require('../middlewares/authMiddleware');
 const upload = require('../middlewares/uploadMiddleware');
 
-router.use(requireAuth);
-router.use(requireRole('patient'));
+router.use(requireAuth); // Protect all routes
 
-router.post('/onboarding', patientController.completePatientProfile);
-router.get('/dashboard', patientController.getDashboard);
-router.post('/prakriti-assessment', patientController.updatePrakriti);
-router.get('/profile', patientController.getProfile);
-router.post('/health-logs', patientController.addHealthLogs);
-router.get('/all-appointments', patientController.getAllAppointments);
-router.get('/appointment/:id', patientController.getAppointment);
-router.get('/health-stats', patientController.getHealthStats);
-router.get('/routine', patientController.getDailyRoutine);
-router.put('/routine', patientController.updateDailyRoutine);
-router.get('/regimen', patientController.getCurrentRegimen);
-router.get('/wellness-tip', patientController.getWellnessTip);
-router.put('/profile', patientController.updateProfile);
-router.get('/health-logs', patientController.getHealthLogs);
+// DASHBOARD
+router.get('/dashboard/patient-details', ctrl.getDashPatientDetails);
+router.get('/dashboard/upcoming-session-appointments', ctrl.getDashUpcomingSession);
+router.get('/dashboard/body-weight-tracker', ctrl.getDashWeightTracker);
+router.get('/dashboard/weekly-wellness-activity', ctrl.getDashWellnessActivity);
+router.get('/dashboard/medical-history', ctrl.getDashMedicalHistory);
+router.get('/dashboard/next-meditation-hydration-goal-sleep-quality', ctrl.getDashQuickMetrics);
 
-// Add this route under your Patient Operations
-// 'document' is the field name expected from the frontend FormData
-router.post('/documents', upload.single('document'), patientController.uploadDocument);
+// PROFILE
+router.get('/profile/personal-information', ctrl.getProfilePersonal);
+router.put('/profile/personal-information/update', ctrl.updateProfilePersonal);
+router.get('/profile/personal-information/download', ctrl.downloadProfilePersonal);
+router.get('/profile/medical-information', ctrl.getProfileMedical);
+router.get('/profile/contact-information', ctrl.getProfileContact);
+router.put('/profile/contact-information/update', ctrl.updateProfileContact);
+router.get('/profile/emergency-contact', ctrl.getProfileEmergency);
+router.put('/profile/emergency-contact/update', ctrl.updateProfileEmergency);
+
+// SETTINGS
+router.get('/settings/account-details', ctrl.getSettingsAccount);
+router.put('/settings/account-details/update', ctrl.updateSettingsAccount);
+router.put('/settings/change-password', ctrl.changePassword);
+router.get('/settings/notifications', ctrl.getSettingsNotifications);
+router.get('/settings/privacy-&-settings', ctrl.getSettingsPrivacy);
+router.put('/settings/update-setting-data', ctrl.updateSettingsData);
+
+// HEALTH REPORTS
+router.post('/health-records/upload-new-report', upload.single('report'), ctrl.uploadReport);
+router.get('/health-records/recent-reports', ctrl.getRecentReports);
+router.get('/health-reports/:id/download', ctrl.downloadReport);
+router.get('/health-reports/filters/report-name=:reportName-doctor-name=:doctorName-date=:date', ctrl.filterReports);
+router.get('/health-reports/quick-insights', ctrl.getReportInsights);
+router.get('/health-reports/vitality-spark', ctrl.getReportVitality);
+router.get('/health-reports/wellness-goals', ctrl.getReportGoals);
+router.get('/health-reports/last-changed', ctrl.getReportLastChanged);
 
 module.exports = router;

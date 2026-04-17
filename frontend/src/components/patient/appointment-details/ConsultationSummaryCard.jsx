@@ -1,39 +1,34 @@
 import React from 'react';
-import { ClipboardList } from 'lucide-react';
+import { FileText } from 'lucide-react';
 
-const ConsultationSummaryCard = ({ summary }) => {
-  return (
-    <div className="bg-white rounded-3xl p-8 shadow-sm border border-[#EFEBE1] h-full">
-      <div className="flex items-center gap-3 mb-6">
-        <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center text-blue-600 shrink-0">
-          <ClipboardList size={20} />
+const ConsultationSummaryCard = ({ summary, isLoading }) => {
+  if (isLoading) {
+    return (
+      <div className="bg-white rounded-[32px] p-8 border border-[#EFEBE1] shadow-sm animate-pulse h-full">
+        <div className="h-6 bg-gray-200 rounded w-48 mb-6"></div>
+        <div className="space-y-3">
+          <div className="h-4 bg-gray-100 rounded w-full"></div>
+          <div className="h-4 bg-gray-100 rounded w-full"></div>
+          <div className="h-4 bg-gray-100 rounded w-3/4"></div>
         </div>
-        <h3 className="text-lg font-bold text-gray-900">Consultation Summary</h3>
+      </div>
+    );
+  }
+
+  return (
+    <div className="bg-white rounded-[32px] p-8 border border-[#EFEBE1] shadow-sm h-full">
+      <div className="flex items-center gap-3 mb-6">
+        <div className="bg-[#E7F3EB] p-2.5 rounded-xl text-[#4A7C59]">
+          <FileText size={20} />
+        </div>
+        <h3 className="text-xl font-bold text-gray-900">Consultation Summary</h3>
       </div>
 
-      <div className="space-y-6">
-        <div>
-          <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2">Diagnosis / Observation</p>
-          <p className="text-sm font-bold text-gray-900">{summary?.diagnosis || 'Vata-Pitta Imbalance'}</p>
-        </div>
-        
-        <div>
-          <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2">Doctor's Notes</p>
-          <p className="text-sm text-gray-600 leading-relaxed bg-[#FAFAF8] p-5 rounded-2xl border border-[#EFEBE1] italic">
-            "{summary?.notes || 'Patient reported improved digestion but still struggles with sleep continuity. Pulse indicates elevated Vata. Recommended to adjust evening routine and continue herbal support.'}"
-          </p>
-        </div>
-
-        <div className="grid grid-cols-2 gap-4 pt-2">
-          <div className="p-4 bg-gray-50 rounded-2xl border border-gray-100">
-            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Recorded Weight</p>
-            <p className="text-sm font-bold text-gray-900">{summary?.vitals?.weight || '74.5 kg'}</p>
-          </div>
-          <div className="p-4 bg-gray-50 rounded-2xl border border-gray-100">
-            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Blood Pressure</p>
-            <p className="text-sm font-bold text-gray-900">{summary?.vitals?.bp || '120/80 mmHg'}</p>
-          </div>
-        </div>
+      <div className="bg-[#FDF9EE] border border-[#F5E6CC] rounded-2xl p-6 relative overflow-hidden">
+        <div className="absolute top-0 left-0 w-1 h-full bg-[#EBCB8B]"></div>
+        <p className="text-sm text-gray-700 leading-relaxed font-medium whitespace-pre-line">
+          {summary || "No post-consultation summary has been provided by the practitioner yet."}
+        </p>
       </div>
     </div>
   );

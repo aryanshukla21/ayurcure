@@ -1,20 +1,37 @@
 import React from 'react';
 
-const CATEGORIES = ['All', 'Herbal Supplements', 'Digestive Care', 'Immunity Boosters', 'Skin Care', 'Wellness Products'];
+const CategoryFilter = ({ activeCategory, setActiveCategory, isLoading }) => {
+    const categories = [
+        'All',
+        'Herbal Supplements',
+        'Digestive Care',
+        'Immunity Boosters',
+        'Skin Care',
+        'Wellness Products'
+    ];
 
-const CategoryFilter = ({ activeCategory, setActiveCategory }) => {
+    if (isLoading) {
+        return (
+            <div className="flex gap-3 overflow-x-auto pb-4 mb-8 hide-scrollbar">
+                {[1, 2, 3, 4, 5].map(i => (
+                    <div key={i} className="h-12 w-32 bg-gray-200 rounded-full animate-pulse shrink-0"></div>
+                ))}
+            </div>
+        );
+    }
+
     return (
-        <div className="flex overflow-x-auto hide-scrollbar gap-3 mb-8 pb-2">
-            {CATEGORIES.map(category => (
+        <div className="flex gap-3 overflow-x-auto pb-4 mb-8 hide-scrollbar">
+            {categories.map((cat) => (
                 <button
-                    key={category}
-                    onClick={() => setActiveCategory(category)}
-                    className={`whitespace-nowrap px-5 py-2 rounded-full text-sm font-medium transition-colors ${activeCategory === category
-                            ? 'bg-[#2D5A27] text-white shadow-sm'
-                            : 'bg-[#F3EFE6] text-gray-700 hover:bg-[#E8E3D8]'
+                    key={cat}
+                    onClick={() => setActiveCategory(cat)}
+                    className={`px-6 py-3 rounded-full text-sm font-bold whitespace-nowrap transition-all shadow-sm ${activeCategory === cat
+                            ? 'bg-[#3A6447] text-white border border-[#3A6447]'
+                            : 'bg-white text-gray-600 border border-[#EFEBE1] hover:bg-gray-50'
                         }`}
                 >
-                    {category}
+                    {cat}
                 </button>
             ))}
         </div>

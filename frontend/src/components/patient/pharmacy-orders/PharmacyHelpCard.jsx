@@ -2,8 +2,22 @@ import React from 'react';
 import { HelpCircle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
-const PharmacyHelpCard = () => {
+const PharmacyHelpCard = ({ isLoading }) => {
   const navigate = useNavigate();
+
+  if (isLoading) {
+    return (
+      <div className="bg-[#3A6447] rounded-[24px] p-8 h-full min-h-[220px] flex flex-col justify-center shadow-sm animate-pulse border border-[#2C4D36]">
+        <div className="w-10 h-10 rounded-xl bg-white/10 mb-5"></div>
+        <div className="h-6 bg-white/20 rounded w-1/2 mb-4"></div>
+        <div className="space-y-2 mb-6">
+          <div className="h-4 bg-white/10 rounded w-full"></div>
+          <div className="h-4 bg-white/10 rounded w-3/4"></div>
+        </div>
+        <div className="h-4 bg-white/20 rounded w-32 mt-auto"></div>
+      </div>
+    );
+  }
 
   return (
     <div className="bg-[#3A6447] rounded-[24px] p-8 text-white h-full flex flex-col justify-center shadow-sm">

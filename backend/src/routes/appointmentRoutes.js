@@ -1,30 +1,40 @@
 const express = require('express');
 const router = express.Router();
-const appointmentController = require('../controllers/appointmentController');
+const ctrl = require('../controllers/appointmentController');
 const { requireAuth } = require('../middlewares/authMiddleware');
-const { validateBodyFields } = require('../middlewares/validationMiddleware');
 
 router.use(requireAuth);
 
-router.post('/book',
-    validateBodyFields(['doctor_id', 'scheduled_at', 'mode']),
-    appointmentController.bookAppointment
-);
+// APPOINTMENT LISTS
+router.get('/all-appointment', ctrl.getAll);
+router.get('/upcoming-appointment', ctrl.getUpcoming);
+router.get('/completed-appointment', ctrl.getCompleted);
+router.get('/cancelled-appointment', ctrl.getCancelled);
+router.get('/this-month', ctrl.getThisMonth);
+router.get('/filter/doctor-name=:doctorName', ctrl.filterByDoctor);
+router.get('/ayurvedic-insight', ctrl.getAyurvedicInsight);
+router.get('/prepare-for-your-next-visit', ctrl.getPrepInstructions);
 
-// Updated fields to match the database schema
-router.post('/:id/prescription',
-    validateBodyFields(['medicine_name', 'dosage', 'timing', 'duration']),
-    appointmentController.addPrescription
-);
+// APPOINTMENT DETAILS
+router.get('/:id/actions', ctrl.getActions);
+router.get('/:id/your-symptoms-and-notes', ctrl.getSymptoms);
+router.get('/:id/practitioner-info', ctrl.getPractitionerInfo);
+router.get('/:id/related-documents', ctrl.getDocuments);
+router.get('/:id/related-documents/download', ctrl.downloadDocument);
 
-router.put('/:id/status',
-    validateBodyFields(['status']),
-    appointmentController.updateStatus
-);
+// BOOK APPOINTMENT
+router.get('/book-appointment/view-all-practitioners', ctrl.getAllPractitioners);
+router.get('/book-appointment/view-all-practitioners/filter', ctrl.filterPractitioners);
+router.get('/book-appointment/view-all-practitioners/search=:doctorName', ctrl.searchPractitioners);
+router.get('/book-appointment/view-all-practitioners/select/:doctorId', ctrl.selectPractitioner);
+router.get('/book-appointment/view-all-practitioners/select/:doctorId/available-slots', ctrl.getAvailableSlots);
+router.get('/book-appointment/view-all-practitioners/select/:doctorId/appointment-summary', ctrl.getBookingSummary);
+router.get('/book-appointment/prakriti-analysis', ctrl.getPrakritiAnalysis);
 
-router.post('/:id/review',
-    validateBodyFields(['rating']),
-    appointmentController.addReview
-);
+// PRESCRIPTIONS
+router.get('/prescription/all-prescriptions', ctrl.getAllPrescriptions);
+router.get('/prescription/all-prescription/:id/view-pdf', ctrl.downloadPrescriptionPdf);
+router.get('/prescription/automated-refills', ctrl.getAutomatedRefills);
+router.get('/prescription/expert-consultation', ctrl.getExpertConsultation);
 
 module.exports = router;

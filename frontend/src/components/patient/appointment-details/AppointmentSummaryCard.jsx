@@ -1,58 +1,77 @@
 import React from 'react';
-import { Calendar, Clock, Video, MapPin, CheckCircle2, XCircle } from 'lucide-react';
+import { Calendar, Clock, Video, MapPin } from 'lucide-react';
 
-const AppointmentSummaryCard = ({ appointment }) => {
-  if (!appointment) return null;
-
-  const isVideo = appointment.type === 'video';
-  const isCancelled = appointment.status === 'cancelled';
-  const isCompleted = appointment.status === 'completed';
-
-  return (
-    <div className="bg-white rounded-3xl p-8 shadow-sm border border-[#EFEBE1] h-full flex flex-col justify-between">
-      <div className="flex items-start justify-between mb-8">
-        <div className="flex items-center gap-5">
-          <div className="w-20 h-20 rounded-2xl bg-[#EAE5D9] flex items-center justify-center text-[#4A7C59] text-2xl font-bold border border-[#EFEBE1] shrink-0 object-cover overflow-hidden">
-            {/* Fallback to initials if no image */}
-            {appointment.doctorName?.charAt(4) || 'D'}
+const AppointmentSummaryCard = ({ practitioner, isLoading }) => {
+  if (isLoading) {
+    return (
+      <div className="bg-white rounded-[32px] p-8 border border-[#EFEBE1] shadow-sm animate-pulse h-full flex flex-col justify-center">
+        <div className="flex gap-6 items-center mb-6">
+          <div className="w-20 h-20 bg-gray-200 rounded-[24px]"></div>
+          <div className="space-y-3 flex-1">
+            <div className="h-6 bg-gray-200 rounded w-1/2"></div>
+            <div className="h-4 bg-gray-200 rounded w-1/3"></div>
           </div>
-          <div>
-            <div className="flex items-center gap-3 mb-1">
-              <h2 className="text-2xl font-bold text-gray-900">{appointment.doctorName}</h2>
-              {isCompleted ? (
-                <span className="px-3 py-1 bg-green-100 text-green-800 text-[10px] font-bold uppercase tracking-wider rounded-full flex items-center gap-1"><CheckCircle2 size={12} /> Completed</span>
-              ) : isCancelled ? (
-                <span className="px-3 py-1 bg-red-100 text-red-800 text-[10px] font-bold uppercase tracking-wider rounded-full flex items-center gap-1"><XCircle size={12} /> Cancelled</span>
-              ) : (
-                <span className="px-3 py-1 bg-amber-100 text-amber-800 text-[10px] font-bold uppercase tracking-wider rounded-full">Upcoming</span>
-              )}
-            </div>
-            <p className="text-green-700 font-medium">{appointment.specialty}</p>
-            <p className="text-xs text-gray-400 mt-1 font-semibold">{appointment.appointmentId}</p>
-          </div>
+        </div>
+        <div className="grid grid-cols-2 gap-4 mt-4">
+          <div className="h-12 bg-gray-100 rounded-xl"></div>
+          <div className="h-12 bg-gray-100 rounded-xl"></div>
         </div>
       </div>
+    );
+  }
 
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 pt-6 border-t border-[#EFEBE1]">
-        <div>
-          <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2">Date</p>
-          <div className="flex items-center gap-2 text-sm font-bold text-gray-900">
-            <Calendar size={16} className="text-[#4A7C59]" />
-            {appointment.date}
+  const safeData = practitioner || {};
+  const isVideo = safeData.type === 'video' || safeData.mode === 'video';
+
+  return (
+    <div className="bg-white rounded-[32px] p-8 border border-[#EFEBE1] shadow-sm h-full relative overflow-hidden group">
+      <div className="absolute top-0 right-0 w-32 h-32 bg-[#FDF9EE] rounded-bl-full -z-10 group-hover:scale-110 transition-transform duration-500"></div>
+
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-8">
+        <div className="flex items-center gap-6">
+          <div className="w-20 h-20 bg-[#EFEBE1] rounded-[24px] flex items-center justify-center text-[#8B6A47] font-bold text-2xl shadow-inner">
+            {safeData.doctorName ? safeData.doctorName.charAt(4) : 'D'}
+          </div>
+          <div>
+            <h2 className="text-2xl font-extrabold text-gray-900 mb-1">{safeData.doctorName || 'Practitioner'}</h2>
+            <p className="text-[#4A7C59] font-bold text-sm bg-[#E7F3EB] px-3 py-1 rounded-full inline-block">
+              {safeData.specialty || 'Ayurvedic Specialist'}
+            </p>
           </div>
         </div>
-        <div>
-          <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2">Time</p>
-          <div className="flex items-center gap-2 text-sm font-bold text-gray-900">
-            <Clock size={16} className="text-[#4A7C59]" />
-            {appointment.time}
+
+        <span className={`px-4 py-1.5 rounded-full text-[10px] font-extrabold uppercase tracking-widest border ${safeData.status === 'completed' ? 'bg-[#F3E8FF] text-[#9333EA] border-[#e9d5ff]' :
+            safeData.status === 'cancelled' ? 'bg-[#FEE2E2] text-[#EF4444] border-[#fecaca]' :
+              'bg-[#E7F3EB] text-[#4A7C59] border-[#cce8d6]'
+          }`}>
+          {safeData.status || 'Upcoming'}
+        </span>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="bg-[#FDFBF7] p-5 rounded-2xl border border-[#EFEBE1] flex items-center gap-4">
+          <div className="bg-white p-3 rounded-xl shadow-sm text-[#8B6A47]">
+            <Calendar size={20} />
+          </div>
+          <div>
+            <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mb-1">Scheduled Date</p>
+            <p className="font-bold text-gray-900 text-base">{safeData.date || '--'}</p>
           </div>
         </div>
-        <div className="col-span-2">
-          <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2">Location / Mode</p>
-          <div className="flex items-center gap-2 text-sm font-bold text-gray-900 truncate">
-            {isVideo ? <Video size={16} className="text-[#4A7C59]" /> : <MapPin size={16} className="text-[#4A7C59]" />}
-            {appointment.clinic}
+
+        <div className="bg-[#FDFBF7] p-5 rounded-2xl border border-[#EFEBE1] flex items-center gap-4">
+          <div className="bg-white p-3 rounded-xl shadow-sm text-[#8B6A47]">
+            <Clock size={20} />
+          </div>
+          <div>
+            <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mb-1">Time & Mode</p>
+            <div className="flex items-center gap-2">
+              <p className="font-bold text-gray-900 text-base">{safeData.time || '--'}</p>
+              <span className="w-1 h-1 bg-gray-300 rounded-full"></span>
+              <span className="flex items-center gap-1 text-xs font-semibold text-gray-500">
+                {isVideo ? <><Video size={14} /> Video</> : <><MapPin size={14} /> Clinic</>}
+              </span>
+            </div>
           </div>
         </div>
       </div>

@@ -1,36 +1,38 @@
 import React, { useRef, useState } from 'react';
-import { UploadCloud, Info, FileText } from 'lucide-react';
+import { UploadCloud, Info } from 'lucide-react';
 
 const UploadReportCard = ({ onUpload }) => {
   const fileInputRef = useRef(null);
   const [isDragging, setIsDragging] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
 
-  const handleFileChange = (e) => {
+  const handleFileChange = async (e) => {
     const file = e.target.files[0];
     if (file) {
-      processUpload(file);
+      await processUpload(file);
     }
   };
 
-  const processUpload = (file) => {
-    // Generate a new dummy report based on the uploaded file's name
-    const newReport = {
-      id: Date.now(), // Unique ID
-      name: file.name.split('.')[0] || 'Uploaded Document', // File name without extension
-      desc: 'Patient Uploaded File',
-      doctor: 'Self Uploaded',
-      date: new Date().toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' }),
-      icon: FileText,
-      color: 'text-teal-600 bg-teal-50'
-    };
+  const processUpload = async (file) => {
+    setIsUploading(true);
+    try {
+      // Create actual FormData for the backend API
+      const formData = new FormData();
+      formData.append('report', file);
+      formData.append('document_name', file.name.split('.')[0] || 'Uploaded Document');
+      formData.append('document_type', 'Patient Uploaded File');
 
-    onUpload(newReport);
+      // Let the parent component handle the actual API call
+      await onUpload(formData);
 
-    // Optional: Show a quick success alert
-    alert(`Successfully uploaded: ${file.name}`);
-
-    // Reset input so the same file can be uploaded again if needed
-    if (fileInputRef.current) fileInputRef.current.value = "";
+      alert(`Successfully uploaded: ${file.name}`);
+    } catch (error) {
+      console.error("Upload failed", error);
+      alert("Failed to upload the document. Please try again.");
+    } finally {
+      setIsUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
   };
 
   const handleDragOver = (e) => {
@@ -42,12 +44,12 @@ const UploadReportCard = ({ onUpload }) => {
     setIsDragging(false);
   };
 
-  const handleDrop = (e) => {
+  const handleDrop = async (e) => {
     e.preventDefault();
     setIsDragging(false);
     const file = e.dataTransfer.files[0];
     if (file) {
-      processUpload(file);
+      await processUpload(file);
     }
   };
 
@@ -60,38 +62,36 @@ const UploadReportCard = ({ onUpload }) => {
         </span>
       </div>
 
-      {/* Hidden File Input */}
       <input
         type="file"
         ref={fileInputRef}
         onChange={handleFileChange}
         accept=".pdf,.jpg,.jpeg,.png"
         className="hidden"
+        disabled={isUploading}
       />
 
-      {/* Drag & Drop Zone */}
       <div
-        onClick={() => fileInputRef.current.click()}
+        onClick={() => !isUploading && fileInputRef.current.click()}
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
         onDrop={handleDrop}
-        className={`border-2 border-dashed rounded-2xl p-8 flex flex-col items-center justify-center text-center cursor-pointer transition-colors mb-6 group 
-          ${isDragging ? 'border-[#4A7C59] bg-[#E7F3EB]' : 'border-[#EFEBE1] bg-[#FAF7F2] hover:bg-[#F4F1EB]'}`}
+        className={`border-2 border-dashed rounded-2xl p-8 flex flex-col items-center justify-center text-center transition-colors mb-6 group ${isUploading ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'
+          } ${isDragging ? 'border-[#4A7C59] bg-[#E7F3EB]' : 'border-[#EFEBE1] bg-[#FAF7F2] hover:bg-[#F4F1EB]'}`}
       >
         <div className={`w-14 h-14 rounded-full flex items-center justify-center mb-4 shadow-sm transition-transform ${isDragging ? 'bg-[#2C4D36] text-white scale-110' : 'bg-[#3A6447] text-white group-hover:scale-105'}`}>
-          <UploadCloud size={24} />
+          <UploadCloud size={24} className={isUploading ? 'animate-bounce' : ''} />
         </div>
         <p className="text-sm font-bold text-gray-900 mb-1">
-          {isDragging ? 'Drop file here' : 'Click to upload or drag & drop'}
+          {isUploading ? 'Uploading...' : isDragging ? 'Drop file here' : 'Click to upload or drag & drop'}
         </p>
         <p className="text-xs font-medium text-gray-400">PDF, JPG or PNG (MAX. 20MB)</p>
       </div>
 
-      {/* Info Box */}
       <div className="flex gap-3 bg-[#FDF9EE] p-4 rounded-xl border border-[#EFEBE1]">
         <Info size={18} className="text-[#D9774B] shrink-0 mt-0.5" />
         <p className="text-xs font-medium text-gray-600 leading-relaxed">
-          Uploaded reports are automatically categorized by our Ayur AI to categorize and extract key metrics for your vitality trends.
+          Uploaded reports are automatically categorized by our Ayur AI to extract key metrics for your vitality trends.
         </p>
       </div>
     </div>

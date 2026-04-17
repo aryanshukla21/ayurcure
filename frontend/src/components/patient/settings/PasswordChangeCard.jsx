@@ -1,116 +1,90 @@
 import React, { useState } from 'react';
-import { ShieldCheck, X, Check, Edit2 } from 'lucide-react';
+import { KeyRound, CheckCircle2 } from 'lucide-react';
+import { patientApi } from '../../../api/patientApi';
 
-const INITIAL_PASSWORDS = {
-  current: '••••••••',
-  new: '••••••••',
-  confirm: '••••••••'
-};
+const PasswordChangeCard = ({ isLoading }) => {
+  const [passwords, setPasswords] = useState({ current: '', new: '', confirm: '' });
+  const [status, setStatus] = useState({ loading: false, success: false, error: '' });
 
-const PasswordChangeCard = () => {
-  const [passwords, setPasswords] = useState(INITIAL_PASSWORDS);
-  const [isEditing, setIsEditing] = useState(false);
+  if (isLoading) {
+    return (
+      <div className="bg-[#FAF7F2] rounded-[32px] p-6 md:p-8 border border-[#EFEBE1] shadow-sm animate-pulse h-full">
+        <div className="h-6 bg-gray-200 rounded w-40 mb-6"></div>
+        <div className="space-y-4 mb-6">
+          <div className="h-12 bg-white rounded-2xl w-full"></div>
+          <div className="h-12 bg-white rounded-2xl w-full"></div>
+          <div className="h-12 bg-white rounded-2xl w-full"></div>
+        </div>
+        <div className="h-12 bg-gray-200 rounded-full w-full"></div>
+      </div>
+    );
+  }
 
-  const handleChange = (e) => {
-    setPasswords({ ...passwords, [e.target.name]: e.target.value });
-  };
+  const handleUpdate = async (e) => {
+    e.preventDefault();
+    if (passwords.new !== passwords.confirm) {
+      setStatus({ loading: false, success: false, error: "New passwords don't match." });
+      return;
+    }
 
-  const handleEditClick = () => {
-    setIsEditing(true);
-    setPasswords({ current: '', new: '', confirm: '' });
-  };
-
-  const handleCancel = () => {
-    setPasswords(INITIAL_PASSWORDS);
-    setIsEditing(false);
-  };
-
-  const handleUpdate = () => {
-    console.log("Password successfully updated");
-    setPasswords(INITIAL_PASSWORDS);
-    setIsEditing(false);
+    setStatus({ loading: true, success: false, error: '' });
+    try {
+      await patientApi.changePassword({ current: passwords.current, new: passwords.new });
+      setStatus({ loading: false, success: true, error: '' });
+      setPasswords({ current: '', new: '', confirm: '' });
+      setTimeout(() => setStatus(s => ({ ...s, success: false })), 3000);
+    } catch (error) {
+      setStatus({ loading: false, success: false, error: "Failed to update password." });
+    }
   };
 
   return (
-    <div className="bg-[#FAF7F2] rounded-[32px] p-6 md:p-8 border border-[#EFEBE1] shadow-sm h-full flex flex-col transition-all">
-      <div className="flex items-center gap-3 mb-8">
-        <ShieldCheck size={20} className="text-gray-500" />
-        <h3 className="text-xl font-bold text-gray-900">Password Change</h3>
+    <div className="bg-[#FAF7F2] rounded-[32px] p-6 md:p-8 border border-[#EFEBE1] shadow-sm h-full flex flex-col">
+      <div className="flex items-center gap-3 mb-6">
+        <div className="bg-white p-2.5 rounded-xl text-[#8B6A47] shadow-sm">
+          <KeyRound size={20} />
+        </div>
+        <h3 className="text-xl font-bold text-gray-900">Security</h3>
       </div>
 
-      <div className="flex flex-col gap-5 mb-8 flex-1">
-        <div className="flex flex-col gap-1.5">
-          <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Current Password</label>
+      <form onSubmit={handleUpdate} className="flex flex-col flex-1">
+        <div className="space-y-4 mb-6">
           <input
             type="password"
-            name="current"
+            placeholder="Current Password"
             value={passwords.current}
-            onChange={handleChange}
-            readOnly={!isEditing}
-            className={`w-full border rounded-xl px-4 py-3 text-sm font-bold text-gray-900 focus:outline-none transition-colors ${isEditing
-                ? 'bg-white border-[#EFEBE1] focus:ring-2 focus:ring-[#8C6239] cursor-text'
-                : 'bg-transparent border-transparent cursor-not-allowed'
-              }`}
+            onChange={(e) => setPasswords({ ...passwords, current: e.target.value })}
+            required
+            className="w-full px-4 py-3.5 bg-white border border-[#EFEBE1] rounded-2xl text-sm font-medium text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#4A7C59] transition-all"
           />
-        </div>
-
-        <div className="flex flex-col gap-1.5">
-          <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">New Password</label>
           <input
             type="password"
-            name="new"
+            placeholder="New Password"
             value={passwords.new}
-            onChange={handleChange}
-            readOnly={!isEditing}
-            className={`w-full border rounded-xl px-4 py-3 text-sm font-bold text-gray-900 focus:outline-none transition-colors ${isEditing
-                ? 'bg-white border-[#EFEBE1] focus:ring-2 focus:ring-[#8C6239] cursor-text'
-                : 'bg-transparent border-transparent cursor-not-allowed'
-              }`}
+            onChange={(e) => setPasswords({ ...passwords, new: e.target.value })}
+            required
+            className="w-full px-4 py-3.5 bg-white border border-[#EFEBE1] rounded-2xl text-sm font-medium text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#4A7C59] transition-all"
           />
-        </div>
-
-        <div className="flex flex-col gap-1.5">
-          <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Confirm Password</label>
           <input
             type="password"
-            name="confirm"
+            placeholder="Confirm New Password"
             value={passwords.confirm}
-            onChange={handleChange}
-            readOnly={!isEditing}
-            className={`w-full border rounded-xl px-4 py-3 text-sm font-bold text-gray-900 focus:outline-none transition-colors ${isEditing
-                ? 'bg-white border-[#EFEBE1] focus:ring-2 focus:ring-[#8C6239] cursor-text'
-                : 'bg-transparent border-transparent cursor-not-allowed'
-              }`}
+            onChange={(e) => setPasswords({ ...passwords, confirm: e.target.value })}
+            required
+            className="w-full px-4 py-3.5 bg-white border border-[#EFEBE1] rounded-2xl text-sm font-medium text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#4A7C59] transition-all"
           />
         </div>
-      </div>
 
-      {/* Action Buttons */}
-      <div className="w-full mt-auto">
-        {isEditing ? (
-          <div className="flex items-center gap-3 animate-in fade-in slide-in-from-bottom-2">
-            <button
-              onClick={handleCancel}
-              className="flex-1 bg-white border border-[#EFEBE1] hover:bg-gray-50 text-gray-700 font-bold py-3.5 px-4 rounded-full transition-colors text-sm shadow-sm flex items-center justify-center gap-2"
-            >
-              <X size={16} /> Cancel
-            </button>
-            <button
-              onClick={handleUpdate}
-              className="flex-1 bg-[#8C6239] hover:bg-[#734F2D] text-white font-bold py-3.5 px-4 rounded-full transition-colors text-sm shadow-sm flex items-center justify-center gap-2"
-            >
-              <Check size={16} /> Update
-            </button>
-          </div>
-        ) : (
-          <button
-            onClick={handleEditClick}
-            className="w-full bg-white border border-[#EFEBE1] hover:bg-gray-50 text-gray-700 font-bold py-3.5 px-8 rounded-full transition-colors text-sm flex items-center justify-center gap-2 shadow-sm"
-          >
-            <Edit2 size={16} /> Edit Password
-          </button>
-        )}
-      </div>
+        {status.error && <p className="text-xs text-red-500 font-bold mb-4">{status.error}</p>}
+
+        <button
+          type="submit"
+          disabled={status.loading}
+          className="w-full mt-auto bg-white border border-[#EFEBE1] hover:bg-gray-50 text-gray-700 font-bold py-3.5 rounded-full transition-colors flex items-center justify-center gap-2 shadow-sm"
+        >
+          {status.success ? <><CheckCircle2 size={16} className="text-[#4A7C59]" /> Updated</> : 'Update Password'}
+        </button>
+      </form>
     </div>
   );
 };

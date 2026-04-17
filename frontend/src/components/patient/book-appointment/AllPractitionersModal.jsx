@@ -1,106 +1,94 @@
 import React, { useState } from 'react';
-import { X, Search, ChevronLeft, ChevronRight } from 'lucide-react';
+import { X, Search } from 'lucide-react';
 import PractitionerModalCard from './PractitionerModalCard';
 
-const SPECIALTIES = ['All Specialties', 'Ayurvedic', 'Panchakarma', 'Yoga Therapy'];
-
-const AllPractitionersModal = ({ isOpen, onClose, onSelectDoctor, doctors }) => {
-  const [activeFilter, setActiveFilter] = useState('All Specialties');
-  const [searchQuery, setSearchQuery] = useState('');
+const AllPractitionersModal = ({ isOpen, onClose, onSelectDoctor, doctors = [], isLoading }) => {
+  const [searchTerm, setSearchTerm] = useState('');
+  const [activeFilter, setActiveFilter] = useState('All');
 
   if (!isOpen) return null;
 
-  // Filter logic for both the search bar and the specialty tabs
-  const filteredDoctors = doctors.filter((doctor) => {
-    const searchLower = searchQuery.toLowerCase();
+  const specialties = ['All', ...new Set(doctors.map(d => d.specialty || d.specialization).filter(Boolean))];
 
-    // Check if the search query matches the doctor's name, specialty, or tags
-    const matchesSearch =
-      doctor.name.toLowerCase().includes(searchLower) ||
-      doctor.specialty.toLowerCase().includes(searchLower) ||
-      doctor.tag.toLowerCase().includes(searchLower);
-
-    // Check if the active tab matches the doctor's specialty
-    const matchesSpecialty =
-      activeFilter === 'All Specialties' ||
-      doctor.specialty.toLowerCase().includes(activeFilter.toLowerCase());
-
-    return matchesSearch && matchesSpecialty;
+  const filteredDoctors = doctors.filter(doc => {
+    const docName = doc.name || doc.full_name || '';
+    const matchesSearch = docName.toLowerCase().includes(searchTerm.toLowerCase());
+    const docSpec = doc.specialty || doc.specialization;
+    const matchesFilter = activeFilter === 'All' || docSpec === activeFilter;
+    return matchesSearch && matchesFilter;
   });
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 md:p-12 bg-black/40 backdrop-blur-sm">
-      <div className="bg-[#FDF9EE] w-full max-w-[1200px] max-h-full rounded-[32px] shadow-2xl flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-gray-900/60 backdrop-blur-sm animate-fade-in">
+      <div className="bg-white w-full max-w-4xl rounded-[32px] shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
 
-        {/* Header - Filter Icon Removed */}
-        <div className="px-8 py-6 border-b border-[#EFEBE1] flex items-center justify-between shrink-0 bg-[#FDF9EE] z-10">
-          <div className="flex items-center gap-4">
-            <button onClick={onClose} className="p-2 hover:bg-[#EFEBE1] rounded-full transition-colors">
-              <X size={24} className="text-gray-900" />
-            </button>
-            <h2 className="text-xl font-bold text-gray-900">Practitioners</h2>
+        {/* Header */}
+        <div className="p-6 md:p-8 border-b border-[#EFEBE1] flex justify-between items-center bg-[#FDF9EE]">
+          <div>
+            <h2 className="text-2xl font-extrabold text-gray-900">Select Practitioner</h2>
+            <p className="text-sm text-gray-500 font-medium mt-1">Choose from our verified clinical experts</p>
+          </div>
+          <button onClick={onClose} className="p-2 bg-white rounded-full text-gray-400 hover:text-gray-900 shadow-sm border border-[#EFEBE1] transition-colors">
+            <X size={20} />
+          </button>
+        </div>
+
+        {/* Filters */}
+        <div className="p-6 border-b border-[#EFEBE1] flex flex-col sm:flex-row gap-4 items-center justify-between">
+          <div className="relative w-full sm:w-72 shrink-0">
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
+            <input
+              type="text"
+              placeholder="Search by name..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full pl-11 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-full text-sm font-medium focus:outline-none focus:ring-2 focus:ring-[#4A7C59] transition-all"
+            />
+          </div>
+
+          <div className="flex gap-2 overflow-x-auto w-full pb-2 sm:pb-0 hide-scrollbar">
+            {specialties.map(spec => (
+              <button
+                key={spec}
+                onClick={() => setActiveFilter(spec)}
+                className={`px-4 py-2 rounded-full text-xs font-bold whitespace-nowrap transition-colors ${activeFilter === spec ? 'bg-[#3A6447] text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                  }`}
+              >
+                {spec}
+              </button>
+            ))}
           </div>
         </div>
 
-        <div className="flex-1 overflow-y-auto p-8 custom-scrollbar">
-          <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-10">
-
-            {/* Search Bar */}
-            <div className="relative w-full md:max-w-md">
-              <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
-              <input
-                type="text"
-                placeholder="Search by name or keyword"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-12 pr-4 py-3.5 bg-white border border-[#EFEBE1] rounded-2xl text-sm focus:outline-none focus:ring-2 focus:ring-[#4A7C59] shadow-sm"
-              />
-            </div>
-
-            {/* Specialty Filters */}
-            <div className="flex overflow-x-auto gap-2 w-full md:w-auto pb-2 md:pb-0 hide-scrollbar">
-              {SPECIALTIES.map(spec => (
-                <button
-                  key={spec}
-                  onClick={() => setActiveFilter(spec)}
-                  className={`px-5 py-2.5 rounded-full text-sm font-bold whitespace-nowrap transition-colors ${activeFilter === spec ? 'bg-[#2C4C3B] text-white shadow-md' : 'bg-white text-gray-600 border border-[#EFEBE1] hover:bg-gray-50'
-                    }`}
-                >
-                  {spec}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Render Filtered Doctors */}
-          {filteredDoctors.length > 0 ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {filteredDoctors.map(doctor => (
-                <PractitionerModalCard
-                  key={doctor.id}
-                  doctor={doctor}
-                  onSelect={(doc) => {
-                    onSelectDoctor(doc.id);
-                    onClose();
-                  }}
-                />
-              ))}
-            </div>
-          ) : (
-            <div className="text-center py-20 text-gray-500 font-medium">
-              No practitioners found matching your criteria.
-            </div>
-          )}
-        </div>
-
-        <div className="px-8 py-5 border-t border-[#EFEBE1] flex justify-between items-center shrink-0 bg-[#FDF9EE]">
-          <p className="text-sm font-semibold text-gray-500">Showing {filteredDoctors.length} Practitioners available today</p>
-          <div className="flex items-center gap-4 text-gray-900 font-bold">
-            <button className="p-1 text-gray-400 hover:text-gray-900 transition-colors"><ChevronLeft size={20} /></button>
-            <span>1 / 1</span>
-            <button className="p-1 hover:text-[#4A7C59] transition-colors"><ChevronRight size={20} /></button>
+        {/* Doctor Grid */}
+        <div className="p-6 md:p-8 overflow-y-auto bg-gray-50 flex-1">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {isLoading ? (
+              // Skeleton loaders while fetching
+              [1, 2, 3, 4].map(i => (
+                <div key={i} className="bg-white rounded-[24px] p-6 border border-[#EFEBE1] h-[220px] animate-pulse flex flex-col justify-between">
+                  <div className="flex gap-4">
+                    <div className="w-16 h-16 rounded-2xl bg-gray-100"></div>
+                    <div className="flex-1 space-y-2">
+                      <div className="h-4 bg-gray-100 rounded w-full"></div>
+                      <div className="h-3 bg-gray-100 rounded w-1/2"></div>
+                    </div>
+                  </div>
+                  <div className="h-10 bg-gray-200 rounded-full w-full"></div>
+                </div>
+              ))
+            ) : filteredDoctors.length > 0 ? (
+              filteredDoctors.map(doctor => (
+                <PractitionerModalCard key={doctor.id || doctor._id} doctor={doctor} onSelect={onSelectDoctor} />
+              ))
+            ) : (
+              <div className="col-span-1 md:col-span-2 text-center py-12 text-gray-500 font-medium">
+                No practitioners found matching your criteria.
+              </div>
+            )}
           </div>
         </div>
+
       </div>
     </div>
   );

@@ -1,65 +1,70 @@
 import React from 'react';
-import { MapPin, Clock } from 'lucide-react';
+import { User, Droplets, MapPin, Activity } from 'lucide-react';
 
-const PatientProfileSummary = ({ profile }) => {
-  // Default fallbacks to prevent crashes if data is missing
-  const {
-    name = "Patient Name",
-    constitution = "Not Assessed",
-    age = "-",
-    gender = "-",
-    bloodGroup = "Unknown",
-    knownConditions = "None",
-    location = "Unknown",
-    lastCheckup = "No record",
-    status = "ACTIVE CARE"
-  } = profile;
-
-  return (
-    <div className="bg-white rounded-2xl p-6 shadow-sm border border-[#EFEBE1] h-full flex flex-col justify-between">
-      <div className="flex items-start gap-6">
-        <div className="w-24 h-24 bg-[#2C5F44] rounded-2xl flex items-center justify-center shrink-0">
-          <div className="text-white text-center">
-            <span className="text-2xl font-bold">{name.charAt(0)}</span>
+const PatientProfileSummary = ({ profile, isLoading }) => {
+  if (isLoading) {
+    return (
+      <div className="bg-white rounded-[32px] p-8 border border-[#EFEBE1] shadow-sm animate-pulse h-full flex flex-col justify-center">
+        <div className="flex items-center gap-6 mb-6">
+          <div className="w-20 h-20 bg-gray-200 rounded-full"></div>
+          <div className="space-y-3">
+            <div className="h-6 bg-gray-200 rounded w-48"></div>
+            <div className="h-4 bg-gray-200 rounded w-32"></div>
           </div>
         </div>
-
-        <div className="flex-1">
-          <div className="flex justify-between items-start mb-4">
-            <div>
-              <h2 className="text-2xl font-bold text-gray-900">{name}</h2>
-              <p className="text-sm text-amber-800 font-medium">{constitution} Constitution</p>
-            </div>
-            <span className="px-3 py-1 bg-amber-100 text-amber-800 text-xs font-bold rounded-full">
-              {status}
-            </span>
-          </div>
-
-          <div className="grid grid-cols-3 gap-4 mb-6">
-            <div>
-              <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider mb-1">Age / Gender</p>
-              <p className="text-sm font-semibold text-gray-900">{age} / {gender}</p>
-            </div>
-            <div>
-              <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider mb-1">Blood Group</p>
-              <p className="text-sm font-semibold text-gray-900">{bloodGroup}</p>
-            </div>
-            <div>
-              <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider mb-1">Known Conditions</p>
-              <p className="text-sm font-semibold text-amber-700">{knownConditions}</p>
-            </div>
-          </div>
+        <div className="grid grid-cols-2 gap-4 mt-4">
+          <div className="h-10 bg-gray-100 rounded-xl"></div>
+          <div className="h-10 bg-gray-100 rounded-xl"></div>
         </div>
       </div>
+    );
+  }
 
-      <div className="flex items-center gap-6 pt-4 border-t border-gray-100 text-xs text-gray-500 font-medium">
-        <div className="flex items-center gap-1.5">
-          <MapPin size={14} className="text-gray-400" />
-          {location}
+  // Fallback defaults if data is missing from DB
+  const safeProfile = profile || {};
+
+  return (
+    <div className="bg-white rounded-[32px] p-8 border border-[#EFEBE1] shadow-sm h-full relative overflow-hidden group">
+      <div className="absolute top-0 right-0 w-32 h-32 bg-[#FDF9EE] rounded-bl-full -z-10 group-hover:scale-110 transition-transform duration-500"></div>
+
+      <div className="flex justify-between items-start mb-8">
+        <div className="flex items-center gap-6">
+          <div className="relative">
+            <div className="w-20 h-20 bg-[#E7F3EB] rounded-full flex items-center justify-center text-[#4A7C59] border-4 border-white shadow-sm">
+              <User size={36} />
+            </div>
+            <div className="absolute -bottom-1 -right-1 w-6 h-6 bg-[#EBCB8B] rounded-full border-2 border-white flex items-center justify-center">
+              <div className="w-2 h-2 bg-white rounded-full animate-ping"></div>
+            </div>
+          </div>
+          <div>
+            <h2 className="text-2xl font-extrabold text-gray-900 mb-1">{safeProfile.name || 'Patient User'}</h2>
+            <p className="text-[#A67C00] font-bold text-sm bg-[#FEF5D3] px-3 py-1 rounded-full inline-block">
+              {safeProfile.constitution || 'Prakriti Assessment Pending'}
+            </p>
+          </div>
         </div>
-        <div className="flex items-center gap-1.5">
-          <Clock size={14} className="text-gray-400" />
-          Last Checkup: {lastCheckup}
+        <span className="text-[10px] font-extrabold text-gray-400 uppercase tracking-widest bg-gray-50 px-3 py-1 rounded-full border border-gray-100">
+          {safeProfile.status || 'Active Care'}
+        </span>
+      </div>
+
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="bg-[#FDFBF7] p-4 rounded-2xl border border-[#EFEBE1]">
+          <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mb-1 flex items-center gap-1"><User size={12} /> Age / Gender</p>
+          <p className="font-bold text-gray-900">{safeProfile.age || '--'} Yrs / {safeProfile.gender || '--'}</p>
+        </div>
+        <div className="bg-[#FDFBF7] p-4 rounded-2xl border border-[#EFEBE1]">
+          <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mb-1 flex items-center gap-1"><Droplets size={12} /> Blood Group</p>
+          <p className="font-bold text-gray-900">{safeProfile.bloodGroup || '--'}</p>
+        </div>
+        <div className="bg-[#FDFBF7] p-4 rounded-2xl border border-[#EFEBE1]">
+          <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mb-1 flex items-center gap-1"><Activity size={12} /> Conditions</p>
+          <p className="font-bold text-gray-900 truncate">{safeProfile.knownConditions || 'None'}</p>
+        </div>
+        <div className="bg-[#FDFBF7] p-4 rounded-2xl border border-[#EFEBE1]">
+          <p className="text-[10px] text-gray-400 font-bold uppercase tracking-widest mb-1 flex items-center gap-1"><MapPin size={12} /> Location</p>
+          <p className="font-bold text-gray-900 truncate">{safeProfile.location || '--'}</p>
         </div>
       </div>
     </div>

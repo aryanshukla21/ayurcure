@@ -1,48 +1,35 @@
 import axiosInstance from './axiosConfig';
 
 export const ecommerceApi = {
-    // Fetch products with optional filters (category, search, prakriti)
-    getProducts: async (params = {}) => {
-        const response = await axiosInstance.get('/api/ecommerce/products', { params });
-        return response.data;
-    },
+    // --- PHARMACY STORE ---
+    getAllProducts: async () => (await axiosInstance.get('/api/pharmacy-store/all')).data,
+    getHerbalSupplements: async () => (await axiosInstance.get('/api/pharmacy-store/herbal-suppliments')).data,
+    getDigestiveCare: async () => (await axiosInstance.get('/api/pharmacy-store/digestive-care')).data,
+    getImmunityBoosters: async () => (await axiosInstance.get('/api/pharmacy-store/immunity-booster')).data,
+    getSkinCare: async () => (await axiosInstance.get('/api/pharmacy-store/skin-care')).data,
+    getWellnessProducts: async () => (await axiosInstance.get('/api/pharmacy-store/wellness-products')).data,
+    getProductDetails: async (id) => (await axiosInstance.get(`/api/pharmacy-store/product/${id}/details`)).data,
 
-    getProductDetails: async (id) => {
-        const response = await axiosInstance.get(`/api/ecommerce/products/${id}`);
-        return response.data;
-    },
+    // --- PHARMACY ORDERS ---
+    getInProgressOrders: async () => (await axiosInstance.get('/api/pharmacy-orders/orders/in-progress')).data,
+    getShippedToday: async () => (await axiosInstance.get('/api/pharmacy-orders/orders/shipped-today')).data,
+    getTotalSpent: async () => (await axiosInstance.get('/api/pharmacy-orders/orders/total-spent')).data,
+    getOrderHistory: async () => (await axiosInstance.get('/api/pharmacy-orders/order-history')).data,
+    filterOrderHistory: async (status, sort) => (await axiosInstance.get(`/api/pharmacy-orders/order-history/filter/status=${status}-sort-by=${sort}`)).data,
+    getRefillReminder: async () => (await axiosInstance.get('/api/pharmacy-orders/refill-reminder')).data,
+    getAssistanceInfo: async () => (await axiosInstance.get('/api/pharmacy-orders/need-assistance')).data,
+    exportOrderHistory: async () => (await axiosInstance.get('/api/pharmacy-orders/order-history/export-all', { responseType: 'blob' })).data,
 
-    getWishlist: async () => {
-        const response = await axiosInstance.get(`/api/ecommerce/wishlist`);
-        return response.data;
-    },
+    // --- ORDER DETAILS (:id) ---
+    getOrderDetails: async (id) => (await axiosInstance.get(`/api/order/${id}/order-details`)).data,
+    getOrderedProducts: async (id) => (await axiosInstance.get(`/api/order/${id}/ordered-products`)).data,
+    getDeliveryStatus: async (id) => (await axiosInstance.get(`/api/order/${id}/delivery-projects`)).data, // Keeping your spelling
+    getPaymentSummary: async (id) => (await axiosInstance.get(`/api/order/${id}/payment-summary`)).data,
+    downloadInvoice: async (id) => (await axiosInstance.get(`/api/order/${id}/download-invoice`, { responseType: 'blob' })).data,
+    getOrderWellnessTip: async (id) => (await axiosInstance.get(`/api/order/${id}/wellness-tip`)).data,
 
-    toggleWishlist: async (productId) => {
-        // Send as productId so it aligns smoothly with component logic
-        const response = await axiosInstance.post(`/api/ecommerce/wishlist/toggle`, { productId });
-        return response.data;
-    },
-
-    placeOrder: async (orderData) => {
-        // Expected: { items: [{product_id, quantity, price}], total_amount, discount_applied, shipping_address, payment_method }
-        const response = await axiosInstance.post(`/api/ecommerce/orders`, orderData);
-        return response.data;
-    },
-
-    getUserOrders: async () => {
-        const response = await axiosInstance.get(`/api/ecommerce/orders`);
-        return response.data;
-    },
-
-    // NEW: Get details and items of a specific order
-    getOrderDetails: async (orderId) => {
-        const response = await axiosInstance.get(`/api/ecommerce/orders/${orderId}`);
-        return response.data;
-    },
-
-    verifyPayments: async (paymentData) => {
-        // Expected: { razorpay_order_id, razorpay_payment_id, razorpay_signature, order_id }
-        const response = await axiosInstance.post(`/api/ecommerce/orders/verify-payment`, paymentData);
-        return response.data;
-    },
+    // --- CART ---
+    getCartProductDetails: async () => (await axiosInstance.get('/api/cart/product-details')).data,
+    getCartOrderSummary: async () => (await axiosInstance.get('/api/cart/order-summary')).data,
+    applyPromoCode: async (code) => (await axiosInstance.post('/api/cart/apply-promo-code', { code })).data,
 };

@@ -1,101 +1,108 @@
 import React from 'react';
-import { User } from 'lucide-react';
+import { User, Camera } from 'lucide-react';
 
-const AccountInfoCard = ({ data, isEditing, onChange }) => {
-  if (!data) return null;
+const AccountInfoCard = ({ data, isEditing, onChange, isLoading }) => {
+  if (isLoading) {
+    return (
+      <div className="bg-white rounded-[32px] p-6 md:p-8 border border-[#EFEBE1] shadow-sm animate-pulse h-full">
+        <div className="flex items-center gap-6 mb-8">
+          <div className="w-20 h-20 bg-gray-200 rounded-full shrink-0"></div>
+          <div className="space-y-2 flex-1">
+            <div className="h-5 bg-gray-200 rounded w-1/3"></div>
+            <div className="h-4 bg-gray-100 rounded w-1/4"></div>
+          </div>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {[1, 2, 3, 4].map(i => (
+            <div key={i} className="space-y-2">
+              <div className="h-3 bg-gray-200 rounded w-24"></div>
+              <div className="h-12 bg-gray-100 rounded-2xl w-full"></div>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  const safeData = data || {};
 
   return (
-    <div className="bg-white rounded-[24px] p-6 md:p-8 border border-[#EFEBE1] shadow-sm h-full">
-      <div className="flex items-center gap-3 mb-8 pb-4 border-b border-[#EFEBE1]">
-        <div className="w-10 h-10 rounded-full bg-[#E7F3EB] flex items-center justify-center text-[#2D5A27]">
-          <User size={20} />
+    <div className="bg-white rounded-[32px] p-6 md:p-8 border border-[#EFEBE1] shadow-sm h-full">
+      <h3 className="text-xl font-bold text-gray-900 mb-6">Account Information</h3>
+
+      <div className="flex items-center gap-6 mb-8 pb-8 border-b border-[#EFEBE1]">
+        <div className="relative">
+          <div className="w-20 h-20 bg-[#E7F3EB] rounded-full flex items-center justify-center text-[#4A7C59] text-2xl font-bold border-4 border-white shadow-sm overflow-hidden">
+            {safeData.avatar ? (
+              <img src={safeData.avatar} alt="Profile" className="w-full h-full object-cover" />
+            ) : (
+              <User size={32} />
+            )}
+          </div>
+          {isEditing && (
+            <button className="absolute bottom-0 right-0 w-8 h-8 bg-[#3A6447] text-white rounded-full border-2 border-white flex items-center justify-center shadow-sm hover:bg-[#2C4D36] transition-colors">
+              <Camera size={14} />
+            </button>
+          )}
         </div>
-        <h2 className="text-xl font-bold text-gray-900">Account Details</h2>
+        <div>
+          <h4 className="text-lg font-bold text-gray-900">{safeData.name || safeData.full_name || 'Patient User'}</h4>
+          <p className="text-sm font-medium text-gray-500">Update your photo and personal details here.</p>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-
-        {/* Full Name */}
         <div>
-          <label className="block text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-2">Full Name</label>
-          {isEditing ? (
-            <input
-              type="text"
-              value={data.fullName}
-              onChange={(e) => onChange('fullName', e.target.value)}
-              className="w-full bg-[#FAF7F2] border border-[#EFEBE1] rounded-xl p-3 text-sm text-gray-900 font-medium focus:outline-none focus:border-[#4A7C59] transition-colors"
-            />
-          ) : (
-            <p className="text-sm font-bold text-gray-900 p-3 bg-gray-50 rounded-xl border border-transparent cursor-not-allowed hover:bg-gray-100 transition-colors">{data.fullName}</p>
-          )}
+          <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-2 ml-1">
+            Full Name
+          </label>
+          <input
+            type="text"
+            value={safeData.name || safeData.full_name || ''}
+            onChange={(e) => onChange('name', e.target.value)}
+            disabled={!isEditing}
+            className="w-full px-4 py-3.5 bg-[#FAF7F2] border border-[#EFEBE1] rounded-2xl text-sm font-medium text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#4A7C59] transition-all disabled:opacity-70 disabled:bg-gray-50"
+          />
         </div>
-
-        {/* Email Address */}
         <div>
-          <label className="block text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-2">Email Address</label>
-          {isEditing ? (
-            <input
-              type="email"
-              value={data.email}
-              onChange={(e) => onChange('email', e.target.value)}
-              className="w-full bg-[#FAF7F2] border border-[#EFEBE1] rounded-xl p-3 text-sm text-gray-900 font-medium focus:outline-none focus:border-[#4A7C59] transition-colors"
-            />
-          ) : (
-            <p className="text-sm font-bold text-gray-900 p-3 bg-gray-50 rounded-xl border border-transparent cursor-not-allowed hover:bg-gray-100 transition-colors">{data.email}</p>
-          )}
+          <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-2 ml-1">
+            Email Address
+          </label>
+          <input
+            type="email"
+            value={safeData.email || ''}
+            onChange={(e) => onChange('email', e.target.value)}
+            disabled={!isEditing}
+            className="w-full px-4 py-3.5 bg-[#FAF7F2] border border-[#EFEBE1] rounded-2xl text-sm font-medium text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#4A7C59] transition-all disabled:opacity-70 disabled:bg-gray-50"
+          />
         </div>
-
-        {/* Phone Number */}
         <div>
-          <label className="block text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-2">Phone Number</label>
-          {isEditing ? (
-            <input
-              type="tel"
-              value={data.phone}
-              onChange={(e) => onChange('phone', e.target.value)}
-              className="w-full bg-[#FAF7F2] border border-[#EFEBE1] rounded-xl p-3 text-sm text-gray-900 font-medium focus:outline-none focus:border-[#4A7C59] transition-colors"
-            />
-          ) : (
-            <p className="text-sm font-bold text-gray-900 p-3 bg-gray-50 rounded-xl border border-transparent cursor-not-allowed hover:bg-gray-100 transition-colors">{data.phone}</p>
-          )}
+          <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-2 ml-1">
+            Phone Number
+          </label>
+          <input
+            type="tel"
+            value={safeData.phone || ''}
+            onChange={(e) => onChange('phone', e.target.value)}
+            disabled={!isEditing}
+            className="w-full px-4 py-3.5 bg-[#FAF7F2] border border-[#EFEBE1] rounded-2xl text-sm font-medium text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#4A7C59] transition-all disabled:opacity-70 disabled:bg-gray-50"
+          />
         </div>
-
-        {/* Language */}
         <div>
-          <label className="block text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-2">Preferred Language</label>
-          {isEditing ? (
-            <select
-              value={data.language}
-              onChange={(e) => onChange('language', e.target.value)}
-              className="w-full bg-[#FAF7F2] border border-[#EFEBE1] rounded-xl p-3 text-sm text-gray-900 font-medium focus:outline-none focus:border-[#4A7C59] transition-colors appearance-none cursor-pointer"
-            >
-              <option value="English">English</option>
-              <option value="Hindi">Hindi</option>
-              <option value="Sanskrit">Sanskrit</option>
-            </select>
-          ) : (
-            <p className="text-sm font-bold text-gray-900 p-3 bg-gray-50 rounded-xl border border-transparent cursor-not-allowed hover:bg-gray-100 transition-colors">{data.language}</p>
-          )}
+          <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-2 ml-1">
+            Timezone
+          </label>
+          <select
+            value={safeData.timezone || 'Asia/Kolkata'}
+            onChange={(e) => onChange('timezone', e.target.value)}
+            disabled={!isEditing}
+            className="w-full px-4 py-3.5 bg-[#FAF7F2] border border-[#EFEBE1] rounded-2xl text-sm font-medium text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#4A7C59] transition-all disabled:opacity-70 disabled:bg-gray-50 appearance-none"
+          >
+            <option value="Asia/Kolkata">IST (Indian Standard Time)</option>
+            <option value="America/New_York">EST (Eastern Standard Time)</option>
+            <option value="Europe/London">GMT (Greenwich Mean Time)</option>
+          </select>
         </div>
-
-        {/* Time Zone */}
-        <div className="md:col-span-2">
-          <label className="block text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-2">Time Zone</label>
-          {isEditing ? (
-            <select
-              value={data.timeZone}
-              onChange={(e) => onChange('timeZone', e.target.value)}
-              className="w-full bg-[#FAF7F2] border border-[#EFEBE1] rounded-xl p-3 text-sm text-gray-900 font-medium focus:outline-none focus:border-[#4A7C59] transition-colors appearance-none cursor-pointer"
-            >
-              <option value="Asia/Kolkata (IST)">Asia/Kolkata (IST)</option>
-              <option value="America/New_York (EST)">America/New_York (EST)</option>
-              <option value="Europe/London (GMT)">Europe/London (GMT)</option>
-            </select>
-          ) : (
-            <p className="text-sm font-bold text-gray-900 p-3 bg-gray-50 rounded-xl border border-transparent cursor-not-allowed hover:bg-gray-100 transition-colors">{data.timeZone}</p>
-          )}
-        </div>
-
       </div>
     </div>
   );

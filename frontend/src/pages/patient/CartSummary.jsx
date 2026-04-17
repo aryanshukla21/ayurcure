@@ -1,64 +1,17 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { Leaf } from 'lucide-react';
 import CartItem from '../../components/patient/cart/CartItem';
 import OrderSummaryPanel from '../../components/patient/cart/OrderSummaryPanel';
-
-const MOCK_CART_ITEMS = [
-    {
-        id: '1',
-        name: 'Ashwagandha Premium Capsules',
-        description: '60 Capsules • Stress Relief',
-        price: 24.99,
-        quantity: 1,
-        image: 'https://images.unsplash.com/photo-1611078443555-b16eb3291244?ixlib=rb-4.0.3&auto=format&fit=crop&w=300&q=80'
-    },
-    {
-        id: '2',
-        name: 'Triphala Churna',
-        description: '100g • Digestive Health',
-        price: 12.50,
-        quantity: 2,
-        image: 'https://images.unsplash.com/photo-1599305090598-fe179d501227?ixlib=rb-4.0.3&auto=format&fit=crop&w=300&q=80'
-    }
-];
+import { useCart } from '../../context/CartContext';
 
 const CartSummary = () => {
-    const [cartItems, setCartItems] = useState([]);
-    const [loading, setLoading] = useState(true);
+    const { cartItems, updateQuantity, removeFromCart, cartTotal } = useCart();
 
-    useEffect(() => {
-        const fetchCart = setTimeout(() => {
-            setCartItems(MOCK_CART_ITEMS);
-            setLoading(false);
-        }, 600);
-        return () => clearTimeout(fetchCart);
-    }, []);
-
-    const updateQuantity = (id, newQuantity) => {
-        setCartItems(items =>
-            items.map(item => item.id === id ? { ...item, quantity: newQuantity } : item)
-        );
-    };
-
-    const removeItem = (id) => {
-        setCartItems(items => items.filter(item => item.id !== id));
-    };
-
-    const subtotal = cartItems.reduce((acc, item) => acc + (item.price * item.quantity), 0);
-    const taxes = 4.50;
-    const total = subtotal + taxes;
-
-    if (loading) {
-        return (
-            <div className="flex justify-center items-center h-full min-h-screen bg-[#FDFBF7]">
-                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#2D5A27]"></div>
-            </div>
-        );
-    }
+    const taxes = cartItems.length > 0 ? 4.50 : 0;
+    const total = cartTotal + taxes;
 
     return (
         <div className="min-h-screen bg-[#FDF9EE] p-4 md:p-8 font-sans pb-24">
-
             <div className="mb-10">
                 <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-2">Cart Summary</h1>
                 <p className="text-gray-600 text-sm md:text-base">
@@ -67,7 +20,6 @@ const CartSummary = () => {
             </div>
 
             <div className="flex flex-col lg:flex-row gap-10">
-
                 <div className="flex-1">
                     {cartItems.length > 0 ? (
                         <div className="bg-[#fdf7e7] rounded-3xl p-6 md:p-8 shadow-sm border border-gray-100 mb-6">
@@ -76,7 +28,7 @@ const CartSummary = () => {
                                     key={item.id}
                                     item={item}
                                     updateQuantity={updateQuantity}
-                                    removeItem={removeItem}
+                                    removeItem={removeFromCart}
                                 />
                             ))}
 
@@ -85,27 +37,25 @@ const CartSummary = () => {
                                     <Leaf size={16} />
                                 </div>
                                 <p className="text-sm text-gray-700">
-                                    {/* Changed $ to ₹ */}
-                                    You are <span className="font-bold">₹10.01</span> away from <span className="font-bold">Free Herbal Tea Sampler</span>. Add more to your wellness kit!
+                                    Add more items to unlock our <span className="font-bold">Free Herbal Tea Sampler</span>!
                                 </p>
                             </div>
                         </div>
                     ) : (
                         <div className="bg-white rounded-3xl p-12 text-center shadow-sm border border-gray-100">
                             <h2 className="text-xl font-bold text-gray-900 mb-2">Your cart is empty</h2>
-                            <p className="text-gray-500">Add some holistic products to begin your wellness journey.</p>
+                            <p className="text-gray-500">Add some holistic products from the Pharmacy to begin your wellness journey.</p>
                         </div>
                     )}
                 </div>
 
                 <div className="w-full lg:w-[380px] xl:w-[420px] shrink-0">
                     <OrderSummaryPanel
-                        subtotal={subtotal}
+                        subtotal={cartTotal}
                         taxes={taxes}
                         total={total}
                     />
                 </div>
-
             </div>
         </div>
     );
