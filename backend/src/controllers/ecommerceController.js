@@ -1,151 +1,414 @@
 const EcommerceModel = require('../models/ecommerceModel');
 const PatientModel = require('../models/patientModel');
-const paymentService = require('../services/paymentService');
 const logger = require('../utils/logger');
-const db = require('../config/db');
+const fs = require('fs');
+const path = require('path');
 
-const getPatientId = async (userId) => {
-    const profile = await PatientModel.getProfileByUserId(userId);
-    if (!profile) throw new Error('Patient profile not found. Please complete onboarding.');
-    return profile.id;
+// ==========================================
+// UTILITY HELPERS
+// ==========================================
+
+/**
+ * Resolves the authenticated User ID to their specific Patient Profile ID.
+ */
+const getPatientId = async (userId, res) => {
+    try {
+        const profile = await PatientModel.getProfileByUserId(userId);
+        if (!profile) {
+            res.status(404).json({ error: 'Patient profile not found. Please complete onboarding.' });
+            return null;
+        }
+        return profile.id;
+    } catch (error) {
+        logger.error(`Error resolving patient ID: ${error.message}`);
+        res.status(500).json({ error: 'Internal server error while verifying profile.' });
+        return null;
+    }
 };
 
 // ==========================================
-// PUBLIC: PRODUCT CATALOG
+// 1. PHARMACY STORE MODULE
 // ==========================================
 
-exports.getProducts = async (req, res) => {
+exports.getAllProducts = async (req, res) => {
     try {
-        const { category, prakriti_suitability, search } = req.query;
-        const products = await EcommerceModel.getProducts({ category, prakriti_suitability, search });
-        res.status(200).json({ products });
-    } catch (error) {
-        logger.error(`Get Products Error: ${error.message}`);
-        res.status(500).json({ error: 'Failed to fetch products.' });
+        const data = await EcommerceModel.getAllProducts();
+        res.status(200).json(data);
+    } catch (err) {
+        logger.error(`getAllProducts Error: ${err.message}`);
+        res.status(500).json({ error: 'Failed to fetch all products' });
+    }
+};
+
+exports.getHerbalSupplements = async (req, res) => {
+    try {
+        const data = await EcommerceModel.getProductsByCategory('Herbal');
+        res.status(200).json(data);
+    } catch (err) {
+        logger.error(`getHerbalSupplements Error: ${err.message}`);
+        res.status(500).json({ error: 'Failed to fetch herbal supplements' });
+    }
+};
+
+exports.getDigestiveCare = async (req, res) => {
+    try {
+        const data = await EcommerceModel.getProductsByCategory('Digestive');
+        res.status(200).json(data);
+    } catch (err) {
+        logger.error(`getDigestiveCare Error: ${err.message}`);
+        res.status(500).json({ error: 'Failed to fetch digestive care products' });
+    }
+};
+
+exports.getImmunityBoosters = async (req, res) => {
+    try {
+        const data = await EcommerceModel.getProductsByCategory('Immunity');
+        res.status(200).json(data);
+    } catch (err) {
+        logger.error(`getImmunityBoosters Error: ${err.message}`);
+        res.status(500).json({ error: 'Failed to fetch immunity boosters' });
+    }
+};
+
+exports.getSkinCare = async (req, res) => {
+    try {
+        const data = await EcommerceModel.getProductsByCategory('Skin');
+        res.status(200).json(data);
+    } catch (err) {
+        logger.error(`getSkinCare Error: ${err.message}`);
+        res.status(500).json({ error: 'Failed to fetch skin care products' });
+    }
+};
+
+exports.getWellnessProducts = async (req, res) => {
+    try {
+        const data = await EcommerceModel.getProductsByCategory('Wellness');
+        res.status(200).json(data);
+    } catch (err) {
+        logger.error(`getWellnessProducts Error: ${err.message}`);
+        res.status(500).json({ error: 'Failed to fetch wellness products' });
     }
 };
 
 exports.getProductDetails = async (req, res) => {
     try {
-        const product = await EcommerceModel.getProductById(req.params.id);
-        if (!product) return res.status(404).json({ error: 'Product not found.' });
-        res.status(200).json({ product });
-    } catch (error) {
-        logger.error(`Get Product Details Error: ${error.message}`);
-        res.status(500).json({ error: 'Failed to fetch product details.' });
+        const { id } = req.params;
+        const data = await EcommerceModel.getProductDetails(id);
+
+        if (!data) return res.status(404).json({ error: 'Product not found' });
+
+        res.status(200).json(data);
+    } catch (err) {
+        logger.error(`getProductDetails Error: ${err.message}`);
+        res.status(500).json({ error: 'Failed to fetch product details' });
     }
 };
 
 // ==========================================
-// PROTECTED: PATIENT OPERATIONS
+// 2. PHARMACY ORDERS MODULE
 // ==========================================
 
-exports.toggleWishlist = async (req, res) => {
+exports.getInProgressOrders = async (req, res) => {
     try {
-        const patientId = await getPatientId(req.user.id);
-        // Supports both camelCase (frontend) and snake_case (standard backend)
-        const productId = req.body.productId || req.body.product_id;
+        const patientId = await getPatientId(req.user.id, res);
+        if (!patientId) return;
 
-        if (!productId) return res.status(400).json({ error: 'Product ID is required.' });
-
-        const result = await EcommerceModel.toggleWishlist(patientId, productId);
-        const message = result.added ? 'Added to wishlist.' : 'Removed from wishlist.';
-
-        res.status(200).json({ message, added: result.added });
-    } catch (error) {
-        logger.error(`Wishlist Toggle Error: ${error.message}`);
-        res.status(500).json({ error: 'Failed to update wishlist.' });
+        const data = await EcommerceModel.getInProgressOrdersCount(patientId);
+        res.status(200).json(data);
+    } catch (err) {
+        logger.error(`getInProgressOrders Error: ${err.message}`);
+        res.status(500).json({ error: 'Failed to fetch in-progress orders' });
     }
 };
 
-exports.getWishlist = async (req, res) => {
+exports.getShippedToday = async (req, res) => {
     try {
-        const patientId = await getPatientId(req.user.id);
-        const products = await EcommerceModel.getWishlist(patientId);
-        res.status(200).json({ wishlist: products });
-    } catch (error) {
-        logger.error(`Get Wishlist Error: ${error.message}`);
-        res.status(500).json({ error: 'Failed to fetch wishlist.' });
+        const patientId = await getPatientId(req.user.id, res);
+        if (!patientId) return;
+
+        const data = await EcommerceModel.getShippedTodayCount(patientId);
+        res.status(200).json(data);
+    } catch (err) {
+        logger.error(`getShippedToday Error: ${err.message}`);
+        res.status(500).json({ error: 'Failed to fetch orders shipped today' });
     }
 };
 
-exports.placeOrder = async (req, res) => {
+exports.getTotalSpent = async (req, res) => {
     try {
-        const patientId = await getPatientId(req.user.id);
-        const { items, total_amount, discount_applied, shipping_address, payment_method } = req.body;
+        const patientId = await getPatientId(req.user.id, res);
+        if (!patientId) return;
 
-        if (!items || items.length === 0) return res.status(400).json({ error: 'Cart is empty.' });
+        const data = await EcommerceModel.getTotalSpent(patientId);
+        res.status(200).json(data);
+    } catch (err) {
+        logger.error(`getTotalSpent Error: ${err.message}`);
+        res.status(500).json({ error: 'Failed to fetch total spent amount' });
+    }
+};
 
-        const { orderId } = await EcommerceModel.placeOrder({
-            patient_id: patientId,
-            total_amount,
-            discount_applied: discount_applied || 0,
-            shipping_address,
-            payment_method
-        }, items);
+exports.getOrderHistory = async (req, res) => {
+    try {
+        const patientId = await getPatientId(req.user.id, res);
+        if (!patientId) return;
 
-        if (payment_method === 'Online') {
-            const gatewayOrder = await paymentService.createOrder(total_amount, orderId);
-            return res.status(201).json({
-                message: 'Order created. Pending payment.',
-                orderId,
-                gatewayPayload: gatewayOrder
-            });
+        const data = await EcommerceModel.getOrderHistory(patientId);
+        res.status(200).json(data);
+    } catch (err) {
+        logger.error(`getOrderHistory Error: ${err.message}`);
+        res.status(500).json({ error: 'Failed to fetch order history' });
+    }
+};
+
+exports.filterOrderHistory = async (req, res) => {
+    try {
+        const patientId = await getPatientId(req.user.id, res);
+        if (!patientId) return;
+
+        const { status, sort } = req.params;
+        const data = await EcommerceModel.filterOrderHistory(patientId, status, sort);
+        res.status(200).json(data);
+    } catch (err) {
+        logger.error(`filterOrderHistory Error: ${err.message}`);
+        res.status(500).json({ error: 'Failed to filter order history' });
+    }
+};
+
+exports.getRefillReminder = async (req, res) => {
+    try {
+        const patientId = await getPatientId(req.user.id, res);
+        if (!patientId) return;
+
+        const data = await EcommerceModel.getRefillReminder(patientId);
+        res.status(200).json(data);
+    } catch (err) {
+        logger.error(`getRefillReminder Error: ${err.message}`);
+        res.status(500).json({ error: 'Failed to fetch refill reminders' });
+    }
+};
+
+exports.getAssistanceInfo = async (req, res) => {
+    try {
+        // Returns static/mock data for pharmacy assistance
+        const assistanceInfo = {
+            support_email: "pharmacy@ayurcure.com",
+            support_phone: "+91-1800-AYUR-CARE",
+            faq_link: "/support/pharmacy-faq",
+            message: "Our Ayurvedic pharmacists are available Mon-Sat, 9 AM to 8 PM."
+        };
+        res.status(200).json(assistanceInfo);
+    } catch (err) {
+        logger.error(`getAssistanceInfo Error: ${err.message}`);
+        res.status(500).json({ error: 'Failed to fetch assistance info' });
+    }
+};
+
+exports.exportOrderHistory = async (req, res) => {
+    try {
+        const patientId = await getPatientId(req.user.id, res);
+        if (!patientId) return;
+
+        const data = await EcommerceModel.exportOrderHistory(patientId);
+
+        if (!data || data.length === 0) {
+            return res.status(404).json({ error: 'No order history found to export' });
         }
 
-        res.status(201).json({ message: 'Order placed successfully.', orderId });
-    } catch (error) {
-        logger.error(`Place Order Error: ${error.message}`);
-        if (error.message.includes('Insufficient stock')) {
-            return res.status(409).json({ error: error.message });
-        }
-        res.status(500).json({ error: 'Failed to process order.' });
+        // Generate CSV format
+        let csvContent = "Order ID,Date,Product,Quantity,Price,Status,Total Amount\n";
+        data.forEach(row => {
+            const date = new Date(row.created_at).toLocaleDateString();
+            csvContent += `${row.order_id},${date},"${row.product_name}",${row.quantity},${row.price_at_purchase},${row.order_status},${row.total_amount}\n`;
+        });
+
+        res.setHeader('Content-disposition', 'attachment; filename=AyurCure_Order_History.csv');
+        res.setHeader('Content-type', 'text/csv');
+        res.send(csvContent);
+    } catch (err) {
+        logger.error(`exportOrderHistory Error: ${err.message}`);
+        res.status(500).json({ error: 'Failed to export order history' });
     }
 };
 
-exports.verifyPayment = async (req, res) => {
-    try {
-        const { razorpay_order_id, razorpay_payment_id, razorpay_signature, order_id } = req.body;
+// ==========================================
+// 3. ORDER DETAILS (:id) MODULE
+// ==========================================
 
-        const isValid = paymentService.verifyPaymentSignature(razorpay_order_id, razorpay_payment_id, razorpay_signature);
-
-        if (!isValid) {
-            await EcommerceModel.updatePaymentStatus(order_id, 'Failed');
-            return res.status(400).json({ error: 'Payment verification failed. Signature mismatch.' });
-        }
-
-        const updatedOrder = await EcommerceModel.updatePaymentStatus(order_id, 'Paid');
-        res.status(200).json({ message: 'Payment verified successfully.', order: updatedOrder });
-    } catch (error) {
-        logger.error(`Verify Payment Error: ${error.message}`);
-        res.status(500).json({ error: 'Failed to verify payment.' });
-    }
-};
-
-exports.getUserOrders = async (req, res) => {
-    try {
-        const patientId = await getPatientId(req.user.id);
-        const orders = await EcommerceModel.getUserOrders(patientId);
-        res.status(200).json({ orders });
-    } catch (error) {
-        logger.error(`Get Orders Error: ${error.message}`);
-        res.status(500).json({ error: 'Failed to fetch orders.' });
-    }
-};
-
-// NEW: Fetch specific order details (used for order tracking page)
 exports.getOrderDetails = async (req, res) => {
     try {
-        const patientId = await getPatientId(req.user.id);
-        const orderId = req.params.id;
+        const patientId = await getPatientId(req.user.id, res);
+        if (!patientId) return;
 
-        const order = await EcommerceModel.getOrderById(orderId, patientId);
+        const { id } = req.params;
+        const data = await EcommerceModel.getOrderDetails(id, patientId);
 
-        if (!order) return res.status(404).json({ error: 'Order not found or access denied.' });
+        if (!data) return res.status(404).json({ error: 'Order not found' });
+        res.status(200).json(data);
+    } catch (err) {
+        logger.error(`getOrderDetails Error: ${err.message}`);
+        res.status(500).json({ error: 'Failed to fetch order details' });
+    }
+};
 
-        res.status(200).json({ order });
-    } catch (error) {
-        logger.error(`Get Order Details Error: ${error.message}`);
-        res.status(500).json({ error: 'Failed to fetch order details.' });
+exports.getOrderedProducts = async (req, res) => {
+    try {
+        const patientId = await getPatientId(req.user.id, res);
+        if (!patientId) return;
+
+        const { id } = req.params;
+        const data = await EcommerceModel.getOrderedProducts(id, patientId);
+        res.status(200).json(data);
+    } catch (err) {
+        logger.error(`getOrderedProducts Error: ${err.message}`);
+        res.status(500).json({ error: 'Failed to fetch ordered products' });
+    }
+};
+
+exports.getDeliveryStatus = async (req, res) => {
+    try {
+        const patientId = await getPatientId(req.user.id, res);
+        if (!patientId) return;
+
+        const { id } = req.params;
+        const data = await EcommerceModel.getDeliveryStatus(id, patientId);
+        res.status(200).json(data);
+    } catch (err) {
+        logger.error(`getDeliveryStatus Error: ${err.message}`);
+        res.status(500).json({ error: 'Failed to fetch delivery status' });
+    }
+};
+
+exports.getPaymentSummary = async (req, res) => {
+    try {
+        const patientId = await getPatientId(req.user.id, res);
+        if (!patientId) return;
+
+        const { id } = req.params;
+        const data = await EcommerceModel.getPaymentSummary(id, patientId);
+        res.status(200).json(data);
+    } catch (err) {
+        logger.error(`getPaymentSummary Error: ${err.message}`);
+        res.status(500).json({ error: 'Failed to fetch payment summary' });
+    }
+};
+
+exports.downloadInvoice = async (req, res) => {
+    try {
+        const patientId = await getPatientId(req.user.id, res);
+        if (!patientId) return;
+
+        const { id } = req.params;
+        const invoiceData = await EcommerceModel.getInvoiceData(id, patientId);
+        const productsData = await EcommerceModel.getOrderedProducts(id, patientId);
+
+        if (!invoiceData) return res.status(404).json({ error: 'Invoice data not found' });
+
+        // Build a text-based invoice (Replace with PDFKit for production PDF)
+        let invoiceText = `
+        ====================================================
+                       AYURCURE INVOICE
+        ====================================================
+        Order ID: ${invoiceData.order_id}
+        Date: ${new Date(invoiceData.created_at).toLocaleDateString()}
+        
+        BILLED TO:
+        ${invoiceData.patient_name}
+        ${invoiceData.patient_email}
+        Shipping Address: ${invoiceData.shipping_address}
+        
+        ----------------------------------------------------
+        ITEMS:
+        `;
+
+        productsData.forEach(p => {
+            invoiceText += `${p.name} (Qty: ${p.quantity}) - Rs. ${p.subtotal}\n`;
+        });
+
+        invoiceText += `
+        ----------------------------------------------------
+        Discount Applied: Rs. ${invoiceData.discount_applied || 0}
+        TOTAL AMOUNT: Rs. ${invoiceData.total_amount}
+        
+        Payment Method: ${invoiceData.payment_method}
+        Payment Status: ${invoiceData.payment_status}
+        ====================================================
+        Thank you for choosing AyurCure!
+        `;
+
+        res.setHeader('Content-disposition', `attachment; filename=Invoice_${invoiceData.order_id}.txt`);
+        res.setHeader('Content-type', 'text/plain');
+        res.send(invoiceText);
+    } catch (err) {
+        logger.error(`downloadInvoice Error: ${err.message}`);
+        res.status(500).json({ error: 'Failed to download invoice' });
+    }
+};
+
+exports.getOrderWellnessTip = async (req, res) => {
+    try {
+        // Fetch static wellness tip for post-order confirmation
+        res.status(200).json({
+            title: "Store Medicines Properly",
+            content: "Keep your Ayurvedic medicines in a cool, dry place away from direct sunlight to maintain their efficacy."
+        });
+    } catch (err) {
+        logger.error(`getOrderWellnessTip Error: ${err.message}`);
+        res.status(500).json({ error: 'Failed to fetch wellness tip' });
+    }
+};
+
+// ==========================================
+// 4. CART & CHECKOUT MODULE
+// ==========================================
+
+exports.getCartProductDetails = async (req, res) => {
+    try {
+        // In a stateless backend API, cart products are usually sent from the client's local storage 
+        // to be validated against the database. For this endpoint to work purely from backend, 
+        // it assumes a Cart table exists. Since we rely on frontend state, we return a success 
+        // acknowledgment or validate an array of IDs passed in query params.
+        res.status(200).json({ message: "Cart product details are synced via frontend context." });
+    } catch (err) {
+        logger.error(`getCartProductDetails Error: ${err.message}`);
+        res.status(500).json({ error: 'Failed to fetch cart product details' });
+    }
+};
+
+exports.getCartOrderSummary = async (req, res) => {
+    try {
+        // Returns the static configuration for taxes, delivery fees etc. 
+        // The frontend calculates the final subtotal based on the items in its context.
+        const config = await EcommerceModel.getCartConfig();
+        res.status(200).json(config);
+    } catch (err) {
+        logger.error(`getCartOrderSummary Error: ${err.message}`);
+        res.status(500).json({ error: 'Failed to fetch cart summary config' });
+    }
+};
+
+exports.applyPromoCode = async (req, res) => {
+    try {
+        const { code } = req.body;
+
+        if (!code) {
+            return res.status(400).json({ error: 'Promo code is required' });
+        }
+
+        const validCode = await EcommerceModel.getValidPromoCode(code.toUpperCase());
+
+        if (!validCode) {
+            return res.status(400).json({ error: 'Invalid or expired promo code' });
+        }
+
+        res.status(200).json({
+            message: 'Promo code applied successfully!',
+            discount: {
+                value: validCode.discount_value,
+                type: validCode.discount_type
+            }
+        });
+    } catch (err) {
+        logger.error(`applyPromoCode Error: ${err.message}`);
+        res.status(500).json({ error: 'Failed to apply promo code' });
     }
 };

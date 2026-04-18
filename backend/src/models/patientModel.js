@@ -2,246 +2,383 @@ const db = require('../config/db');
 
 class PatientModel {
     // ==========================================
-    // 1. REGISTRATION & PROFILE MANAGEMENT
+    // 0. CORE HELPERS & ONBOARDING
     // ==========================================
+    static async getProfileByUserId(userId) {
+        const query = `SELECT id FROM PatientProfiles WHERE user_id = $1;`;
+        const { rows } = await db.query(query, [userId]);
+        return rows[0];
+    }
 
-    static async registerPatient(userId, patientData) {
-        const {
-            age, gender, health_history, prakriti_type, referral_code,
-            patient_display_id, clinical_status, dob, blood_group,
-            height_cm, weight_kg, bmi, vikruti, address, diet_preference, allergies,
-            emergency_contact_name, emergency_contact_relation, emergency_contact_phone,
-            chief_complaints, medical_history, current_medications,
-            lifestyle_profile, treatment_plan, doctor_notes, primary_doctor_id
-        } = patientData;
-
+    static async registerPatient(userId, data) {
         const query = `
             INSERT INTO PatientProfiles (
-                user_id, age, gender, health_history, prakriti_type, referral_code,
-                patient_display_id, clinical_status, dob, blood_group, 
-                height_cm, weight_kg, bmi, vikruti, address, diet_preference, allergies,
-                emergency_contact_name, emergency_contact_relation, emergency_contact_phone,
-                chief_complaints, medical_history, current_medications,
-                lifestyle_profile, treatment_plan, doctor_notes, primary_doctor_id
-            )
-            VALUES (
-                $1, $2, $3, $4, $5, $6, 
-                $7, $8, $9, $10, 
-                $11, $12, $13, $14, $15, $16, $17, 
-                $18, $19, $20, 
-                $21, $22, $23, 
-                $24, $25, $26, $27
-            )
-            RETURNING *;
+                user_id, age, gender, blood_group, height_cm, weight_kg, bmi, 
+                prakriti_type, health_history, diet_preference, allergies, address
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+            RETURNING id;
         `;
-
         const values = [
-            userId, age, gender, health_history, prakriti_type, referral_code,
-            patient_display_id, clinical_status || 'Active', dob, blood_group,
-            height_cm, weight_kg, bmi, vikruti, address, diet_preference, allergies,
-            emergency_contact_name, emergency_contact_relation, emergency_contact_phone,
-            chief_complaints || null,
-            medical_history || null,
-            current_medications ? JSON.stringify(current_medications) : null,
-            lifestyle_profile, treatment_plan, doctor_notes, primary_doctor_id
+            userId, data.age, data.gender, data.blood_group, data.height_cm,
+            data.weight_kg, data.bmi, data.prakriti_type, data.health_history,
+            data.diet_preference, data.allergies, data.address
         ];
-
         const { rows } = await db.query(query, values);
         return rows[0];
     }
 
-    static async getProfileByUserId(userId) {
-        const query = `SELECT * FROM PatientProfiles WHERE user_id = $1;`;
-        const { rows } = await db.query(query, [userId]);
-        return rows[0];
-    }
-
-    static async getFullProfile(userId) {
-        const query = `
-            SELECT u.full_name, u.email, u.phone, p.* FROM Users u 
-            JOIN PatientProfiles p ON u.id = p.user_id 
-            WHERE u.id = $1;
-        `;
-        const { rows } = await db.query(query, [userId]);
-        return rows[0];
-    }
-
-    static async updateProfile(patientId, profileData) {
-        const { age, gender, health_history, prakriti_type } = profileData;
-        const query = `
-            UPDATE PatientProfiles 
-            SET age = COALESCE($1, age),
-                gender = COALESCE($2, gender),
-                health_history = COALESCE($3, health_history),
-                prakriti_type = COALESCE($4, prakriti_type),
-                updated_at = CURRENT_TIMESTAMP
-            WHERE id = $5
-            RETURNING *;
-        `;
-        const { rows } = await db.query(query, [age, gender, health_history, prakriti_type, patientId]);
-        return rows[0];
-    }
-
     // ==========================================
-    // 2. PRAKRITI & WELLNESS PLANS
+    // 1. DASHBOARD MODULE
     // ==========================================
-
-    static async updatePrakriti(patientId, prakriti_type) {
-        const query = `UPDATE PatientProfiles SET prakriti_type = $1 WHERE id = $2 RETURNING *;`;
-        const { rows } = await db.query(query, [prakriti_type, patientId]);
-        return rows[0];
-    }
-
-    static async createWellnessPlan(patientId, planData) {
-        const { dinacharya_routine, diet_chart, yoga_schedule } = planData;
+    static async getDashPatientDetails(patientId) {
         const query = `
-            INSERT INTO WellnessPlans (patient_id, dinacharya_routine, diet_chart, yoga_schedule, generated_at)
-            VALUES ($1, $2, $3, $4, CURRENT_TIMESTAMP)
-            ON CONFLICT (patient_id) DO UPDATE 
-            SET dinacharya_routine = EXCLUDED.dinacharya_routine,
-                diet_chart = EXCLUDED.diet_chart,
-                yoga_schedule = EXCLUDED.yoga_schedule,
-                generated_at = CURRENT_TIMESTAMP
-            RETURNING *;
-        `;
-        const { rows } = await db.query(query, [patientId, dinacharya_routine, diet_chart, yoga_schedule]);
-        return rows[0];
-    }
-
-    static async getWellnessPlan(patientId) {
-        const query = `SELECT * FROM WellnessPlans WHERE patient_id = $1;`;
-        const { rows } = await db.query(query, [patientId]);
-        return rows[0];
-    }
-
-    static async getWellnessTip() {
-        const query = `SELECT content FROM wellness_tips ORDER BY RANDOM() LIMIT 1;`;
-        const { rows } = await db.query(query);
-        return rows[0];
-    }
-
-    // ==========================================
-    // 3. HEALTH LOGS & STATS
-    // ==========================================
-
-    static async addHealthLog(patientId, logData) {
-        const { log_date, sleep_hours, water_intake, stress_level, symptoms } = logData;
-        const query = `
-            INSERT INTO HealthLogs (patient_id, log_date, sleep_hours, water_intake, stress_level, symptoms)
-            VALUES ($1, $2, $3, $4, $5, $6)
-            RETURNING *;
-        `;
-        const { rows } = await db.query(query, [patientId, log_date, sleep_hours, water_intake, stress_level, symptoms]);
-        return rows[0];
-    }
-
-    static async getLatestHealthLog(patientId) {
-        const query = `SELECT * FROM HealthLogs WHERE patient_id = $1 ORDER BY log_date DESC LIMIT 1;`;
-        const { rows } = await db.query(query, [patientId]);
-        return rows[0];
-    }
-
-    static async getHealthLogs(patientId) {
-        const query = `SELECT * FROM HealthLogs WHERE patient_id = $1 ORDER BY log_date DESC;`;
-        const { rows } = await db.query(query, [patientId]);
-        return rows;
-    }
-
-    static async getHealthStats(patientId) {
-        const query = `
-            SELECT weight, sleep_hours, dosha_balance, bp 
-            FROM health_stats 
-            WHERE patient_id = $1 
-            ORDER BY created_at DESC 
-            LIMIT 1;
+            SELECT 
+                u.full_name, p.age, p.gender, p.blood_group, 
+                p.height_cm, p.weight_kg, p.bmi, p.prakriti_type
+            FROM PatientProfiles p 
+            JOIN Users u ON p.user_id = u.id 
+            WHERE p.id = $1;
         `;
         const { rows } = await db.query(query, [patientId]);
         return rows[0];
     }
-
-    // ==========================================
-    // 4. DAILY ROUTINE (DINACHARYA)
-    // ==========================================
-
-    static async getDailyRoutine(patientId) {
-        const query = `
-            SELECT morning, afternoon, evening, night 
-            FROM patient_routines 
-            WHERE patient_id = $1;
-        `;
-        const { rows } = await db.query(query, [patientId]);
-        return rows[0];
-    }
-
-    static async updateDailyRoutine(patientId, routineData) {
-        const { morning, afternoon, evening, night } = routineData;
-        const query = `
-            INSERT INTO patient_routines (patient_id, morning, afternoon, evening, night) 
-            VALUES ($1, $2, $3, $4, $5)
-            ON CONFLICT (patient_id) DO UPDATE 
-            SET morning = EXCLUDED.morning, 
-                afternoon = EXCLUDED.afternoon, 
-                evening = EXCLUDED.evening, 
-                night = EXCLUDED.night
-            RETURNING *;
-        `;
-        const { rows } = await db.query(query, [patientId, morning, afternoon, evening, night]);
-        return rows[0];
-    }
-
-    // ==========================================
-    // 5. APPOINTMENTS & REGIMENS
-    // ==========================================
 
     static async getUpcomingAppointment(patientId) {
         const query = `
-            SELECT a.id, a.scheduled_at, a.mode, u.full_name AS doctor_name
+            SELECT 
+                a.id, a.start_time, a.mode, 
+                u.full_name AS doctor_name, d.specialization
             FROM Appointments a
-            JOIN DoctorProfiles d ON a.doctor_id = d.id
+            JOIN DoctorProfiles d ON a.doctor_id = d.id 
             JOIN Users u ON d.user_id = u.id
-            WHERE a.patient_id = $1 AND a.status = 'Scheduled' AND a.scheduled_at > CURRENT_TIMESTAMP
-            ORDER BY a.scheduled_at ASC LIMIT 1;
+            WHERE a.patient_id = $1 AND a.status = 'Scheduled' AND a.start_time > CURRENT_TIMESTAMP
+            ORDER BY a.start_time ASC 
+            LIMIT 1;
+        `;
+        const { rows } = await db.query(query, [patientId]);
+        return rows[0] || null;
+    }
+
+    static async getWeightTrackerLogs(patientId) {
+        const query = `
+            SELECT log_date, weight 
+            FROM HealthStats 
+            WHERE patient_id = $1 AND weight IS NOT NULL
+            ORDER BY log_date ASC 
+            LIMIT 30;
+        `;
+        const { rows } = await db.query(query, [patientId]);
+        return rows;
+    }
+
+    static async getWellnessActivity(patientId) {
+        const query = `
+            SELECT dinacharya_routine, yoga_schedule 
+            FROM WellnessPlans 
+            WHERE patient_id = $1;
+        `;
+        const { rows } = await db.query(query, [patientId]);
+        return rows[0] || { dinacharya_routine: null, yoga_schedule: null };
+    }
+
+    static async getMedicalHistory(patientId) {
+        const query = `
+            SELECT chief_complaints, medical_history, allergies 
+            FROM PatientProfiles 
+            WHERE id = $1;
         `;
         const { rows } = await db.query(query, [patientId]);
         return rows[0];
     }
 
-    static async getAllAppointments(patientId) {
+    static async getQuickMetrics(patientId) {
         const query = `
-            SELECT a.id, a.scheduled_at, a.mode, a.status, u.full_name AS doctor_name, d.specialization
-            FROM Appointments a
-            JOIN DoctorProfiles d ON a.doctor_id = d.id
-            JOIN Users u ON d.user_id = u.id
-            WHERE a.patient_id = $1
-            ORDER BY a.scheduled_at DESC;
+            SELECT sleep_hours, water_intake, stress_level 
+            FROM HealthLogs 
+            WHERE patient_id = $1 
+            ORDER BY log_date DESC 
+            LIMIT 1;
         `;
         const { rows } = await db.query(query, [patientId]);
-        return rows;
+        return rows[0] || { sleep_hours: 0, water_intake: 0, stress_level: 'Unknown' };
     }
 
-    static async getAppointmentById(appointmentId, patientId) {
+    // ==========================================
+    // 2. PROFILE MODULE
+    // ==========================================
+    static async getProfilePersonal(patientId) {
         const query = `
-            SELECT a.*, u.full_name AS doctor_name, d.specialization, 
-                   p.herbs_prescribed, p.dosage, p.duration, p.lifestyle_advice
-            FROM Appointments a
-            JOIN DoctorProfiles d ON a.doctor_id = d.id
-            JOIN Users u ON d.user_id = u.id
-            LEFT JOIN Prescriptions p ON a.id = p.appointment_id
-            WHERE a.id = $1 AND a.patient_id = $2;
+            SELECT 
+                u.full_name, p.dob, p.age, p.gender, 
+                p.blood_group, p.height_cm, p.weight_kg, p.bmi
+            FROM PatientProfiles p 
+            JOIN Users u ON p.user_id = u.id 
+            WHERE p.id = $1;
         `;
-        const { rows } = await db.query(query, [appointmentId, patientId]);
+        const { rows } = await db.query(query, [patientId]);
         return rows[0];
     }
 
-    static async getCurrentRegimen(patientId) {
+    static async updateProfilePersonal(patientId, data) {
         const query = `
-            SELECT id, medicine_name, dosage, timing, duration 
-            FROM Prescriptions 
-            WHERE patient_id = $1 AND is_active = true
-            ORDER BY created_at DESC;
+            UPDATE PatientProfiles 
+            SET 
+                dob = COALESCE($1, dob), 
+                age = COALESCE($2, age), 
+                gender = COALESCE($3, gender), 
+                blood_group = COALESCE($4, blood_group), 
+                height_cm = COALESCE($5, height_cm), 
+                weight_kg = COALESCE($6, weight_kg), 
+                bmi = COALESCE($7, bmi),
+                updated_at = CURRENT_TIMESTAMP
+            WHERE id = $8 
+            RETURNING dob, age, gender, blood_group, height_cm, weight_kg, bmi;
+        `;
+        const { rows } = await db.query(query, [
+            data.dob, data.age, data.gender, data.blood_group,
+            data.height_cm, data.weight_kg, data.bmi, patientId
+        ]);
+        return rows[0];
+    }
+
+    static async getProfileMedical(patientId) {
+        const query = `
+            SELECT 
+                prakriti_type, health_history, vikruti, 
+                diet_preference, allergies, current_medications 
+            FROM PatientProfiles 
+            WHERE id = $1;
+        `;
+        const { rows } = await db.query(query, [patientId]);
+        return rows[0];
+    }
+
+    static async getProfileContact(patientId) {
+        const query = `
+            SELECT u.email, u.phone, p.address 
+            FROM PatientProfiles p 
+            JOIN Users u ON p.user_id = u.id 
+            WHERE p.id = $1;
+        `;
+        const { rows } = await db.query(query, [patientId]);
+        return rows[0];
+    }
+
+    static async updateProfileContact(patientId, data) {
+        // Typically, email and phone are strictly managed in Account Settings due to OTP verification,
+        // so this method strictly updates the physical address in the Profile.
+        const query = `
+            UPDATE PatientProfiles 
+            SET address = COALESCE($1, address), updated_at = CURRENT_TIMESTAMP
+            WHERE id = $2 
+            RETURNING address;
+        `;
+        const { rows } = await db.query(query, [data.address, patientId]);
+        return rows[0];
+    }
+
+    static async getProfileEmergency(patientId) {
+        const query = `
+            SELECT 
+                emergency_contact_name, 
+                emergency_contact_relation, 
+                emergency_contact_phone 
+            FROM PatientProfiles 
+            WHERE id = $1;
+        `;
+        const { rows } = await db.query(query, [patientId]);
+        return rows[0];
+    }
+
+    static async updateProfileEmergency(patientId, data) {
+        const query = `
+            UPDATE PatientProfiles 
+            SET 
+                emergency_contact_name = COALESCE($1, emergency_contact_name),
+                emergency_contact_relation = COALESCE($2, emergency_contact_relation),
+                emergency_contact_phone = COALESCE($3, emergency_contact_phone),
+                updated_at = CURRENT_TIMESTAMP
+            WHERE id = $4 
+            RETURNING emergency_contact_name, emergency_contact_relation, emergency_contact_phone;
+        `;
+        const { rows } = await db.query(query, [
+            data.emergency_contact_name,
+            data.emergency_contact_relation,
+            data.emergency_contact_phone,
+            patientId
+        ]);
+        return rows[0];
+    }
+
+    // ==========================================
+    // 3. SETTINGS MODULE
+    // ==========================================
+    static async getSettingsAccount(userId) {
+        const query = `SELECT full_name, email, phone FROM Users WHERE id = $1;`;
+        const { rows } = await db.query(query, [userId]);
+        return rows[0];
+    }
+
+    static async updateSettingsAccount(userId, data) {
+        const query = `
+            UPDATE Users 
+            SET full_name = COALESCE($1, full_name), phone = COALESCE($2, phone) 
+            WHERE id = $3 
+            RETURNING full_name, email, phone;
+        `;
+        const { rows } = await db.query(query, [data.full_name, data.phone, userId]);
+        return rows[0];
+    }
+
+    static async getUserPasswordHash(userId) {
+        const query = `SELECT password_hash FROM Users WHERE id = $1;`;
+        const { rows } = await db.query(query, [userId]);
+        return rows[0];
+    }
+
+    static async updateUserPassword(userId, newHash) {
+        await db.query(`UPDATE Users SET password_hash = $1 WHERE id = $2;`, [newHash, userId]);
+    }
+
+    static async getSettingsJsonField(patientId, field) {
+        // Extracts exactly the specified key (e.g., 'notifications' or 'privacy') from the JSONB column
+        const query = `SELECT settings->$1 AS data FROM PatientProfiles WHERE id = $2;`;
+        const { rows } = await db.query(query, [field, patientId]);
+        return rows[0]?.data || {};
+    }
+
+    static async updateSettingsFull(patientId, data) {
+        // Deep merges the incoming JSON data with the existing settings JSONB object
+        const query = `
+            UPDATE PatientProfiles 
+            SET settings = settings || $1::jsonb 
+            WHERE id = $2 
+            RETURNING settings;
+        `;
+        const { rows } = await db.query(query, [JSON.stringify(data), patientId]);
+        return rows[0]?.settings;
+    }
+
+    // ==========================================
+    // 4. HEALTH REPORTS & RECORDS MODULE
+    // ==========================================
+    static async uploadReport(patientId, docName, docType, fileUrl) {
+        const query = `
+            INSERT INTO PatientDocuments (patient_id, document_name, document_type, file_url) 
+            VALUES ($1, $2, $3, $4) 
+            RETURNING id, document_name, document_type, uploaded_at, file_url;
+        `;
+        const { rows } = await db.query(query, [patientId, docName, docType, fileUrl]);
+        return rows[0];
+    }
+
+    static async getRecentReports(patientId) {
+        const query = `
+            SELECT id, document_name, document_type, uploaded_at 
+            FROM PatientDocuments 
+            WHERE patient_id = $1 
+            ORDER BY uploaded_at DESC 
+            LIMIT 5;
         `;
         const { rows } = await db.query(query, [patientId]);
         return rows;
+    }
+
+    static async getReportById(id, patientId) {
+        const query = `
+            SELECT id, document_name, file_url 
+            FROM PatientDocuments 
+            WHERE id = $1 AND patient_id = $2;
+        `;
+        const { rows } = await db.query(query, [id, patientId]);
+        return rows[0];
+    }
+
+    static async filterReports(patientId, reportName, doctorName, date) {
+        // Dynamic search utilizing ILIKE for partial matching on names
+        let query = `
+            SELECT pd.id, pd.document_name, pd.document_type, pd.uploaded_at 
+            FROM PatientDocuments pd
+            WHERE pd.patient_id = $1
+        `;
+        const params = [patientId];
+        let pIndex = 2;
+
+        if (reportName && reportName !== 'undefined') {
+            query += ` AND pd.document_name ILIKE $${pIndex++}`;
+            params.push(`%${reportName}%`);
+        }
+
+        // Note: Filtering by doctorName requires joining with Appointments/Prescriptions 
+        // if documents are strictly tied to them. Assuming documents are uploaded generally here, 
+        // this is kept loose, but you can expand the JOIN if reports are linked to doctors.
+
+        if (date && date !== 'undefined') {
+            query += ` AND DATE(pd.uploaded_at) = $${pIndex++}`;
+            params.push(date);
+        }
+
+        query += ` ORDER BY pd.uploaded_at DESC;`;
+        const { rows } = await db.query(query, params);
+        return rows;
+    }
+
+    static async getReportInsights(patientId) {
+        // Aggregating actual data from the past 30 days to generate insights
+        const query = `
+            SELECT 
+                ROUND(AVG(sleep_hours), 1) AS average_sleep,
+                ROUND(AVG(water_intake), 1) AS average_hydration
+            FROM HealthLogs 
+            WHERE patient_id = $1 AND log_date >= CURRENT_DATE - INTERVAL '30 days';
+        `;
+        const { rows } = await db.query(query, [patientId]);
+        const data = rows[0];
+
+        return {
+            average_sleep: data.average_sleep || 0,
+            hydration_status: data.average_hydration > 2 ? 'Optimal' : 'Needs Improvement',
+            stress_trend: 'Stable' // Can be expanded with slope calculations
+        };
+    }
+
+    static async getReportVitality(patientId) {
+        const query = `
+            SELECT log_date, dosha_balance 
+            FROM HealthStats 
+            WHERE patient_id = $1 AND dosha_balance IS NOT NULL
+            ORDER BY log_date ASC 
+            LIMIT 10;
+        `;
+        const { rows } = await db.query(query, [patientId]);
+        return rows;
+    }
+
+    static async getReportGoals(patientId) {
+        // Retrieve dynamic goals based on current WellnessPlan or defaults
+        const query = `SELECT prakriti_type FROM PatientProfiles WHERE id = $1;`;
+        const { rows } = await db.query(query, [patientId]);
+        const prakriti = rows[0]?.prakriti_type;
+
+        let dynamicGoalTitle = 'Maintain Balance';
+        if (prakriti === 'Vata') dynamicGoalTitle = 'Grounding Routine Consistency';
+        if (prakriti === 'Pitta') dynamicGoalTitle = 'Cooling Diet Adherence';
+        if (prakriti === 'Kapha') dynamicGoalTitle = 'Daily Vigorous Activity';
+
+        return [
+            { id: 1, title: dynamicGoalTitle, progress: 65 },
+            { id: 2, title: 'Hydration Target (3L)', progress: 80 }
+        ];
+    }
+
+    static async getReportLastChanged(patientId) {
+        const query = `
+            SELECT MAX(uploaded_at) as last_updated 
+            FROM PatientDocuments 
+            WHERE patient_id = $1;
+        `;
+        const { rows } = await db.query(query, [patientId]);
+        return rows[0] || { last_updated: null };
     }
 }
 

@@ -1,291 +1,462 @@
 const PatientModel = require('../models/patientModel');
+const authService = require('../services/authService'); // Ensure you have this for password hashing/verification
 const logger = require('../utils/logger');
-const bcrypt = require('bcrypt');
+const path = require('path');
+const fs = require('fs');
 
-// Helper to reliably get patient ID and handle incomplete profiles
+// ==========================================
+// UTILITY HELPERS
+// ==========================================
+
+/**
+ * Resolves the authenticated User ID to their specific Patient Profile ID.
+ * Returns null and handles the response if the profile is incomplete.
+ */
 const getPatientId = async (userId, res) => {
-    const profile = await PatientModel.getProfileByUserId(userId);
-    if (!profile) {
-        res.status(404).json({ error: 'Patient profile incomplete. Please complete onboarding.' });
+    try {
+        const profile = await PatientModel.getProfileByUserId(userId);
+        if (!profile) {
+            res.status(404).json({ error: 'Patient profile not found. Please complete onboarding.' });
+            return null;
+        }
+        return profile.id;
+    } catch (error) {
+        logger.error(`Error resolving patient ID: ${error.message}`);
+        res.status(500).json({ error: 'Internal server error while verifying profile.' });
         return null;
     }
-    return profile.id;
 };
 
-exports.completePatientProfile = async (req, res) => {
-    try {
-        const userId = req.user.id;
-        const { age, gender, health_history, prakriti_type, referral_code } = req.body;
+// ==========================================
+// 1. DASHBOARD
+// ==========================================
 
-        const existingProfile = await PatientModel.getProfileByUserId(userId);
-        if (existingProfile) {
-            return res.status(409).json({ error: 'Profile already exists.' });
+exports.getDashPatientDetails = async (req, res) => {
+    try {
+        const patientId = await getPatientId(req.user.id, res);
+        if (!patientId) return;
+
+        const data = await PatientModel.getDashPatientDetails(patientId);
+        res.status(200).json(data);
+    } catch (err) {
+        logger.error(`getDashPatientDetails Error: ${err.message}`);
+        res.status(500).json({ error: 'Failed to fetch dashboard patient details' });
+    }
+};
+
+exports.getDashUpcomingSession = async (req, res) => {
+    try {
+        const patientId = await getPatientId(req.user.id, res);
+        if (!patientId) return;
+
+        const data = await PatientModel.getUpcomingAppointment(patientId);
+        res.status(200).json(data); // Returns null if no upcoming session, which frontend should handle
+    } catch (err) {
+        logger.error(`getDashUpcomingSession Error: ${err.message}`);
+        res.status(500).json({ error: 'Failed to fetch upcoming session' });
+    }
+};
+
+exports.getDashWeightTracker = async (req, res) => {
+    try {
+        const patientId = await getPatientId(req.user.id, res);
+        if (!patientId) return;
+
+        const data = await PatientModel.getWeightTrackerLogs(patientId);
+        res.status(200).json(data);
+    } catch (err) {
+        logger.error(`getDashWeightTracker Error: ${err.message}`);
+        res.status(500).json({ error: 'Failed to fetch weight tracker data' });
+    }
+};
+
+exports.getDashWellnessActivity = async (req, res) => {
+    try {
+        const patientId = await getPatientId(req.user.id, res);
+        if (!patientId) return;
+
+        const data = await PatientModel.getWellnessActivity(patientId);
+        res.status(200).json(data);
+    } catch (err) {
+        logger.error(`getDashWellnessActivity Error: ${err.message}`);
+        res.status(500).json({ error: 'Failed to fetch wellness activity' });
+    }
+};
+
+exports.getDashMedicalHistory = async (req, res) => {
+    try {
+        const patientId = await getPatientId(req.user.id, res);
+        if (!patientId) return;
+
+        const data = await PatientModel.getMedicalHistory(patientId);
+        res.status(200).json(data);
+    } catch (err) {
+        logger.error(`getDashMedicalHistory Error: ${err.message}`);
+        res.status(500).json({ error: 'Failed to fetch medical history' });
+    }
+};
+
+exports.getDashQuickMetrics = async (req, res) => {
+    try {
+        const patientId = await getPatientId(req.user.id, res);
+        if (!patientId) return;
+
+        const data = await PatientModel.getQuickMetrics(patientId);
+        res.status(200).json(data);
+    } catch (err) {
+        logger.error(`getDashQuickMetrics Error: ${err.message}`);
+        res.status(500).json({ error: 'Failed to fetch quick metrics' });
+    }
+};
+
+// ==========================================
+// 2. PROFILE
+// ==========================================
+
+exports.getProfilePersonal = async (req, res) => {
+    try {
+        const patientId = await getPatientId(req.user.id, res);
+        if (!patientId) return;
+
+        const data = await PatientModel.getProfilePersonal(patientId);
+        res.status(200).json(data);
+    } catch (err) {
+        logger.error(`getProfilePersonal Error: ${err.message}`);
+        res.status(500).json({ error: 'Failed to fetch personal info' });
+    }
+};
+
+exports.updateProfilePersonal = async (req, res) => {
+    try {
+        const patientId = await getPatientId(req.user.id, res);
+        if (!patientId) return;
+
+        const data = await PatientModel.updateProfilePersonal(patientId, req.body);
+        res.status(200).json({ message: 'Personal profile updated successfully', data });
+    } catch (err) {
+        logger.error(`updateProfilePersonal Error: ${err.message}`);
+        res.status(500).json({ error: 'Failed to update personal info' });
+    }
+};
+
+exports.downloadProfilePersonal = async (req, res) => {
+    try {
+        const patientId = await getPatientId(req.user.id, res);
+        if (!patientId) return;
+
+        const data = await PatientModel.getProfilePersonal(patientId);
+
+        // Generate a text file representation for download
+        const fileContent = `
+        AyurCure - Personal Health Profile
+        -----------------------------------
+        Name: ${data.full_name}
+        Date of Birth: ${data.dob ? new Date(data.dob).toLocaleDateString() : 'N/A'}
+        Age: ${data.age || 'N/A'}
+        Gender: ${data.gender || 'N/A'}
+        Blood Group: ${data.blood_group || 'N/A'}
+        Height: ${data.height_cm ? `${data.height_cm} cm` : 'N/A'}
+        Weight: ${data.weight_kg ? `${data.weight_kg} kg` : 'N/A'}
+        BMI: ${data.bmi || 'N/A'}
+        `;
+
+        res.setHeader('Content-disposition', 'attachment; filename=personal_profile.txt');
+        res.setHeader('Content-type', 'text/plain');
+        res.send(fileContent);
+    } catch (err) {
+        logger.error(`downloadProfilePersonal Error: ${err.message}`);
+        res.status(500).json({ error: 'Failed to download profile' });
+    }
+};
+
+exports.getProfileMedical = async (req, res) => {
+    try {
+        const patientId = await getPatientId(req.user.id, res);
+        if (!patientId) return;
+
+        const data = await PatientModel.getProfileMedical(patientId);
+        res.status(200).json(data);
+    } catch (err) {
+        logger.error(`getProfileMedical Error: ${err.message}`);
+        res.status(500).json({ error: 'Failed to fetch medical info' });
+    }
+};
+
+exports.getProfileContact = async (req, res) => {
+    try {
+        const patientId = await getPatientId(req.user.id, res);
+        if (!patientId) return;
+
+        const data = await PatientModel.getProfileContact(patientId);
+        res.status(200).json(data);
+    } catch (err) {
+        logger.error(`getProfileContact Error: ${err.message}`);
+        res.status(500).json({ error: 'Failed to fetch contact info' });
+    }
+};
+
+exports.updateProfileContact = async (req, res) => {
+    try {
+        const patientId = await getPatientId(req.user.id, res);
+        if (!patientId) return;
+
+        const data = await PatientModel.updateProfileContact(patientId, req.body);
+        res.status(200).json({ message: 'Contact info updated', data });
+    } catch (err) {
+        logger.error(`updateProfileContact Error: ${err.message}`);
+        res.status(500).json({ error: 'Failed to update contact info' });
+    }
+};
+
+exports.getProfileEmergency = async (req, res) => {
+    try {
+        const patientId = await getPatientId(req.user.id, res);
+        if (!patientId) return;
+
+        const data = await PatientModel.getProfileEmergency(patientId);
+        res.status(200).json(data);
+    } catch (err) {
+        logger.error(`getProfileEmergency Error: ${err.message}`);
+        res.status(500).json({ error: 'Failed to fetch emergency contact' });
+    }
+};
+
+exports.updateProfileEmergency = async (req, res) => {
+    try {
+        const patientId = await getPatientId(req.user.id, res);
+        if (!patientId) return;
+
+        const data = await PatientModel.updateProfileEmergency(patientId, req.body);
+        res.status(200).json({ message: 'Emergency contact updated', data });
+    } catch (err) {
+        logger.error(`updateProfileEmergency Error: ${err.message}`);
+        res.status(500).json({ error: 'Failed to update emergency contact' });
+    }
+};
+
+// ==========================================
+// 3. SETTINGS
+// ==========================================
+
+exports.getSettingsAccount = async (req, res) => {
+    try {
+        const data = await PatientModel.getSettingsAccount(req.user.id);
+        res.status(200).json(data);
+    } catch (err) {
+        logger.error(`getSettingsAccount Error: ${err.message}`);
+        res.status(500).json({ error: 'Failed to fetch account settings' });
+    }
+};
+
+exports.updateSettingsAccount = async (req, res) => {
+    try {
+        const data = await PatientModel.updateSettingsAccount(req.user.id, req.body);
+        res.status(200).json({ message: 'Account details updated', data });
+    } catch (err) {
+        logger.error(`updateSettingsAccount Error: ${err.message}`);
+        res.status(500).json({ error: 'Failed to update account settings' });
+    }
+};
+
+exports.changePassword = async (req, res) => {
+    try {
+        const { currentPassword, newPassword } = req.body;
+
+        if (!currentPassword || !newPassword) {
+            return res.status(400).json({ error: 'Current and new passwords are required' });
         }
 
-        const newProfile = await PatientModel.registerPatient(userId, {
-            age, gender, health_history, prakriti_type, referral_code
-        });
+        const user = await PatientModel.getUserPasswordHash(req.user.id);
 
-        res.status(201).json({ message: 'Profile created.', profile: newProfile });
-    } catch (error) {
-        logger.error(`Patient Onboarding Error: ${error.message}`);
-        res.status(500).json({ error: 'Failed to complete onboarding.' });
-    }
-};
-
-exports.getDashboard = async (req, res) => {
-    try {
-        const patientId = await getPatientId(req.user.id, res);
-        if (!patientId) return;
-
-        const [upcomingAppointment, recentHealthLog, wellnessPlan] = await Promise.all([
-            PatientModel.getUpcomingAppointment(patientId),
-            PatientModel.getLatestHealthLog(patientId),
-            PatientModel.getWellnessPlan(patientId)
-        ]);
-
-        res.status(200).json({
-            upcomingAppointment,
-            recentHealthLog,
-            wellnessPlan
-        });
-    } catch (error) {
-        logger.error(`Dashboard Error: ${error.message}`);
-        res.status(500).json({ error: 'Failed to load dashboard.' });
-    }
-};
-
-exports.updatePrakriti = async (req, res) => {
-    try {
-        const { prakriti_type } = req.body;
-        const patientId = await getPatientId(req.user.id, res);
-        if (!patientId) return;
-
-        if (!['Vata', 'Pitta', 'Kapha'].includes(prakriti_type)) {
-            return res.status(400).json({ error: 'Invalid Prakriti type.' });
+        // Check if user authenticated via SSO and has no local password
+        if (!user.password_hash) {
+            return res.status(400).json({ error: 'Account uses Single Sign-On. Please set up a password first.' });
         }
 
-        await PatientModel.updatePrakriti(patientId, prakriti_type);
-
-        // Baseline AI generation logic placeholder
-        const planData = generateBaselineWellnessPlan(prakriti_type);
-
-        const plan = await PatientModel.createWellnessPlan(patientId, planData);
-
-        res.status(200).json({ message: 'Prakriti updated and plan generated.', plan });
-    } catch (error) {
-        logger.error(`Prakriti Update Error: ${error.message}`);
-        res.status(500).json({ error: 'Failed to update Prakriti.' });
-    }
-};
-
-exports.getProfile = async (req, res) => {
-    try {
-        const profile = await PatientModel.getFullProfile(req.user.id);
-        if (!profile) return res.status(404).json({ error: 'Profile not found.' });
-        res.status(200).json({ profile });
-    } catch (error) {
-        logger.error(`Get Profile Error: ${error.message}`);
-        res.status(500).json({ error: 'Failed to fetch profile.' });
-    }
-};
-
-exports.updateProfile = async (req, res) => {
-    try {
-        const patientId = await getPatientId(req.user.id, res);
-        if (!patientId) return;
-
-        const updatedProfile = await PatientModel.updateProfile(patientId, req.body);
-
-        if (!updatedProfile) {
-            return res.status(404).json({ error: 'Profile not found.' });
+        const isValid = await authService.verifyHash(currentPassword, user.password_hash);
+        if (!isValid) {
+            return res.status(401).json({ error: 'Incorrect current password' });
         }
 
-        res.status(200).json({ message: 'Profile updated successfully.', profile: updatedProfile });
-    } catch (error) {
-        logger.error(`Update Profile Error: ${error.message}`);
-        res.status(500).json({ error: 'Failed to update profile.' });
-    }
-};
+        const newHash = await authService.hashData(newPassword);
+        await PatientModel.updateUserPassword(req.user.id, newHash);
 
-exports.addHealthLogs = async (req, res) => {
-    try {
-        const patientId = await getPatientId(req.user.id, res);
-        if (!patientId) return;
-
-        const log = await PatientModel.addHealthLog(patientId, req.body);
-        res.status(201).json({ message: 'Log added.', log });
-    } catch (error) {
-        logger.error(`Add Health Log Error: ${error.message}`);
-        res.status(500).json({ error: 'Failed to add health log.' });
-    }
-};
-
-exports.getHealthLogs = async (req, res) => {
-    try {
-        const patientId = await getPatientId(req.user.id, res);
-        if (!patientId) return;
-
-        const logs = await PatientModel.getHealthLogs(patientId);
-        res.status(200).json({ logs });
-    } catch (error) {
-        logger.error(`Get Health Logs Error: ${error.message}`);
-        res.status(500).json({ error: 'Failed to fetch health logs.' });
-    }
-};
-
-exports.getAllAppointments = async (req, res) => {
-    try {
-        const patientId = await getPatientId(req.user.id, res);
-        if (!patientId) return;
-
-        const appointments = await PatientModel.getAllAppointments(patientId);
-        res.status(200).json({ appointments });
-    } catch (error) {
-        logger.error(`Get Appointments Error: ${error.message}`);
-        res.status(500).json({ error: 'Failed to fetch appointments.' });
-    }
-};
-
-exports.getAppointment = async (req, res) => {
-    try {
-        const patientId = await getPatientId(req.user.id, res);
-        if (!patientId) return;
-
-        const appointment = await PatientModel.getAppointmentById(req.params.id, patientId);
-        if (!appointment) return res.status(404).json({ error: 'Appointment not found.' });
-
-        res.status(200).json({ appointment });
-    } catch (error) {
-        logger.error(`Get Appointment Error: ${error.message}`);
-        res.status(500).json({ error: 'Failed to fetch appointment.' });
-    }
-};
-
-// Fetch the most recent health stats for the Overview page
-exports.getHealthStats = async (req, res) => {
-    try {
-        const patientId = await getPatientId(req.user.id, res);
-        if (!patientId) return;
-
-        const stats = await PatientModel.getHealthStats(patientId);
-        // Return the stats, or null if no stats exist yet
-        res.status(200).json(stats || null);
+        res.status(200).json({ message: 'Password updated successfully' });
     } catch (err) {
-        logger.error(`Health Stats Error: ${err.message}`);
-        res.status(500).json({ error: 'Failed to fetch health stats.' });
+        logger.error(`changePassword Error: ${err.message}`);
+        res.status(500).json({ error: 'Failed to change password' });
     }
 };
 
-// Fetch the Daily Dincharya (Routine)
-exports.getDailyRoutine = async (req, res) => {
+exports.getSettingsNotifications = async (req, res) => {
     try {
         const patientId = await getPatientId(req.user.id, res);
         if (!patientId) return;
 
-        const routine = await PatientModel.getDailyRoutine(patientId);
-        res.status(200).json(routine || null);
+        const data = await PatientModel.getSettingsJsonField(patientId, 'notifications');
+        res.status(200).json(data);
     } catch (err) {
-        logger.error(`Get Routine Error: ${err.message}`);
-        res.status(500).json({ error: 'Failed to fetch daily routine.' });
+        logger.error(`getSettingsNotifications Error: ${err.message}`);
+        res.status(500).json({ error: 'Failed to fetch notifications preferences' });
     }
 };
 
-// Create or Update the Daily Dincharya
-exports.updateDailyRoutine = async (req, res) => {
+exports.getSettingsPrivacy = async (req, res) => {
     try {
         const patientId = await getPatientId(req.user.id, res);
         if (!patientId) return;
 
-        await PatientModel.updateDailyRoutine(patientId, req.body);
-        res.status(200).json({ message: 'Daily routine updated successfully.' });
+        const data = await PatientModel.getSettingsJsonField(patientId, 'privacy');
+        res.status(200).json(data);
     } catch (err) {
-        logger.error(`Update Routine Error: ${err.message}`);
-        res.status(500).json({ error: 'Failed to update daily routine.' });
+        logger.error(`getSettingsPrivacy Error: ${err.message}`);
+        res.status(500).json({ error: 'Failed to fetch privacy settings' });
     }
 };
 
-// Fetch active medicine regimen for the patient
-exports.getCurrentRegimen = async (req, res) => {
+exports.updateSettingsData = async (req, res) => {
     try {
         const patientId = await getPatientId(req.user.id, res);
         if (!patientId) return;
 
-        const regimen = await PatientModel.getCurrentRegimen(patientId);
-        res.status(200).json(regimen);
+        const data = await PatientModel.updateSettingsFull(patientId, req.body);
+        res.status(200).json({ message: 'Settings updated successfully', data });
     } catch (err) {
-        logger.error(`Regimen Error: ${err.message}`);
-        res.status(500).json({ error: 'Failed to fetch current regimen.' });
+        logger.error(`updateSettingsData Error: ${err.message}`);
+        res.status(500).json({ error: 'Failed to update settings' });
     }
 };
 
-// Fetch a random wellness tip
-exports.getWellnessTip = async (req, res) => {
-    try {
-        const tip = await PatientModel.getWellnessTip();
+// ==========================================
+// 4. HEALTH REPORTS & DOCUMENTS
+// ==========================================
 
-        if (!tip) {
-            // Fallback tip if the table is currently empty
-            return res.status(200).json({
-                content: "Start your day with a glass of warm water and a slice of lemon to awaken your digestion."
-            });
-        }
-        res.status(200).json(tip);
-    } catch (err) {
-        logger.error(`Wellness Tip Error: ${err.message}`);
-        // Fallback tip in case the table doesn't exist yet during development
-        res.status(200).json({
-            content: "Practice mindful eating: chew your food thoroughly to aid digestion and nutrient absorption."
-        });
-    }
-};
-
-// --- Internal Business Logic Helpers ---
-
-const generateBaselineWellnessPlan = (prakriti) => {
-    const plans = {
-        'Vata': {
-            dinacharya_routine: 'Wake up by 6:00 AM. Warm sesame oil massage (Abhyanga). Drink warm water with a pinch of salt.',
-            diet_chart: 'Favor warm, moist, grounding foods. Root vegetables, warm grains, ghee, and sweet fruits. Avoid cold, dry, or raw foods.',
-            yoga_schedule: 'Slow, grounding practices. Sun Salutations at a slow pace, Tree Pose, Corpse Pose.'
-        },
-        'Pitta': {
-            dinacharya_routine: 'Wake up by 5:30 AM. Coconut or sunflower oil massage. Cool water wash.',
-            diet_chart: 'Favor cool, refreshing, mildly spiced foods. Sweet fruits, leafy greens, cucumber, dairy. Avoid excessively spicy, sour, or fried foods.',
-            yoga_schedule: 'Cooling practices. Moon Salutations, Seated Forward Bends, Alternate Nostril Breathing.'
-        },
-        'Kapha': {
-            dinacharya_routine: 'Wake up by 5:00 AM (before sunrise). Dry brushing (Garshana) or mustard oil massage. Vigorous exercise.',
-            diet_chart: 'Favor warm, light, spicy, and astringent foods. Beans, vegetables, apples, ginger. Avoid heavy dairy, sweets, and cold foods.',
-            yoga_schedule: 'Vigorous and stimulating practices. Fast Sun Salutations, Warrior Poses, Breath of Fire.'
-        }
-    };
-    return plans[prakriti] || plans['Vata']; // Fallback
-};
-
-// Assuming your uploadMiddleware returns the file path in req.file.path
-exports.uploadDocument = async (req, res) => {
+exports.uploadReport = async (req, res) => {
     try {
         const patientId = await getPatientId(req.user.id, res);
         if (!patientId) return;
 
         if (!req.file) {
-            return res.status(400).json({ error: 'No file provided.' });
+            return res.status(400).json({ error: 'No report file provided.' });
         }
 
         const { document_name, document_type } = req.body;
-        const fileUrl = req.file.path; // Or wherever your cloud storage URL is saved
 
-        // Add this query to your PatientModel or run it directly here
-        const query = `
-            INSERT INTO PatientDocuments (patient_id, document_name, document_type, file_url)
-            VALUES ($1, $2, $3, $4) RETURNING *;
-        `;
-        const { rows } = await db.query(query, [patientId, document_name, document_type, fileUrl]);
+        // Ensure you have a fallback name if one isn't provided
+        const finalDocName = document_name || req.file.originalname;
+        const finalDocType = document_type || 'Other';
+        const fileUrl = req.file.path;
 
-        res.status(201).json({ message: 'Document uploaded successfully.', document: rows[0] });
-    } catch (error) {
-        console.error("Upload Error:", error);
-        res.status(500).json({ error: 'Failed to upload document.' });
+        const data = await PatientModel.uploadReport(patientId, finalDocName, finalDocType, fileUrl);
+        res.status(201).json({ message: 'Report uploaded successfully', data });
+    } catch (err) {
+        logger.error(`uploadReport Error: ${err.message}`);
+        res.status(500).json({ error: 'Failed to upload report' });
+    }
+};
+
+exports.getRecentReports = async (req, res) => {
+    try {
+        const patientId = await getPatientId(req.user.id, res);
+        if (!patientId) return;
+
+        const data = await PatientModel.getRecentReports(patientId);
+        res.status(200).json(data);
+    } catch (err) {
+        logger.error(`getRecentReports Error: ${err.message}`);
+        res.status(500).json({ error: 'Failed to fetch recent reports' });
+    }
+};
+
+exports.downloadReport = async (req, res) => {
+    try {
+        const patientId = await getPatientId(req.user.id, res);
+        if (!patientId) return;
+
+        const report = await PatientModel.getReportById(req.params.id, patientId);
+
+        if (!report) {
+            return res.status(404).json({ error: 'Report not found or unauthorized access' });
+        }
+
+        // Use Express's built-in download method
+        const filePath = path.resolve(report.file_url);
+
+        if (fs.existsSync(filePath)) {
+            res.download(filePath, report.document_name);
+        } else {
+            res.status(404).json({ error: 'File no longer exists on the server' });
+        }
+    } catch (err) {
+        logger.error(`downloadReport Error: ${err.message}`);
+        res.status(500).json({ error: 'Failed to download report' });
+    }
+};
+
+exports.filterReports = async (req, res) => {
+    try {
+        const patientId = await getPatientId(req.user.id, res);
+        if (!patientId) return;
+
+        const { reportName, doctorName, date } = req.params;
+
+        // The model handles parsing string literals like 'undefined' sent via URL parameters
+        const data = await PatientModel.filterReports(patientId, reportName, doctorName, date);
+        res.status(200).json(data);
+    } catch (err) {
+        logger.error(`filterReports Error: ${err.message}`);
+        res.status(500).json({ error: 'Failed to filter reports' });
+    }
+};
+
+exports.getReportInsights = async (req, res) => {
+    try {
+        const patientId = await getPatientId(req.user.id, res);
+        if (!patientId) return;
+
+        const data = await PatientModel.getReportInsights(patientId);
+        res.status(200).json(data);
+    } catch (err) {
+        logger.error(`getReportInsights Error: ${err.message}`);
+        res.status(500).json({ error: 'Failed to fetch report insights' });
+    }
+};
+
+exports.getReportVitality = async (req, res) => {
+    try {
+        const patientId = await getPatientId(req.user.id, res);
+        if (!patientId) return;
+
+        const data = await PatientModel.getReportVitality(patientId);
+        res.status(200).json(data);
+    } catch (err) {
+        logger.error(`getReportVitality Error: ${err.message}`);
+        res.status(500).json({ error: 'Failed to fetch vitality metrics' });
+    }
+};
+
+exports.getReportGoals = async (req, res) => {
+    try {
+        const patientId = await getPatientId(req.user.id, res);
+        if (!patientId) return;
+
+        const data = await PatientModel.getReportGoals(patientId);
+        res.status(200).json(data);
+    } catch (err) {
+        logger.error(`getReportGoals Error: ${err.message}`);
+        res.status(500).json({ error: 'Failed to fetch wellness goals' });
+    }
+};
+
+exports.getReportLastChanged = async (req, res) => {
+    try {
+        const patientId = await getPatientId(req.user.id, res);
+        if (!patientId) return;
+
+        const data = await PatientModel.getReportLastChanged(patientId);
+        res.status(200).json(data);
+    } catch (err) {
+        logger.error(`getReportLastChanged Error: ${err.message}`);
+        res.status(500).json({ error: 'Failed to fetch last changed timestamp' });
     }
 };

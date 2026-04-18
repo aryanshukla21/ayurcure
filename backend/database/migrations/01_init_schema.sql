@@ -17,7 +17,7 @@ CREATE TYPE user_role AS ENUM ('patient', 'doctor', 'admin');
 CREATE TYPE auth_provider_type AS ENUM ('local', 'google', 'apple');
 CREATE TYPE account_status_type AS ENUM ('Active', 'Deactivated', 'Banned');
 CREATE TYPE prakriti_enum AS ENUM ('Vata', 'Pitta', 'Kapha');
-CREATE TYPE record_enum AS ENUM ('Prescription', 'Lab Report');
+CREATE TYPE record_enum AS ENUM ('Prescription', 'Lab Report', 'Other');
 CREATE TYPE verification_enum AS ENUM ('Pending', 'Verified', 'Active');
 CREATE TYPE appointment_mode AS ENUM ('Video', 'Audio', 'Chat');
 CREATE TYPE appointment_status AS ENUM ('Scheduled', 'Completed', 'Cancelled');
@@ -39,7 +39,7 @@ CREATE TABLE Users (
     auth_provider auth_provider_type,
     password_hash VARCHAR(255),
     
-    -- Added fields for SSO and Notifications
+    -- SSO and Notifications
     google_id VARCHAR(255) UNIQUE, 
     fcm_token VARCHAR(255),        
     
@@ -58,13 +58,57 @@ CREATE TABLE Users (
 CREATE TABLE PatientProfiles (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id UUID UNIQUE NOT NULL REFERENCES Users(id) ON DELETE CASCADE,
+    
+    -- Basic Core Info
     age INT,
     gender VARCHAR(50),
     health_history TEXT,
     prakriti_type prakriti_enum,
     prakriti_report_url VARCHAR(500),
     referral_code VARCHAR(50) UNIQUE,
-    wallet_credits DECIMAL(10, 2) DEFAULT 0.00
+    wallet_credits DECIMAL(10, 2) DEFAULT 0.00,
+    
+    -- Detailed Clinical & Personal Info
+    patient_display_id VARCHAR(50) UNIQUE,
+    clinical_status VARCHAR(50) DEFAULT 'Active',
+    dob DATE,
+    blood_group VARCHAR(10),
+    height_cm DECIMAL(5, 2),
+    weight_kg DECIMAL(5, 2),
+    bmi DECIMAL(5, 2),
+    vikruti VARCHAR(100),
+    address TEXT,
+    diet_preference VARCHAR(100),
+    allergies TEXT,
+    
+    -- Emergency Contact
+    emergency_contact_name VARCHAR(100),
+    emergency_contact_relation VARCHAR(50),
+    emergency_contact_phone VARCHAR(20),
+    
+    -- Medical Notes & Assignments
+    chief_complaints TEXT,
+    medical_history TEXT,
+    current_medications JSONB,
+    lifestyle_profile TEXT,
+    treatment_plan TEXT,
+    doctor_notes TEXT,
+    primary_doctor_id UUID REFERENCES Users(id) ON DELETE SET NULL,
+    
+    -- Application Settings
+    settings JSONB DEFAULT '{}',
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE HealthLogs (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    patient_id UUID NOT NULL REFERENCES PatientProfiles(id) ON DELETE CASCADE,
+    log_date DATE NOT NULL,
+    sleep_hours DECIMAL(4, 2),
+    water_intake DECIMAL(5, 2),
+    stress_level VARCHAR(50),
+    symptoms TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE TABLE HealthStats (
@@ -93,17 +137,25 @@ CREATE TABLE PatientRoutines (
 CREATE TABLE WellnessPlans (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     patient_id UUID UNIQUE NOT NULL REFERENCES PatientProfiles(id) ON DELETE CASCADE,
+    dinacharya_routine TEXT,
     diet_chart TEXT,
     yoga_schedule TEXT,
-    generated_at TIMESTAMP
+    generated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE TABLE MedicalRecords (
+CREATE TABLE PatientDocuments (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     patient_id UUID NOT NULL REFERENCES PatientProfiles(id) ON DELETE CASCADE,
-    record_type record_enum,
+    document_name VARCHAR(255),
+    document_type VARCHAR(100),
     file_url VARCHAR(500) NOT NULL,
     uploaded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE WellnessTips (
+    id SERIAL PRIMARY KEY,
+    content TEXT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
 -- ==========================================
@@ -119,20 +171,20 @@ CREATE TABLE DoctorProfiles (
     verification_status verification_enum DEFAULT 'Pending',
     consultation_fee DECIMAL(10, 2),
     
-    -- Added Contact & Location
+    -- Contact & Location
     location VARCHAR(255),
     languages TEXT[], 
     
-    -- Added Consultation & Availability
+    -- Consultation & Availability
     consultation_duration_mins INT DEFAULT 30,
     availability_summary VARCHAR(255), 
     
-    -- Added Professional Stats
+    -- Professional Stats
     publications_count INT DEFAULT 0,
     average_rating DECIMAL(3, 2) DEFAULT 0.00,
     total_reviews INT DEFAULT 0,
     
-    -- Added Bio & Detailed Background
+    -- Bio & Detailed Background
     bio TEXT,
     education_details JSONB, 
     sub_specializations TEXT[], 
@@ -294,10 +346,4 @@ CREATE TABLE AdminActionLogs (
     target_entity_id UUID,
     details TEXT,
     timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-
-CREATE TABLE WellnessTips (
-    id SERIAL PRIMARY KEY,
-    content TEXT NOT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
