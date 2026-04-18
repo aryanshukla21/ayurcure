@@ -2,76 +2,63 @@ import axiosInstance from './axiosConfig';
 
 export const doctorApi = {
     // ==========================================
-    // PUBLIC ROUTES
+    // DASHBOARD
     // ==========================================
-    searchDoctors: async (queryParams = '') => {
-        // queryParams could be '?specialty=Ayurveda' etc.
-        const response = await axiosInstance.get(`/api/doctors${queryParams}`);
-        return response.data;
-    },
-
-    getDoctorSlots: async (doctorId, date) => {
-        // Expected date format: 'YYYY-MM-DD'
-        const response = await axiosInstance.get(`/api/doctors/${doctorId}/slots?date=${date}`);
-        return response.data;
-    },
+    getTotalPatients: async () => (await axiosInstance.get('/api/doctors/dashboard/get-total-patients')).data,
+    getAppointmentsToday: async () => (await axiosInstance.get('/api/doctors/dashboard/get-appointments-today')).data,
+    getUpcomingConsultations: async () => (await axiosInstance.get('/api/doctors/dashboard/get-upcoming-consultations')).data,
+    getRecentUpcomingAppointments: async () => (await axiosInstance.get('/api/doctors/dashboard/get-recent-upcoming-appointments')).data,
+    getEarningSummary: async () => (await axiosInstance.get('/api/doctors/dashboard/get-earning-summary')).data,
 
     // ==========================================
-    // PROTECTED ROUTES
+    // APPOINTMENTS
     // ==========================================
-    getProfile: async () => {
-        const response = await axiosInstance.get('/api/doctors/profile');
-        return response.data;
-    },
+    getAllAppointments: async () => (await axiosInstance.get('/api/doctors/appointments/get-all-appointments')).data,
+    getTodayAppointments: async () => (await axiosInstance.get('/api/doctors/appointments/get-today-appointments')).data,
+    getUpcomingAppointments: async () => (await axiosInstance.get('/api/doctors/appointments/get-upcoming-appointments')).data,
+    getCompletedAppointments: async () => (await axiosInstance.get('/api/doctors/appointments/get-completed-appointments')).data,
+    getCancelledAppointments: async () => (await axiosInstance.get('/api/doctors/appointments/get-cancelled-appointments')).data,
 
-    submitProfile: async (profileData) => {
-        const response = await axiosInstance.post('/api/doctors/apply', profileData);
-        return response.data;
-    },
+    // ==========================================
+    // APPOINTMENT DETAILS
+    // ==========================================
+    getApptPatientInfo: async (id) => (await axiosInstance.get(`/api/doctors/appointments/${id}/patient-info`)).data,
+    getApptSymptoms: async (id) => (await axiosInstance.get(`/api/doctors/appointments/${id}/symptoms`)).data,
+    getApptReports: async (id) => (await axiosInstance.get(`/api/doctors/appointments/${id}/get-all-patient-reports`)).data,
+    downloadApptReport: async (id, reportId) => (await axiosInstance.get(`/api/doctors/appointments/${id}/patient-reports/${reportId}/download`, { responseType: 'blob' })).data,
+    getApptMedicalInfo: async (id) => (await axiosInstance.get(`/api/doctors/appointments/${id}/get-patient-medical-information`)).data,
+    startVideoConsultation: async (id) => (await axiosInstance.post(`/api/doctors/appointments/${id}/start-video-consultation`)).data,
+    rescheduleAppointment: async (id, data) => (await axiosInstance.put(`/api/doctors/appointments/${id}/reschedule-appointment`, data)).data,
+    cancelAppointment: async (id) => (await axiosInstance.put(`/api/doctors/appointments/${id}/cancel-appointment`)).data,
 
-    // ADDED Update Profile
-    updateProfile: async (profileData) => {
-        const response = await axiosInstance.put('/api/doctors/profile', profileData);
-        return response.data;
-    },
+    // ==========================================
+    // EARNINGS
+    // ==========================================
+    getTotalEarnings: async () => (await axiosInstance.get('/api/doctors/earnings/get-total-earnings')).data,
+    getMonthlyEarning: async () => (await axiosInstance.get('/api/doctors/earnings/get-monthly-earning')).data,
+    getEarningHistory: async () => (await axiosInstance.get('/api/doctors/earnings/get-earning-history')).data,
 
-    updateAvailability: async (availabilityData) => {
-        const response = await axiosInstance.post('/api/doctors/availability', availabilityData);
-        return response.data;
-    },
+    // ==========================================
+    // PROFILE
+    // ==========================================
+    getProfilePersonalInfo: async () => (await axiosInstance.get('/api/doctors/profile/get-personal-information')).data,
+    getNextConsultation: async () => (await axiosInstance.get('/api/doctors/profile/get-next-consultation')).data,
+    getContactInfo: async () => (await axiosInstance.get('/api/doctors/profile/get-contact-info')).data,
+    getCredentials: async () => (await axiosInstance.get('/api/doctors/profile/get-credentials')).data,
+    getPhilosophy: async () => (await axiosInstance.get('/api/doctors/profile/get-philosophy')).data,
 
-    addArticle: async (articleData) => {
-        const response = await axiosInstance.post('/api/doctors/articles', articleData);
-        return response.data;
-    },
-
-    getAllAppointments: async () => {
-        const response = await axiosInstance.get('/api/doctors/all-appointments');
-        return response.data;
-    },
-
-    getAppointment: async (id) => {
-        const response = await axiosInstance.get(`/api/doctors/appointments/${id}`);
-        return response.data;
-    },
-
-    getPatientProfile: async (patientId) => {
-        const response = await axiosInstance.get(`/api/doctors/patient-profile/${patientId}`);
-        return response.data;
-    },
-
-    getDashboardStats: async () => {
-        const response = await axiosInstance.get('/api/doctors/stats');
-        return response.data;
-    },
-
-    getDashboardData: async () => {
-        const response = await axiosInstance.get('/api/doctors/dashboard-data');
-        return response.data;
-    },
-
-    getPayoutDashboard: async () => {
-        const response = await axiosInstance.get('/api/doctors/payouts');
-        return response.data;
-    }
+    // ==========================================
+    // SETTINGS
+    // ==========================================
+    getSettingsPersonalInfo: async () => (await axiosInstance.get('/api/doctors/settings/get-personal-information')).data,
+    updateSettingsPersonalInfo: async (data) => (await axiosInstance.put('/api/doctors/settings/update-personal-information', data)).data,
+    getPreferences: async () => (await axiosInstance.get('/api/doctors/settings/get-preferences')).data,
+    updatePreferences: async (data) => (await axiosInstance.put('/api/doctors/settings/update-preferences', data)).data,
+    getProfessionalCredentials: async () => (await axiosInstance.get('/api/doctors/settings/get-professional-credentials')).data,
+    updateProfessionalCredentials: async (data) => (await axiosInstance.put('/api/doctors/settings/update-professional-credentials', data)).data,
+    getConsultationLogistics: async () => (await axiosInstance.get('/api/doctors/settings/get-consultation-logistics')).data,
+    updateConsultationLogistics: async (data) => (await axiosInstance.put('/api/doctors/settings/update-consultation-logistic', data)).data,
+    getPhilosophyOfCare: async () => (await axiosInstance.get('/api/doctors/settings/get-philosophy-of-care')).data,
+    updatePhilosophyOfCare: async (data) => (await axiosInstance.put('/api/doctors/settings/update-philosophy-of-care', data)).data,
+    updateAccountPassword: async (data) => (await axiosInstance.put('/api/doctors/settings/update-account-password', data)).data,
 };

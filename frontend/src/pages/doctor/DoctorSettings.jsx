@@ -1,4 +1,3 @@
-// frontend/src/pages/doctor/DoctorSettings.jsx
 import React, { useState, useEffect } from 'react';
 import { doctorApi } from '../../api/doctorApi';
 
@@ -9,52 +8,42 @@ import ConsultationLogisticsForm from '../../components/doctor/settings/Consulta
 import PhilosophyOfCareForm from '../../components/doctor/settings/PhilosophyOfCareForm';
 import AccountSecurityForm from '../../components/doctor/settings/AccountSecurityForm';
 
-const generateStaticSettingsData = () => ({
-    full_name: 'Dr. Ananya Sharma',
-    email: 'ananya.sharma@ayurcare360.com',
-    phone: '+91 98765 43210',
-    languages: 'English, Hindi, Sanskrit',
-    clinic_address: '12th Floor, Wellness Tower, MG Road, Bangalore, Karnataka - 560001',
-    specialization: 'Panchakarma & Holistic Healing',
-    experience_years: 12,
-    qualifications: 'BAMS, MD (Ayurveda)',
-    registration_number: 'KMC-AYU-88291',
-    publications: 'Journal of Ayurvedic Medicine (2021), Holistic Living Today',
-    consultation_fee: 1200,
-    start_time: '09:00 AM',
-    end_time: '05:00 PM',
-    availability_days: { Mon: true, Tue: true, Wed: true, Thu: true, Fri: true, Sat: false, Sun: false },
-    preferences: {
-        push_notifications: true,
-        dual_time: false,
-        hd_video: true,
-        public_profile: true
-    },
-    bio: "I believe in treating the root cause of illness rather than just the symptoms. My practice is centered on the principles of Tridosha balance, utilizing natural herbal remedies and lifestyle adjustments to restore the body's innate intelligence for healing. Every patient journey is unique, and I strive to provide personalized care that integrates ancient wisdom with modern diagnostic precision."
-});
-
 const DoctorSettings = () => {
     const [isLoading, setIsLoading] = useState(true);
-    const [settingsData, setSettingsData] = useState(null);
+
+    // Manage all specific sub-sections state
+    const [personalInfo, setPersonalInfo] = useState(null);
+    const [preferences, setPreferences] = useState(null);
+    const [credentials, setCredentials] = useState(null);
+    const [logistics, setLogistics] = useState(null);
+    const [philosophy, setPhilosophy] = useState('');
 
     useEffect(() => {
-        const fetchSettings = async () => {
+        const fetchAllSettings = async () => {
+            setIsLoading(true);
             try {
-                const res = await doctorApi.getProfile();
-                if (res && res.profile) {
-                    setSettingsData(res.profile);
-                } else {
-                    setSettingsData(generateStaticSettingsData());
-                }
+                const [personalRes, prefRes, credRes, logRes, philRes] = await Promise.all([
+                    doctorApi.getSettingsPersonalInfo(),
+                    doctorApi.getPreferences(),
+                    doctorApi.getProfessionalCredentials(),
+                    doctorApi.getConsultationLogistics(),
+                    doctorApi.getPhilosophyOfCare()
+                ]);
+
+                if (personalRes.success) setPersonalInfo(personalRes.info);
+                if (prefRes.success) setPreferences(prefRes.preferences);
+                if (credRes.success) setCredentials(credRes.credentials);
+                if (logRes.success) setLogistics(logRes.logistics);
+                if (philRes.success) setPhilosophy(philRes.philosophy);
+
             } catch (error) {
-                console.warn("API fetch failed. Loading static fallback data for testing.");
-                setSettingsData(generateStaticSettingsData());
+                console.error("Error fetching settings data:", error);
             } finally {
                 setIsLoading(false);
             }
         };
 
-        fetchSettings();
+        fetchAllSettings();
     }, []);
 
     if (isLoading) {
@@ -65,8 +54,6 @@ const DoctorSettings = () => {
         );
     }
 
-    if (!settingsData) return null;
-
     return (
         <div className="max-w-[1600px] mx-auto p-10 bg-[#FDF9EE] min-h-full flex flex-col gap-4">
             <div>
@@ -75,25 +62,23 @@ const DoctorSettings = () => {
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
-
                 {/* --- ROW 1 --- */}
-                <PersonalInformationForm data={settingsData} />
-                <PreferencesForm data={settingsData} />
+                {personalInfo && <PersonalInformationForm data={personalInfo} />}
+                {preferences && <PreferencesForm data={preferences} />}
 
                 {/* --- ROW 2 --- */}
-                <ProfessionalCredentialsForm data={settingsData} />
-                <ConsultationLogisticsForm data={settingsData} />
+                {credentials && <ProfessionalCredentialsForm data={credentials} />}
+                {logistics && <ConsultationLogisticsForm data={logistics} />}
 
                 {/* --- ROW 3 --- (Spans full width) */}
                 <div className="lg:col-span-2">
-                    <PhilosophyOfCareForm data={settingsData} />
+                    <PhilosophyOfCareForm data={{ philosophy_of_care: philosophy }} />
                 </div>
 
                 {/* --- ROW 4 --- (Spans full width) */}
                 <div className="lg:col-span-2">
                     <AccountSecurityForm />
                 </div>
-
             </div>
         </div>
     );

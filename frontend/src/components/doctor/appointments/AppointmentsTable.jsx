@@ -1,27 +1,24 @@
 import React, { useState, useEffect } from 'react';
 import { Calendar as CalendarIcon, ChevronLeft, ChevronRight } from 'lucide-react';
-import { useNavigate } from 'react-router-dom'; // <-- 1. Import useNavigate
+import { useNavigate } from 'react-router-dom';
 
 const AppointmentsTable = ({ appointments = [], activeTab }) => {
-    const navigate = useNavigate(); // <-- 2. Initialize navigate hook
+    const navigate = useNavigate();
 
-    // --- Pagination State & Logic ---
+    // --- Pagination Logic ---
     const [currentPage, setCurrentPage] = useState(1);
-    const itemsPerPage = 4; // Set to 4 to match your requirement ("Showing 1 to 4...")
+    const itemsPerPage = 4;
 
-    // Reset to page 1 whenever the tab changes or a new search is made
     useEffect(() => {
         setCurrentPage(1);
     }, [activeTab, appointments.length]);
 
     const safeAppointments = Array.isArray(appointments) ? appointments : [];
     const totalItems = safeAppointments.length;
-    const totalPages = Math.ceil(totalItems / itemsPerPage);
+    const totalPages = Math.ceil(totalItems / itemsPerPage) || 1;
 
     const startIndex = (currentPage - 1) * itemsPerPage;
     const endIndex = Math.min(startIndex + itemsPerPage, totalItems);
-
-    // Slice the data to only show the current page's items
     const paginatedAppointments = safeAppointments.slice(startIndex, endIndex);
 
     const getStatusStyle = (status) => {
@@ -56,17 +53,24 @@ const AppointmentsTable = ({ appointments = [], activeTab }) => {
                             </tr>
                         ) : (
                             paginatedAppointments.map((apt, index) => {
-                                const name = apt?.name || apt?.patient_name || 'Unknown Patient';
+                                const name = apt?.patient_name || 'Unknown Patient';
                                 const initials = typeof name === 'string' ? name.substring(0, 2).toUpperCase() : 'P';
-                                const dateStr = apt?.date || (apt?.start_time ? new Date(apt.start_time).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'N/A');
-                                const timeStr = apt?.time || (apt?.start_time ? new Date(apt.start_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'N/A');
+
+                                const dateStr = apt?.appointment_date
+                                    ? new Date(apt.appointment_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+                                    : 'N/A';
+
+                                const timeStr = apt?.appointment_time
+                                    ? new Date(`1970-01-01T${apt.appointment_time}`).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                                    : 'N/A';
+
                                 const statusStr = apt?.status || 'Scheduled';
 
                                 return (
                                     <tr
                                         key={apt?.id || index}
-                                        onClick={() => navigate(`/doctor/appointments/${apt?.id || index + 1}`)} // <-- 3. Click handler added
-                                        className="hover:bg-gray-50 transition-colors group cursor-pointer" // <-- 4. cursor-pointer added
+                                        onClick={() => navigate(`/doctor/appointments/${apt?.id}`)}
+                                        className="hover:bg-gray-50 transition-colors group cursor-pointer"
                                     >
                                         <td className="px-8 py-2">
                                             <div className="flex items-center gap-4">
@@ -95,8 +99,7 @@ const AppointmentsTable = ({ appointments = [], activeTab }) => {
                 </table>
             </div>
 
-
-            {/* --- Dynamic Pagination Footer --- */}
+            {/* Pagination Controls */}
             {totalItems > 0 && (
                 <div className="px-8 py-5 border-t border-gray-100 flex flex-col sm:flex-row items-center justify-between gap-4">
                     <p className="text-sm font-medium text-gray-500">
@@ -115,7 +118,6 @@ const AppointmentsTable = ({ appointments = [], activeTab }) => {
                         <div className="flex items-center gap-1">
                             {Array.from({ length: totalPages }).map((_, idx) => {
                                 const pageNum = idx + 1;
-                                // Simple logic to only show a few pages if there are many
                                 if (totalPages > 5 && Math.abs(currentPage - pageNum) > 1 && pageNum !== 1 && pageNum !== totalPages) {
                                     if (pageNum === 2 || pageNum === totalPages - 1) return <span key={pageNum} className="px-1 text-gray-400">...</span>;
                                     return null;

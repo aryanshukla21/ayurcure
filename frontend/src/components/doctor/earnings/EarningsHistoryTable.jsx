@@ -12,11 +12,18 @@ const EarningsHistoryTable = ({ history = [] }) => {
 
     const safeHistory = Array.isArray(history) ? history : [];
     const totalItems = safeHistory.length;
-    const totalPages = Math.ceil(totalItems / itemsPerPage);
+    const totalPages = Math.max(1, Math.ceil(totalItems / itemsPerPage));
 
     const startIndex = (currentPage - 1) * itemsPerPage;
     const endIndex = Math.min(startIndex + itemsPerPage, totalItems);
     const paginatedHistory = safeHistory.slice(startIndex, endIndex);
+
+    // Format date string safely
+    const formatDate = (dateString) => {
+        if (!dateString) return 'N/A';
+        const date = new Date(dateString);
+        return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    };
 
     return (
         <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden flex flex-col">
@@ -28,9 +35,8 @@ const EarningsHistoryTable = ({ history = [] }) => {
                 <table className="w-full text-left border-collapse">
                     <thead>
                         <tr className="bg-[#FDF9EE]/50 text-xs uppercase tracking-widest text-amber-700 rounded-2xl">
-                            {/* Updated 4 Columns based on new UI rules */}
                             <th className="px-8 py-3 font-bold">Transaction ID</th>
-                            <th className="px-8 py-3 font-bold">Date & Time</th>
+                            <th className="px-8 py-3 font-bold">Date</th>
                             <th className="px-8 py-3 font-bold">Patient / Type</th>
                             <th className="px-8 py-3 font-bold">Amount</th>
                         </tr>
@@ -49,24 +55,24 @@ const EarningsHistoryTable = ({ history = [] }) => {
                             paginatedHistory.map((trx, index) => (
                                 <tr key={trx.id || index} className="hover:bg-gray-50 transition-colors group">
                                     <td className="px-8 py-3 rounded-l-2xl">
-                                        <span className="font-bold text-gray-900 text-xs">{trx.id}</span>
+                                        <span className="font-bold text-gray-900 text-xs">TRX-{trx.id}</span>
                                     </td>
                                     <td className="px-8 py-3">
-                                        {/* Displaying Date AND Time together */}
-                                        <span className="text-gray-900 text-xs font-bold block">{trx.date}</span>
-                                        <span className="text-gray-500 text-xs font-medium">{trx.time}</span>
+                                        <span className="text-gray-900 text-xs font-bold block">
+                                            {formatDate(trx.payment_date)}
+                                        </span>
                                     </td>
                                     <td className="px-8 py-3">
                                         <div>
-                                            <p className="font-bold text-gray-900 text-xs">{trx.patient}</p>
+                                            <p className="font-bold text-gray-900 text-xs">{trx.patient_name || 'N/A'}</p>
                                             <div className="flex items-center gap-1.5 text-gray-500 text-xs mt-0.5 font-medium">
-                                                {trx.type === 'Video' ? <Video size={14} /> : <User size={14} />}
-                                                {trx.type} Consultation
+                                                {trx.consultation_type === 'Video' ? <Video size={14} /> : <User size={14} />}
+                                                {trx.consultation_type || 'General'} Consultation
                                             </div>
                                         </div>
                                     </td>
                                     <td className="px-8 py-3 rounded-r-2xl">
-                                        <span className="font-extrabold text-black text-xs">${trx.amount.toLocaleString()}</span>
+                                        <span className="font-extrabold text-black text-xs">₹{Number(trx.amount).toLocaleString()}</span>
                                     </td>
                                 </tr>
                             ))

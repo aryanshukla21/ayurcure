@@ -1,7 +1,6 @@
 import React from 'react';
 
 const AppointmentsTabs = ({ tabs = [], activeTab, onTabChange }) => {
-    // Fail silently if no tabs exist instead of showing an error box
     if (!tabs || tabs.length === 0) return null;
 
     return (

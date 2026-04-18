@@ -1,7 +1,9 @@
 import React from 'react';
 import { Star } from 'lucide-react';
 
-const CredentialsCard = ({ profile }) => {
+const CredentialsCard = ({ credentials }) => {
+    if (!credentials) return null;
+
     return (
         <div className="bg-[#EBE3D0] border border-[#DFD5BE] rounded-3xl p-8 shadow-sm flex flex-col min-h-[420px]">
             <div className="flex items-center gap-3 mb-10">
@@ -16,21 +18,21 @@ const CredentialsCard = ({ profile }) => {
                     <span className="text-xl font-black text-[#c0cdc4] leading-none">01</span>
                     <div>
                         <p className="text-sm text-[#7ca689] font-black uppercase tracking-widest mb-2">Qualifications</p>
-                        <p className="text-gray-900 font-bold text-xs">{profile.qualifications || 'N/A'}</p>
+                        <p className="text-gray-900 font-bold text-xs">{credentials.qualifications || 'N/A'}</p>
                     </div>
                 </div>
                 <div className="flex items-start gap-5">
                     <span className="text-xl font-black text-[#c0cdc4] leading-none">02</span>
                     <div>
-                        <p className="text-sm text-[#7ca689] font-black uppercase tracking-widest mb-2">Experience</p>
-                        <p className="text-gray-900 font-bold text-xs">{profile.experience_years ? `${profile.experience_years} Years Professional Practice` : 'N/A'}</p>
+                        <p className="text-sm text-[#7ca689] font-black uppercase tracking-widest mb-2">License Number</p>
+                        <p className="text-gray-900 font-bold text-xs">{credentials.medical_license_number || 'N/A'}</p>
                     </div>
                 </div>
                 <div className="flex items-start gap-5">
                     <span className="text-xl font-black text-[#c0cdc4] leading-none">03</span>
                     <div>
-                        <p className="text-sm text-[#7ca689] font-black uppercase tracking-widest mb-2">Research</p>
-                        <p className="text-gray-900 font-bold text-xs">{profile.publications_count ? `${profile.publications_count}+ International Publications` : 'N/A'}</p>
+                        <p className="text-sm text-[#7ca689] font-black uppercase tracking-widest mb-2">Achievements</p>
+                        <p className="text-gray-900 font-bold text-xs">{credentials.achievements || 'N/A'}</p>
                     </div>
                 </div>
             </div>

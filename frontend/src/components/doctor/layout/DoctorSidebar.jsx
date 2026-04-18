@@ -6,12 +6,12 @@ const DoctorSidebar = () => {
     const navigate = useNavigate();
 
     const handleLogout = () => {
-        // Clear auth data
+        // Clear all auth data from local storage
+        localStorage.removeItem('token');
         localStorage.removeItem('role');
-        // You can also clear other items like tokens here if stored in localStorage
 
-        // Redirect to login page or home
-        navigate('/login');
+        // Redirect to login page
+        navigate('/signin');
     };
 
     const navItems = [
@@ -53,9 +53,8 @@ const DoctorSidebar = () => {
                 ))}
             </nav>
 
-            {/* Bottom Profile Snippet & Logout */}
+            {/* Logout Button */}
             <div className="p-4 mt-auto border-t border-white/10 bg-black/5">
-
                 <button
                     onClick={handleLogout}
                     className="flex items-center justify-center gap-2 w-full px-4 py-2.5 text-sm font-bold text-red-100 bg-red-500/10 hover:bg-red-500/20 hover:text-white rounded-xl transition-colors"

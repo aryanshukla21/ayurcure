@@ -1,21 +1,40 @@
 import React, { useState } from 'react';
 import { ShieldCheck } from 'lucide-react';
 import { FormGroup, Input, SaveButton, CardHeader } from './SettingsUI';
+import { doctorApi } from '../../../api/doctorApi';
 
 const AccountSecurityForm = () => {
     const initialPasswords = { current: '', new: '', confirm: '' };
     const [passwords, setPasswords] = useState(initialPasswords);
     const [isEditing, setIsEditing] = useState(false);
+    const [isSaving, setIsSaving] = useState(false);
 
     const handleChange = (e) => setPasswords({ ...passwords, [e.target.name]: e.target.value });
 
-    // Assuming the user has a change if any of the password fields are typed in
     const hasChanges = passwords.current !== '' || passwords.new !== '' || passwords.confirm !== '';
 
-    const handleSave = () => {
-        console.log('Updating Password');
-        setIsEditing(false);
-        setPasswords(initialPasswords); // Wipe input after save
+    const handleSave = async () => {
+        if (passwords.new !== passwords.confirm) {
+            alert("New passwords do not match!");
+            return;
+        }
+        setIsSaving(true);
+        try {
+            const res = await doctorApi.updateAccountPassword({
+                currentPassword: passwords.current,
+                newPassword: passwords.new
+            });
+            if (res.success) {
+                alert("Password updated successfully!");
+                setIsEditing(false);
+                setPasswords(initialPasswords);
+            }
+        } catch (error) {
+            console.error('Failed to update password', error);
+            alert("Failed to update password. Ensure your current password is correct.");
+        } finally {
+            setIsSaving(false);
+        }
     };
 
     const handleCancel = () => {
@@ -48,17 +67,23 @@ const AccountSecurityForm = () => {
 
             <div className="flex justify-end mt-6 gap-4">
                 {!isEditing ? (
-                    <SaveButton text="Edit" colorClass="bg-blue-600 hover:bg-blue-700" onClick={() => setIsEditing(true)} />
+                    <SaveButton text="Edit Security" colorClass="bg-blue-600 hover:bg-blue-700" onClick={() => setIsEditing(true)} />
                 ) : (
                     <>
                         {hasChanges && (
-                            <SaveButton text="Update Password" colorClass="bg-green-300 hover:bg-green-700" textColor="text-black" onClick={handleSave} />
+                            <SaveButton
+                                text={isSaving ? "Updating..." : "Update Password"}
+                                colorClass="bg-green-300 hover:bg-green-700"
+                                textColor="text-black"
+                                onClick={handleSave}
+                            />
                         )}
-                        <SaveButton text="Don't Update" colorClass="bg-red-500 hover:bg-red-600" onClick={handleCancel} />
+                        <SaveButton text="Cancel" colorClass="bg-red-500 hover:bg-red-600" onClick={handleCancel} />
                     </>
                 )}
             </div>
         </div>
     );
 };
+
 export default AccountSecurityForm;

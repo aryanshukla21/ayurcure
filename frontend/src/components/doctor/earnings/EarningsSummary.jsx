@@ -1,5 +1,5 @@
 import React from 'react';
-import { DollarSign, Wallet, TrendingUp } from 'lucide-react';
+import { DollarSign, Wallet } from 'lucide-react';
 
 const EarningsSummary = ({ stats }) => {
     // Default safe values
@@ -8,54 +8,34 @@ const EarningsSummary = ({ stats }) => {
     return (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-10">
 
-            {/* Total Earnings Card - Height increased to h-56 */}
+            {/* Total Earnings Card */}
             <div className="bg-white rounded-3xl px-12 shadow-sm border border-gray-100 flex flex-col justify-center h-48 transition-transform hover:-translate-y-1 duration-300">
-
-                {/* Icon and Title in the same row */}
                 <div className="flex items-center gap-4 mb-6">
-                    <div className="p-3.5 rounded-2xl text-green-600">
+                    <div className="p-3.5 rounded-2xl text-green-600 bg-green-50">
                         <DollarSign size={20} />
                     </div>
                     <p className="text-sm text-gray-500 font-bold tracking-widest uppercase">Total Earnings</p>
                 </div>
 
-                {/* Amount */}
-                <h2 className="text-4xl font-black text-gray-900 tracking-tight mb-4">
-                    ${safeStats.totalEarnings.toLocaleString()}
+                <h2 className="text-4xl font-black text-gray-900 tracking-tight mb-2">
+                    ₹{Number(safeStats.totalEarnings).toLocaleString()}
                 </h2>
-
-                {/* Rise in amount indicator */}
-                <div className="flex items-center gap-2 text-sm font-bold mt-4">
-                    <TrendingUp size={18} className="text-green-600" />
-                    <span className="text-green-600">+12.5%</span>
-                    <span className="text-gray-400 font-medium tracking-wide">from last month</span>
-                </div>
-
+                <p className="text-gray-400 text-sm font-medium tracking-wide">All-time total generated revenue</p>
             </div>
 
-            {/* Monthly Earnings Card - Height increased to h-56 */}
+            {/* Monthly Earnings Card */}
             <div className="bg-white rounded-3xl px-12 shadow-sm border border-gray-100 flex flex-col justify-center h-48 transition-transform hover:-translate-y-1 duration-300">
-
-                {/* Icon and Title in the same row */}
                 <div className="flex items-center gap-4 mb-6">
-                    <div className="p-3.5 rounded-2xl text-blue-600">
+                    <div className="p-3.5 rounded-2xl text-blue-600 bg-blue-50">
                         <Wallet size={20} />
                     </div>
                     <p className="text-sm text-gray-500 font-bold tracking-widest uppercase">Monthly Earnings</p>
                 </div>
 
-                {/* Amount */}
-                <h2 className="text-4xl font-black text-gray-900 tracking-tight mb-4">
-                    ${safeStats.monthlyEarnings.toLocaleString()}
+                <h2 className="text-4xl font-black text-gray-900 tracking-tight mb-2">
+                    ₹{Number(safeStats.monthlyEarnings).toLocaleString()}
                 </h2>
-
-                {/* Rise in amount indicator */}
-                <div className="flex items-center gap-2 text-sm font-bold mt-4">
-                    <TrendingUp size={18} className="text-green-600" />
-                    <span className="text-green-600">+8.2%</span>
-                    <span className="text-gray-400 font-medium tracking-wide">from last month</span>
-                </div>
-
+                <p className="text-gray-400 text-sm font-medium tracking-wide">Revenue generated this month</p>
             </div>
 
         </div>

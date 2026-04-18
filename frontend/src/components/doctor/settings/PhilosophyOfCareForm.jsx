@@ -1,21 +1,30 @@
 import React, { useState } from 'react';
 import { Heart } from 'lucide-react';
 import { TextArea, SaveButton, CardHeader } from './SettingsUI';
+import { doctorApi } from '../../../api/doctorApi';
 
 const PhilosophyOfCareForm = ({ data }) => {
-    const initialBio = data?.bio || '';
-    const [bio, setBio] = useState(initialBio);
+    const initialPhilosophy = data?.philosophy_of_care || '';
+    const [philosophy, setPhilosophy] = useState(initialPhilosophy);
     const [isEditing, setIsEditing] = useState(false);
+    const [isSaving, setIsSaving] = useState(false);
 
-    const hasChanges = bio !== initialBio;
+    const hasChanges = philosophy !== initialPhilosophy;
 
-    const handleSave = () => {
-        console.log('Saving Bio:', bio);
-        setIsEditing(false);
+    const handleSave = async () => {
+        setIsSaving(true);
+        try {
+            await doctorApi.updatePhilosophyOfCare({ philosophy_of_care: philosophy });
+            setIsEditing(false);
+        } catch (error) {
+            console.error("Failed to update philosophy", error);
+        } finally {
+            setIsSaving(false);
+        }
     };
 
     const handleCancel = () => {
-        setBio(initialBio);
+        setPhilosophy(initialPhilosophy);
         setIsEditing(false);
     };
 
@@ -29,10 +38,10 @@ const PhilosophyOfCareForm = ({ data }) => {
                 iconBg="bg-teal-50"
             />
 
-            <div className="flex-1">
+            <div className="flex-1 mt-4">
                 <TextArea
-                    value={bio}
-                    onChange={(e) => setBio(e.target.value)}
+                    value={philosophy}
+                    onChange={(e) => setPhilosophy(e.target.value)}
                     placeholder="I believe in treating the root cause..."
                     disabled={!isEditing}
                 />
@@ -44,13 +53,18 @@ const PhilosophyOfCareForm = ({ data }) => {
                 ) : (
                     <>
                         {hasChanges && (
-                            <SaveButton text="Update Philosophy" colorClass="bg-[#4A7C59] hover:bg-[#3a6146]" onClick={handleSave} />
+                            <SaveButton
+                                text={isSaving ? "Updating..." : "Update Philosophy"}
+                                colorClass="bg-[#4A7C59] hover:bg-[#3a6146]"
+                                onClick={handleSave}
+                            />
                         )}
-                        <SaveButton text="Don't Update" colorClass="bg-red-500 hover:bg-red-600" onClick={handleCancel} />
+                        <SaveButton text="Cancel" colorClass="bg-red-500 hover:bg-red-600" onClick={handleCancel} />
                     </>
                 )}
             </div>
         </div>
     );
 };
+
 export default PhilosophyOfCareForm;

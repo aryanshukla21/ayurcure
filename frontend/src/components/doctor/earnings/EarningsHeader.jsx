@@ -1,12 +1,10 @@
 import React from 'react';
 import { Download } from 'lucide-react';
 import jsPDF from 'jspdf';
-// 1. Change the import to import the autoTable function directly
 import autoTable from 'jspdf-autotable';
 
 const EarningsHeader = ({ stats, history }) => {
     const handleExportPDF = () => {
-        // Initialize a new PDF document
         const doc = new jsPDF();
 
         // Add Header/Title
@@ -18,39 +16,38 @@ const EarningsHeader = ({ stats, history }) => {
         doc.setFontSize(12);
         doc.setTextColor(80);
         doc.text(`Generated on: ${new Date().toLocaleDateString()}`, 14, 30);
-        doc.text(`Total Earnings: $${stats?.totalEarnings?.toLocaleString() || 0}`, 14, 40);
-        doc.text(`Monthly Earnings: $${stats?.monthlyEarnings?.toLocaleString() || 0}`, 14, 48);
+        doc.text(`Total Earnings: INR ${stats?.totalEarnings?.toLocaleString() || 0}`, 14, 40);
+        doc.text(`Monthly Earnings: INR ${stats?.monthlyEarnings?.toLocaleString() || 0}`, 14, 48);
 
         // Prepare Table Columns and Rows
         const tableColumn = ["Transaction ID", "Date", "Time", "Patient", "Consultation", "Amount"];
         const tableRows = [];
 
-        // Populate Rows with history data
+        // Populate Rows with database history data
         if (history && history.length > 0) {
             history.forEach(trx => {
+                const dateObj = trx.payment_date ? new Date(trx.payment_date) : null;
                 const rowData = [
-                    trx.id,
-                    trx.date,
-                    trx.time,
-                    trx.patient,
-                    trx.type,
-                    `$${trx.amount}`
+                    `TRX-${trx.id}`,
+                    dateObj ? dateObj.toLocaleDateString() : 'N/A',
+                    dateObj ? dateObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'N/A',
+                    trx.patient_name || 'N/A',
+                    trx.consultation_type || 'General',
+                    `INR ${trx.amount}`
                 ];
                 tableRows.push(rowData);
             });
         }
 
-        // 2. Change how autoTable is called. Pass 'doc' as the first parameter.
         autoTable(doc, {
             head: [tableColumn],
             body: tableRows,
-            startY: 58, // Starts below the summary stats
+            startY: 58,
             styles: { fontSize: 10, cellPadding: 4 },
-            headStyles: { fillColor: [74, 124, 89] }, // Matches your green theme (#4A7C59)
-            alternateRowStyles: { fillColor: [253, 249, 238] } // Matches your #FDF9EE background
+            headStyles: { fillColor: [74, 124, 89] },
+            alternateRowStyles: { fillColor: [253, 249, 238] }
         });
 
-        // Save PDF with a dynamic timestamped filename
         doc.save(`Doctor_Earnings_${new Date().toISOString().split('T')[0]}.pdf`);
     };
 

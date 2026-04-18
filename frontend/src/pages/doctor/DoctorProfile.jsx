@@ -7,46 +7,44 @@ import ContactInfoCard from '../../components/doctor/profile/ContactInfoCard';
 import CredentialsCard from '../../components/doctor/profile/CredentialsCard';
 import PhilosophyCard from '../../components/doctor/profile/PhilosophyCard';
 
-// Static fallback data for testing when not logged in
-const generateStaticProfileData = () => ({
-    full_name: 'Dr. Arjan Varma',
-    specialization: 'Senior Ayurvedic Specialist',
-    registration_number: '#AYU-9021',
-    average_rating: 4.9,
-    verification_status: 'Active',
-    phone: '+91 98765 43210',
-    email: 'arjan.varma@ayurcare.com',
-    languages: ['English', 'Hindi', 'Sanskrit'],
-    consultation_fee: 250.00,
-    availability_summary: 'Mon - Fri, 9:00 AM - 5:00 PM',
-    qualifications: 'BAMS, MD in Ayurveda',
-    experience_years: 15,
-    publications_count: 20,
-    bio: 'Dr. Arjan Varma is dedicated to the ancient wisdom of holistic healing. With over a decade of clinical excellence, he specializes in synchronizing herbal medicine with modern diagnostics to restore balance in the Doshas. His approach treats the person, not just the symptom, fostering long-term vitality through nature-aligned lifestyle shifts.'
-});
-
 const DoctorProfile = () => {
     const [isLoading, setIsLoading] = useState(true);
-    const [profile, setProfile] = useState(null);
+    const [profileData, setProfileData] = useState({
+        personal: null,
+        contact: null,
+        credentials: null,
+        philosophy: null,
+        logistics: null, // needed for consultation fee
+    });
 
     useEffect(() => {
-        const fetchProfile = async () => {
+        const fetchProfileData = async () => {
+            setIsLoading(true);
             try {
-                const res = await doctorApi.getProfile();
-                if (res && res.profile) {
-                    setProfile(res.profile);
-                } else {
-                    setProfile(generateStaticProfileData());
-                }
+                const [personalRes, contactRes, credentialsRes, philosophyRes, logisticsRes] = await Promise.all([
+                    doctorApi.getProfilePersonalInfo(),
+                    doctorApi.getContactInfo(),
+                    doctorApi.getCredentials(),
+                    doctorApi.getPhilosophy(),
+                    doctorApi.getConsultationLogistics() // Need fee for ConsultationFeeCard
+                ]);
+
+                setProfileData({
+                    personal: personalRes.success ? personalRes.info : null,
+                    contact: contactRes.success ? contactRes.info : null,
+                    credentials: credentialsRes.success ? credentialsRes.credentials : null,
+                    philosophy: philosophyRes.success ? philosophyRes.philosophy : null,
+                    logistics: logisticsRes.success ? logisticsRes.logistics : null
+                });
+
             } catch (error) {
-                console.warn("API fetch failed. Loading dynamic fallback data.");
-                setProfile(generateStaticProfileData());
+                console.error("Failed to fetch profile data:", error);
             } finally {
                 setIsLoading(false);
             }
         };
 
-        fetchProfile();
+        fetchProfileData();
     }, []);
 
     if (isLoading) {
@@ -57,24 +55,22 @@ const DoctorProfile = () => {
         );
     }
 
-    if (!profile) return null;
+    if (!profileData.personal) return <div className="p-10 text-gray-500">Profile data unavailable.</div>;
 
     return (
         <div className="max-w-[1600px] mx-auto p-10 bg-[#FDF9EE] min-h-full flex flex-col gap-8">
-
             {/* Top Row */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                <ProfileHeaderCard profile={profile} />
-                <ConsultationFeeCard profile={profile} />
+                <ProfileHeaderCard profile={profileData.personal} />
+                <ConsultationFeeCard logistics={profileData.logistics} />
             </div>
 
-            {/* Middle Row - Cards are now taller */}
+            {/* Middle Row */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-                <ContactInfoCard profile={profile} />
-                <CredentialsCard profile={profile} />
-                <PhilosophyCard profile={profile} />
+                <ContactInfoCard contact={profileData.contact} />
+                <CredentialsCard credentials={profileData.credentials} />
+                <PhilosophyCard philosophy={profileData.philosophy} />
             </div>
-
         </div>
     );
 };

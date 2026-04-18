@@ -1,27 +1,43 @@
 import React, { useState } from 'react';
 import { User } from 'lucide-react';
 import { FormGroup, Input, SaveButton, CardHeader } from './SettingsUI';
+import { doctorApi } from '../../../api/doctorApi';
 
 const PersonalInformationForm = ({ data }) => {
+    // Mapping from backend schema (first_name, last_name) to UI (full_name)
     const initialData = {
-        full_name: data?.full_name || '',
+        full_name: `${data?.first_name || ''} ${data?.last_name || ''}`.trim(),
         email: data?.email || '',
-        phone: data?.phone || '',
-        languages: Array.isArray(data?.languages) ? data.languages.join(', ') : data?.languages || '',
-        clinic_address: data?.clinic_address || ''
+        phone: data?.phone_number || '',
+        bio: data?.bio || ''
     };
 
     const [formData, setFormData] = useState(initialData);
     const [isEditing, setIsEditing] = useState(false);
+    const [isSaving, setIsSaving] = useState(false);
 
     const handleChange = (e) => setFormData({ ...formData, [e.target.name]: e.target.value });
-
-    // Check if the user changed any fields
     const hasChanges = JSON.stringify(formData) !== JSON.stringify(initialData);
 
-    const handleSave = () => {
-        console.log('Saving:', formData);
-        setIsEditing(false);
+    const handleSave = async () => {
+        setIsSaving(true);
+        try {
+            const nameParts = formData.full_name.split(' ');
+            const payload = {
+                first_name: nameParts[0] || '',
+                last_name: nameParts.slice(1).join(' ') || '',
+                email: formData.email,
+                phone_number: formData.phone,
+                bio: formData.bio
+            };
+            await doctorApi.updateSettingsPersonalInfo(payload);
+            setIsEditing(false);
+            // Optionally: trigger a toast notification here
+        } catch (error) {
+            console.error("Failed to update personal info", error);
+        } finally {
+            setIsSaving(false);
+        }
     };
 
     const handleCancel = () => {
@@ -40,29 +56,26 @@ const PersonalInformationForm = ({ data }) => {
                 <FormGroup label="Phone Number">
                     <Input name="phone" value={formData.phone} onChange={handleChange} disabled={!isEditing} />
                 </FormGroup>
-                <FormGroup label="Email Address">
-                    <Input type="email" name="email" value={formData.email} onChange={handleChange} disabled={!isEditing} />
-                </FormGroup>
-                <FormGroup label="Languages">
-                    <Input name="languages" value={formData.languages} onChange={handleChange} disabled={!isEditing} />
-                </FormGroup>
                 <div className="md:col-span-2">
-                    <FormGroup label="Clinic Address">
-                        <Input name="clinic_address" value={formData.clinic_address} onChange={handleChange} disabled={!isEditing} />
+                    <FormGroup label="Email Address">
+                        <Input type="email" name="email" value={formData.email} onChange={handleChange} disabled={!isEditing} />
                     </FormGroup>
                 </div>
             </div>
 
-            {/* Dynamic Buttons */}
             <div className="flex justify-start mt-4 gap-4">
                 {!isEditing ? (
                     <SaveButton text="Edit" colorClass="bg-blue-600 hover:bg-blue-700" onClick={() => setIsEditing(true)} />
                 ) : (
                     <>
                         {hasChanges && (
-                            <SaveButton text="Update Information" colorClass="bg-[#4A7C59] hover:bg-[#3a6146]" onClick={handleSave} />
+                            <SaveButton
+                                text={isSaving ? "Updating..." : "Update Information"}
+                                colorClass="bg-[#4A7C59] hover:bg-[#3a6146]"
+                                onClick={handleSave}
+                            />
                         )}
-                        <SaveButton text="Don't Update" colorClass="bg-red-500 hover:bg-red-600" onClick={handleCancel} />
+                        <SaveButton text="Cancel" colorClass="bg-red-500 hover:bg-red-600" onClick={handleCancel} />
                     </>
                 )}
             </div>

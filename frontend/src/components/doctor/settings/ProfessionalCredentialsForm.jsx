@@ -1,26 +1,36 @@
 import React, { useState } from 'react';
 import { Award } from 'lucide-react';
 import { FormGroup, Input, SaveButton, CardHeader } from './SettingsUI';
+import { doctorApi } from '../../../api/doctorApi';
 
 const ProfessionalCredentialsForm = ({ data }) => {
     const initialData = {
         specialization: data?.specialization || '',
-        experience: data?.experience_years ? `${data.experience_years}+ Years` : '',
+        experience_years: data?.experience_years || '',
         qualifications: data?.qualifications || '',
-        registration: data?.registration_number || '',
-        publications: data?.publications || ''
+        medical_license_number: data?.medical_license_number || '',
     };
 
     const [formData, setFormData] = useState(initialData);
     const [isEditing, setIsEditing] = useState(false);
+    const [isSaving, setIsSaving] = useState(false);
 
     const handleChange = (e) => setFormData({ ...formData, [e.target.name]: e.target.value });
-
     const hasChanges = JSON.stringify(formData) !== JSON.stringify(initialData);
 
-    const handleSave = () => {
-        console.log('Saving:', formData);
-        setIsEditing(false);
+    const handleSave = async () => {
+        setIsSaving(true);
+        try {
+            await doctorApi.updateProfessionalCredentials({
+                ...formData,
+                experience_years: parseInt(formData.experience_years) || 0
+            });
+            setIsEditing(false);
+        } catch (error) {
+            console.error("Failed to update credentials", error);
+        } finally {
+            setIsSaving(false);
+        }
     };
 
     const handleCancel = () => {
@@ -36,20 +46,15 @@ const ProfessionalCredentialsForm = ({ data }) => {
                 <FormGroup label="Specialization">
                     <Input name="specialization" value={formData.specialization} onChange={handleChange} disabled={!isEditing} />
                 </FormGroup>
-                <FormGroup label="Experience">
-                    <Input name="experience" value={formData.experience} onChange={handleChange} disabled={!isEditing} />
+                <FormGroup label="Experience (Years)">
+                    <Input type="number" name="experience_years" value={formData.experience_years} onChange={handleChange} disabled={!isEditing} />
                 </FormGroup>
                 <FormGroup label="Qualifications">
                     <Input name="qualifications" value={formData.qualifications} onChange={handleChange} disabled={!isEditing} />
                 </FormGroup>
-                <FormGroup label="Registration">
-                    <Input name="registration" value={formData.registration} onChange={handleChange} disabled={!isEditing} />
+                <FormGroup label="Medical License No.">
+                    <Input name="medical_license_number" value={formData.medical_license_number} onChange={handleChange} disabled={!isEditing} />
                 </FormGroup>
-                <div className="md:col-span-2">
-                    <FormGroup label="Publications">
-                        <Input name="publications" value={formData.publications} onChange={handleChange} disabled={!isEditing} />
-                    </FormGroup>
-                </div>
             </div>
 
             <div className="flex justify-start mt-4 gap-4">
@@ -58,13 +63,18 @@ const ProfessionalCredentialsForm = ({ data }) => {
                 ) : (
                     <>
                         {hasChanges && (
-                            <SaveButton text="Update Credentials" colorClass="bg-[#4A7C59] hover:bg-[#3a6146]" onClick={handleSave} />
+                            <SaveButton
+                                text={isSaving ? "Updating..." : "Update Credentials"}
+                                colorClass="bg-[#4A7C59] hover:bg-[#3a6146]"
+                                onClick={handleSave}
+                            />
                         )}
-                        <SaveButton text="Don't Update" colorClass="bg-red-500 hover:bg-red-600" onClick={handleCancel} />
+                        <SaveButton text="Cancel" colorClass="bg-red-500 hover:bg-red-600" onClick={handleCancel} />
                     </>
                 )}
             </div>
         </div>
     );
 };
+
 export default ProfessionalCredentialsForm;

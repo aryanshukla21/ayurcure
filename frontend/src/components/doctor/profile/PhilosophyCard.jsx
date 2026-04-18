@@ -1,7 +1,7 @@
 import React from 'react';
 import { Quote } from 'lucide-react';
 
-const PhilosophyCard = ({ profile }) => {
+const PhilosophyCard = ({ philosophy }) => {
     return (
         <div className="bg-white rounded-3xl p-8 shadow-sm border border-gray-100 flex flex-col justify-between min-h-[420px]">
             <div>
@@ -13,7 +13,7 @@ const PhilosophyCard = ({ profile }) => {
                 </div>
                 <div className='bg-[#FDF9EE] p-6 rounded-xl'>
                     <p className="text-gray-600 italic leading-relaxed text-sm">
-                        "{profile.bio || 'No bio provided.'}"
+                        "{philosophy || 'No philosophy of care provided yet.'}"
                     </p>
                 </div>
             </div>
@@ -24,7 +24,7 @@ const PhilosophyCard = ({ profile }) => {
                     <div className="w-3.5 h-10 bg-green-300 rounded-full"></div>
                     <div className="w-3.5 h-8 bg-[#4A7C59] rounded-full"></div>
                 </div>
-                <span className="text-sm font-bold text-gray-400 uppercase tracking-widest">Vitality Trend</span>
+                <span className="text-sm font-bold text-gray-400 uppercase tracking-widest">Care Focus</span>
             </div>
         </div>
     );
