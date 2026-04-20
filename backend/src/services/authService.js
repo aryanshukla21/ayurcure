@@ -1,4 +1,4 @@
-const bcrypt = require('bcrypt');
+const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
 
@@ -15,12 +15,10 @@ class AuthService {
     }
 
     /**
-     * Generates a 6-digit OTP.
+     * Generates a secure 6-digit OTP.
      */
     generateOTP() {
-        // Uses Math.random for speed. If cryptographic strictness is required for OTPs, 
-        // crypto.randomInt(100000, 999999) should be utilized.
-        return Math.floor(100000 + Math.random() * 900000).toString();
+        return crypto.randomInt(100000, 1000000).toString();
     }
 
     /**

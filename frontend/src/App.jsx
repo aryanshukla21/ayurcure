@@ -75,6 +75,9 @@ import CartSummary from './pages/patient/CartSummary';
 import CheckoutPage from './pages/patient/CheckoutPage';
 import PharmacyOrdersPage from './pages/patient/PharmacyOrdersPage';
 
+// Video Consultation Room Component (assuming you created it from previous step)
+import VideoConsultationRoom from './pages/patient/VideoConsultationRoom';
+
 function App() {
   return (
     <CartProvider>
@@ -99,7 +102,6 @@ function App() {
           <Route path="/forgot-password" element={<ForgotPasswordPage />} />
 
           {/* ADMIN ROUTES */}
-          {/* <Route element={<ProtectedRoute allowedRoles={['admin']} />}> */}
           <Route path="/admin" element={<AdminLayout />}>
             <Route index element={<Navigate to="dashboard" replace />} />
             <Route path="dashboard" element={<AdminDashboardPage />} />
@@ -121,10 +123,12 @@ function App() {
             <Route path="inventory/add" element={<AdminAddProductPage />} />
             <Route path="inventory/edit/:id" element={<AdminEditProductPage />} />
           </Route>
-          {/* </Route> */}
+
+          {/* FULL SCREEN VIDEO ROOM ROUTES */}
+          <Route path="/patient/consultation/room/:appointmentId" element={<VideoConsultationRoom />} />
+          <Route path="/doctor/consultation/room/:appointmentId" element={<VideoConsultationRoom />} />
 
           {/* DOCTOR ROUTES */}
-          {/* <Route element={<ProtectedRoute allowedRoles={['doctor']} />}> */}
           <Route path="/doctor" element={<DoctorLayout />}>
             <Route index element={<Navigate to="dashboard" replace />} />
             <Route path="dashboard" element={<DoctorDashboard />} />
@@ -133,11 +137,9 @@ function App() {
             <Route path="earnings" element={<DoctorEarnings />} />
             <Route path="profile" element={<DoctorProfile />} />
             <Route path="settings" element={<DoctorSettings />} />
-            {/* </Route> */}
           </Route>
 
           {/* PATIENT ROUTES */}
-          {/* <Route element={<ProtectedRoute allowedRoles={['patient']} />}> */}
           <Route path="/patient" element={<PatientLayout />}>
             <Route index element={<Navigate to="dashboard" replace />} />
             <Route path="dashboard" element={<PatientDashboard />} />
@@ -154,16 +156,13 @@ function App() {
             <Route path="health-records" element={<PatientHealthReportsPage />} />
             <Route path="profile" element={<PatientProfilePage />} />
             <Route path="settings" element={<PatientSettingsPage />} />
-            {/* </Route> */}
           </Route>
 
           {/* CATCH-ALL */}
           <Route path="*" element={<Navigate to="/" replace />} />
 
         </Routes>
-
         <StickyLogo />
-
       </BrowserRouter>
     </CartProvider>
   );

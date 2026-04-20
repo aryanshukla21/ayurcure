@@ -27,6 +27,16 @@ class PatientModel {
         return rows[0];
     }
 
+    static async createProfile(data) {
+        const query = `
+            INSERT INTO PatientProfiles (user_id) 
+            VALUES ($1) 
+            RETURNING id;
+        `;
+        const { rows } = await db.query(query, [data.user_id]);
+        return rows[0];
+    }
+
     // ==========================================
     // 1. DASHBOARD MODULE
     // ==========================================

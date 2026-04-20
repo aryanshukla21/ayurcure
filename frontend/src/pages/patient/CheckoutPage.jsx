@@ -9,6 +9,16 @@ import BillingForm from '../../components/patient/checkout/BillingForm';
 import PaymentMethods from '../../components/patient/checkout/PaymentMethods';
 import CheckoutSummary from '../../components/patient/checkout/CheckoutSummary';
 
+const loadRazorpayScript = () => {
+    return new Promise((resolve) => {
+        const script = document.createElement('script');
+        script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+        script.onload = () => resolve(true);
+        script.onerror = () => resolve(false);
+        document.body.appendChild(script);
+    });
+};
+
 const CheckoutPage = () => {
     const navigate = useNavigate();
     const { cartItems, cartTotal, clearCart } = useCart();
@@ -27,7 +37,6 @@ const CheckoutPage = () => {
     useEffect(() => {
         const fetchUserProfile = async () => {
             try {
-                // Fetch granular personal profile to prefill billing
                 const response = await patientApi.getProfilePersonal();
                 const profile = response.profile || response || {};
 
@@ -58,27 +67,74 @@ const CheckoutPage = () => {
             alert("Your cart is empty. Please add items to proceed.");
             return;
         }
-
         setIsSubmitting(true);
+
+        const orderPayload = {
+            items: cartItems.map(item => ({ product_id: item.id, quantity: item.quantity, price: item.price })),
+            total_amount: total,
+            shipping_address: `${formData.address}, ${formData.city} - ${formData.postalCode}`,
+            payment_method: selectedPayment === 'cod' ? 'Cash' : 'Online'
+        };
+
         try {
-            const orderData = {
-                items: cartItems.map(item => ({
-                    product_id: item.id,
-                    quantity: item.quantity,
-                    price: item.price
-                })),
-                total_amount: total,
-                discount_applied: 0,
-                shipping_address: `${formData.address}, ${formData.city} - ${formData.postalCode}`,
-                payment_method: selectedPayment === 'cod' ? 'Cash' : 'Online'
+            // If COD, just place order directly
+            if (selectedPayment === 'cod') {
+                await ecommerceApi.createOrder(orderPayload);
+                clearCart();
+                navigate('/patient/pharmacy-orders', { state: { success: true } });
+                return;
+            }
+
+            // For Online Payments: Load Razorpay
+            const res = await loadRazorpayScript();
+            if (!res) {
+                alert('Razorpay SDK failed to load. Are you online?');
+                setIsSubmitting(false);
+                return;
+            }
+
+            // 1. Create order on backend (Backend must call razorpay.orders.create)
+            const orderData = await ecommerceApi.createOrder(orderPayload);
+
+            // 2. Open Razorpay Checkout Modal
+            const options = {
+                key: import.meta.env.VITE_RAZORPAY_KEY_ID, // Your public Razorpay key
+                amount: orderData.amount, // amount in paise
+                currency: "INR",
+                name: "AyurCare360",
+                description: "Pharmacy Order Payment",
+                order_id: orderData.razorpay_order_id, // Returned from backend
+                handler: async function (response) {
+                    // 3. Verify payment on backend
+                    try {
+                        await ecommerceApi.verifyPayment({
+                            razorpay_payment_id: response.razorpay_payment_id,
+                            razorpay_order_id: response.razorpay_order_id,
+                            razorpay_signature: response.razorpay_signature,
+                            order_id: orderData.id // your internal DB order ID
+                        });
+                        clearCart();
+                        navigate('/patient/pharmacy-orders', { state: { success: true } });
+                    } catch (err) {
+                        alert("Payment verification failed!");
+                    }
+                },
+                prefill: {
+                    name: formData.fullName,
+                    email: formData.email,
+                    contact: formData.mobile
+                },
+                theme: {
+                    color: "#52735B"
+                }
             };
 
-            await ecommerceApi.createOrder(orderData);
-            clearCart();
-            navigate('/patient/pharmacy-orders');
+            const paymentObject = new window.Razorpay(options);
+            paymentObject.open();
+
         } catch (error) {
-            console.error('Order placement failed:', error);
-            alert('Failed to place order. Please try again.');
+            console.error('Checkout error:', error);
+            alert('Failed to process checkout. Please try again.');
         } finally {
             setIsSubmitting(false);
         }
@@ -99,14 +155,6 @@ const CheckoutPage = () => {
                 <div className="flex-1 flex flex-col gap-6">
                     <BillingForm formData={formData} handleInputChange={handleInputChange} />
                     <PaymentMethods selectedPayment={selectedPayment} setSelectedPayment={setSelectedPayment} />
-
-                    <div className="bg-[#FDF3E1] border border-[#F5E6CC] rounded-2xl p-5 flex gap-4 w-full md:w-2/3">
-                        <div className="bg-[#EBCB8B] w-1 h-full rounded-full"></div>
-                        <div>
-                            <span className="text-[10px] font-bold tracking-wider text-[#B8860B] uppercase block mb-1">WELLNESS TIP</span>
-                            <p className="text-sm text-gray-800 font-medium">Stay hydrated with herbal infusions for natural vitality.</p>
-                        </div>
-                    </div>
                 </div>
 
                 <div className="w-full lg:w-[380px] xl:w-[420px] shrink-0 flex flex-col gap-6">
@@ -117,15 +165,6 @@ const CheckoutPage = () => {
                         <div>
                             <h4 className="text-sm font-bold text-[#37822e] mb-1">Eco-Friendly Delivery</h4>
                             <p className="text-xs text-gray-500 leading-relaxed">Your medicines will be delivered in biodegradable packaging.</p>
-                        </div>
-                    </div>
-
-                    <div className="bg-[#2D5A27] rounded-3xl overflow-hidden relative h-48 shadow-md">
-                        <div className="absolute inset-0 opacity-20" style={{ backgroundImage: 'radial-gradient(circle at 2px 2px, white 1px, transparent 0)', backgroundSize: '16px 16px' }}></div>
-                        <div className="absolute bottom-4 left-4 right-4 bg-white/90 backdrop-blur rounded-xl py-2 px-3 text-center">
-                            <span className="text-xs font-bold text-gray-800 flex items-center justify-center gap-1">
-                                <MapPin size={12} /> Delivery to {formData.postalCode || 'Postal Code'}
-                            </span>
                         </div>
                     </div>
                 </div>

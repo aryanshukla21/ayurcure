@@ -1,24 +1,20 @@
 const UserModel = require('../models/userModel');
-const PatientModel = require('../models/patientModel'); // Added for Role Profile
-const DoctorModel = require('../models/doctorModel');   // Added for Role Profile
+const PatientModel = require('../models/patientModel');
+const DoctorModel = require('../models/doctorModel');
 const authService = require('../services/authService');
 const notificationService = require('../services/notificationService');
 const logger = require('../utils/logger');
 const { OAuth2Client } = require('google-auth-library');
 
 const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
-
-// Temporary Memory Cache for Email OTPs during the 2-step signup process
-// (For production with multiple server instances, use Redis instead)
 const tempOtpCache = new Map();
 
-// Helper function to set the JWT token in an HttpOnly cookie
 const setTokenCookie = (res, token) => {
     res.cookie('token', token, {
-        httpOnly: true, // Prevents JavaScript access (XSS protection)
-        secure: process.env.NODE_ENV === 'production', // Requires HTTPS in production
-        sameSite: 'lax', // CSRF protection
-        maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days expiration
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax',
+        maxAge: 7 * 24 * 60 * 60 * 1000
     });
 };
 
@@ -30,19 +26,14 @@ const setTokenCookie = (res, token) => {
 exports.sendSignupOtps = async (req, res) => {
     try {
         const { email, phone } = req.body;
-        if (!email || !phone) {
-            return res.status(400).json({ error: 'Email and Phone are required.' });
-        }
+        if (!email || !phone) return res.status(400).json({ error: 'Email and Phone are required.' });
 
-        // A. Send SMS via Twilio
         await notificationService.sendPhoneOTP(phone);
-
-        // B. Send Email via SendGrid & store temporarily
         const emailOtp = authService.generateOTP();
-        tempOtpCache.set(email, { otp: emailOtp, expiresAt: Date.now() + 5 * 60000 }); // 5 min expiry
+        tempOtpCache.set(email, { otp: emailOtp, expiresAt: Date.now() + 5 * 60000 });
         await notificationService.sendEmailVerification(email, emailOtp);
 
-        res.status(200).json({ message: 'Verification codes sent to email and phone.' });
+        res.status(200).json({ message: 'Verification codes sent.' });
     } catch (error) {
         logger.error(`Pre-Signup OTP Error: ${error.message}`);
         res.status(500).json({ error: 'Failed to send verification codes.' });
@@ -54,49 +45,39 @@ exports.verifyAndRegister = async (req, res) => {
     try {
         const { role, full_name, email, phone, password, emailOtp, phoneOtp } = req.body;
 
-        // A. Verify Phone OTP (Twilio)
         const isPhoneValid = await notificationService.verifyPhoneOTP(phone, phoneOtp);
         if (!isPhoneValid) return res.status(401).json({ error: 'Invalid or expired Phone OTP.' });
 
-        // B. Verify Email OTP (Cache)
         const cachedEmailData = tempOtpCache.get(email);
         if (!cachedEmailData || cachedEmailData.otp !== emailOtp || Date.now() > cachedEmailData.expiresAt) {
             return res.status(401).json({ error: 'Invalid or expired Email OTP.' });
         }
-        tempOtpCache.delete(email); // Clean up cache
+        tempOtpCache.delete(email);
 
-        // C. Permanently store user in Database
         const password_hash = await authService.hashData(password);
-
         const newUser = await UserModel.createUser({
             role: role || 'patient',
-            full_name,
-            email,
-            phone,
+            full_name, email, phone,
             auth_provider: 'local',
-            password_hash,
-            google_id: null
+            password_hash, google_id: null
         });
 
-        // Since they verified via OTPs, set status immediately to true
         await UserModel.updateVerificationStatus(newUser.id, true, 'email');
         await UserModel.updateVerificationStatus(newUser.id, true, 'phone');
 
-        // D. Create specific sub-profile based on Role selection
         if (role === 'doctor') {
             await DoctorModel.createProfile({ user_id: newUser.id });
         } else {
             await PatientModel.createProfile({ user_id: newUser.id });
         }
 
-        // E. Generate Session Cookie & Auto-Login
         const token = authService.generateToken(newUser);
         setTokenCookie(res, token);
 
         res.status(201).json({ message: 'Registration complete.', user: { id: newUser.id, role: newUser.role } });
     } catch (error) {
         if (error.code === '23505') return res.status(409).json({ error: 'Email or phone already registered.' });
-        logger.error(`Final Registration Error: ${error.message}`);
+        logger.error(`Registration Error: ${error.message}`);
         res.status(500).json({ error: 'Registration failed.' });
     }
 };
@@ -106,37 +87,23 @@ exports.login = async (req, res) => {
         const { email, phone, password, role } = req.body;
         let user;
 
-        // 1. Fetch user by either Email OR Phone
-        if (email) {
-            user = await UserModel.getUserByEmail(email);
-        } else if (phone) {
-            // NOTE: Ensure your UserModel has a 'getUserByPhone' method
-            user = await UserModel.getUserByPhone(phone);
-        } else {
-            return res.status(400).json({ error: 'Email or phone is required to login.' });
-        }
+        if (email) user = await UserModel.getUserByEmail(email);
+        else if (phone) user = await UserModel.getUserByPhone(phone);
+        else return res.status(400).json({ error: 'Email or phone required.' });
 
-        // 2. Validate existence and password
         if (!user || !user.password_hash || !(await authService.verifyHash(password, user.password_hash))) {
             return res.status(401).json({ error: 'Invalid credentials.' });
         }
 
-        // 3. Ensure they are logging in from the correct portal (Patient vs Doctor)
         if (role && user.role !== role) {
-            return res.status(403).json({ error: `You are registered as a ${user.role}. Please select the correct role.` });
+            return res.status(403).json({ error: `You are registered as a ${user.role}.` });
         }
 
         if (user.account_status !== 'Active') {
             return res.status(403).json({ error: `Account is ${user.account_status}.` });
         }
 
-        if (!user.is_email_verified && !user.is_phone_verified) {
-            return res.status(403).json({ error: 'Account not verified. Please check your email or phone.' });
-        }
-
         const token = authService.generateToken(user);
-
-        // Use our cookie helper
         setTokenCookie(res, token);
 
         res.status(200).json({ user: { id: user.id, role: user.role } });
@@ -387,16 +354,10 @@ exports.updateFcmToken = async (req, res) => {
 // ==========================================
 
 // Endpoint to handle frontend session validation
-exports.checkAuth = (req, res) => {
-    res.status(200).json({ user: req.user });
-};
+exports.checkAuth = (req, res) => { res.status(200).json({ user: req.user }); };
 
 // Clear the cookie to log the user out
 exports.logout = (req, res) => {
-    res.clearCookie('token', {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: 'lax'
-    });
+    res.clearCookie('token', { httpOnly: true, secure: process.env.NODE_ENV === 'production', sameSite: 'lax' });
     res.status(200).json({ message: 'Logged out successfully.' });
 };

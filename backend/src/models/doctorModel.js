@@ -1,6 +1,17 @@
 const db = require('../config/db');
 
 const doctorModel = {
+
+    createProfile: async (data) => {
+        const query = `
+            INSERT INTO DoctorProfiles (user_id, verification_status) 
+            VALUES ($1, 'Pending') 
+            RETURNING id;
+        `;
+        const { rows } = await db.query(query, [data.user_id]);
+        return rows[0];
+    },
+
     // ==========================================
     // DASHBOARD
     // ==========================================

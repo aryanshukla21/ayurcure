@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Leaf, Eye, EyeOff, ShieldCheck } from 'lucide-react';
+import { Leaf, Eye, EyeOff, ShieldCheck, User, Stethoscope } from 'lucide-react';
 
 const SignUpPage = () => {
   const navigate = useNavigate();
   const [showPassword, setShowPassword] = useState(false);
   const [formData, setFormData] = useState({
+    role: 'patient', // Added role state, defaults to patient
     fullName: '',
     email: '',
     password: '',
@@ -22,9 +23,13 @@ const SignUpPage = () => {
 
   const handleSignUp = (e) => {
     e.preventDefault();
-    console.log('Creating account...', formData);
-    // Simulate registration and redirect to dashboard
-    navigate('/patient/dashboard');
+    console.log('Creating account payload:', formData);
+    // Simulate registration and redirect to the correct dashboard based on role
+    if (formData.role === 'doctor') {
+      navigate('/doctor/dashboard');
+    } else {
+      navigate('/patient/dashboard');
+    }
   };
 
   return (
@@ -37,7 +42,7 @@ const SignUpPage = () => {
       </div>
 
       {/* Main Content Area */}
-      <main className="flex-1 flex flex-col items-center justify-center px-4 sm:px-6 relative z-10 w-full py-12 md:py-0">
+      <main className="flex-1 flex flex-col items-center justify-center px-4 sm:px-6 relative z-10 w-full py-12 md:py-0 mt-6">
 
         {/* Header Section */}
         <div className="flex flex-col items-center mb-8">
@@ -56,6 +61,25 @@ const SignUpPage = () => {
         <div className="w-full max-w-[420px] bg-white rounded-3xl p-8 sm:p-10 shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-[#EFEBE1]/50">
           <form onSubmit={handleSignUp} className="flex flex-col gap-5">
 
+            {/* Role Selection UI */}
+            <div className="flex flex-col gap-2">
+              <label className="text-[10px] font-extrabold text-gray-500 uppercase tracking-widest">
+                I am registering as a...
+              </label>
+              <div className="flex gap-4">
+                <label className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl border-2 cursor-pointer transition-all ${formData.role === 'patient' ? 'border-[#52735B] bg-[#52735B]/5 text-[#52735B]' : 'border-[#EFEBE1] bg-[#F8F6F0] text-gray-500 hover:border-[#52735B]/30'}`}>
+                  <input type="radio" name="role" value="patient" checked={formData.role === 'patient'} onChange={handleInputChange} className="hidden" />
+                  <User size={16} />
+                  <span className="text-sm font-bold">Patient</span>
+                </label>
+                <label className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl border-2 cursor-pointer transition-all ${formData.role === 'doctor' ? 'border-[#52735B] bg-[#52735B]/5 text-[#52735B]' : 'border-[#EFEBE1] bg-[#F8F6F0] text-gray-500 hover:border-[#52735B]/30'}`}>
+                  <input type="radio" name="role" value="doctor" checked={formData.role === 'doctor'} onChange={handleInputChange} className="hidden" />
+                  <Stethoscope size={16} />
+                  <span className="text-sm font-bold">Doctor</span>
+                </label>
+              </div>
+            </div>
+
             {/* Full Name Input */}
             <div className="flex flex-col gap-2">
               <label className="text-[10px] font-extrabold text-gray-500 uppercase tracking-widest">
@@ -66,7 +90,7 @@ const SignUpPage = () => {
                 name="fullName"
                 value={formData.fullName}
                 onChange={handleInputChange}
-                placeholder="e.g. Aditi Sharma"
+                placeholder={formData.role === 'doctor' ? "e.g. Dr. Aditi Sharma" : "e.g. Aditi Sharma"}
                 className="w-full bg-[#F8F6F0] rounded-xl px-4 py-3.5 text-sm font-medium text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-[#52735B]/20 transition-all border border-transparent focus:border-[#EFEBE1]"
                 required
               />
@@ -137,7 +161,7 @@ const SignUpPage = () => {
               type="submit"
               className="w-full bg-[#52735B] hover:bg-[#425E4A] text-white font-bold py-3.5 rounded-xl transition-colors shadow-sm mt-4"
             >
-              Create Account
+              Create {formData.role === 'doctor' ? 'Doctor' : 'Patient'} Account
             </button>
           </form>
 
