@@ -1,99 +1,79 @@
-import React from 'react';
-import { CheckCircle2, Globe, PlusCircle } from 'lucide-react';
+import React, { useState } from 'react';
+import { Tag, Key, CheckCircle } from 'lucide-react';
 
-const PublishingSidebar = ({ formData, onChange }) => {
+const PublishingSidebar = ({ formData, onChange, setFormData }) => {
+  const [newTag, setNewTag] = useState('');
+
+  const handleAddTag = (e) => {
+    if (e.key === 'Enter' && newTag.trim() !== '') {
+      e.preventDefault();
+      if (!formData.tags.includes(newTag.trim())) {
+        setFormData(prev => ({ ...prev, tags: [...prev.tags, newTag.trim()] }));
+      }
+      setNewTag('');
+    }
+  };
+
+  const removeTag = (tagToRemove) => {
+    setFormData(prev => ({ ...prev, tags: prev.tags.filter(t => t !== tagToRemove) }));
+  };
+
   return (
-    <div className="flex flex-col gap-8 h-full">
-
-      {/* Publishing Status Card */}
-      <div className="bg-white rounded-[32px] p-8 border border-[#EFEBE1] shadow-sm">
-        <div className="flex items-center gap-3 mb-6">
-          <CheckCircle2 size={18} className="text-[#3A6447]" />
-          <h3 className="text-lg font-bold text-gray-900">Publishing Status</h3>
-        </div>
-
-        <div className="space-y-3">
-          {/* Draft Option */}
-          <label className={`flex items-start gap-3 p-4 rounded-xl border cursor-pointer transition-colors ${formData.status === 'Draft' ? 'border-[#3A6447] bg-[#FDF9EE]' : 'border-[#EFEBE1] hover:bg-gray-50'}`}>
-            <input
-              type="radio"
-              name="status"
-              value="Draft"
-              checked={formData.status === 'Draft'}
-              onChange={onChange}
-              className="mt-0.5"
-            />
-            <div>
-              <p className="text-sm font-bold text-gray-900">Draft</p>
-              <p className="text-xs font-medium text-gray-500">Only visible to administrators</p>
-            </div>
-          </label>
-
-          {/* Published Option */}
-          <label className={`flex items-start gap-3 p-4 rounded-xl border cursor-pointer transition-colors ${formData.status === 'Published' ? 'border-[#3A6447] bg-[#FDF9EE]' : 'border-[#EFEBE1] hover:bg-gray-50'}`}>
-            <input
-              type="radio"
-              name="status"
-              value="Published"
-              checked={formData.status === 'Published'}
-              onChange={onChange}
-              className="mt-0.5"
-            />
-            <div>
-              <p className="text-sm font-bold text-gray-900">Published</p>
-              <p className="text-xs font-medium text-gray-500">Visible immediately on the website</p>
-            </div>
-          </label>
-        </div>
+    <div className="bg-white rounded-[32px] p-8 border border-[#EFEBE1] shadow-sm space-y-8">
+      {/* Status */}
+      <div>
+        <h3 className="text-sm font-extrabold text-gray-900 mb-4 flex items-center gap-2">
+          <CheckCircle size={16} className="text-[#3A6447]" /> Publication Status
+        </h3>
+        <select
+          name="status"
+          value={formData.status}
+          onChange={onChange}
+          className="w-full bg-[#FAF7F2] border border-[#EFEBE1] rounded-2xl py-3 px-4 text-sm font-bold text-gray-700 focus:outline-none focus:ring-2 focus:ring-[#3A6447]/20 cursor-pointer"
+        >
+          <option value="Draft">Draft</option>
+          <option value="Published">Published</option>
+        </select>
       </div>
 
-      {/* Tags Card */}
-      <div className="bg-white rounded-[32px] p-8 border border-[#EFEBE1] shadow-sm">
-        <h3 className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-4">Tags</h3>
+      {/* Tags */}
+      <div className="pt-6 border-t border-[#EFEBE1]">
+        <h3 className="text-sm font-extrabold text-gray-900 mb-4 flex items-center gap-2">
+          <Tag size={16} className="text-[#3A6447]" /> Tags
+        </h3>
+        <input
+          type="text"
+          value={newTag}
+          onChange={(e) => setNewTag(e.target.value)}
+          onKeyDown={handleAddTag}
+          placeholder="Add tag & press enter"
+          className="w-full bg-[#FAF7F2] border border-[#EFEBE1] rounded-2xl py-3 px-4 text-sm font-medium text-gray-700 focus:outline-none focus:ring-2 focus:ring-[#3A6447]/20 mb-3"
+        />
         <div className="flex flex-wrap gap-2">
-          {/* Add a fallback empty array if formData.tags is undefined to prevent crashes */}
-          {(formData.tags || []).map((tag, i) => (
-            <span key={i} className="px-3 py-1.5 bg-[#E7F3EB] text-[#3A6447] text-[10px] font-extrabold uppercase tracking-widest rounded-full">
+          {formData.tags?.map((tag, idx) => (
+            <span key={idx} className="bg-[#E7F3EB] text-[#3A6447] text-xs font-bold px-3 py-1.5 rounded-full flex items-center gap-2">
               {tag}
+              <button type="button" onClick={() => removeTag(tag)} className="hover:text-red-500 transition-colors">&times;</button>
             </span>
           ))}
-          <button type="button" className="p-1.5 text-gray-400 hover:text-[#3A6447] transition-colors rounded-full border border-dashed border-gray-300">
-            <PlusCircle size={16} />
-          </button>
         </div>
       </div>
 
-      {/* SEO Configuration Card */}
-      <div className="bg-white rounded-[32px] p-8 border border-[#EFEBE1] shadow-sm">
-        <div className="flex items-center gap-3 mb-6">
-          <Globe size={18} className="text-[#3A6447]" />
-          <h3 className="text-lg font-bold text-gray-900">SEO Configuration</h3>
-        </div>
-
-        <div className="flex flex-col gap-1.5 mb-6">
-          <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Focus Keyword</label>
-          <input
-            type="text"
-            name="focusKeyword"
-            value={formData.focusKeyword || ''}
-            onChange={onChange}
-            className="w-full bg-[#FAF7F2] border border-[#EFEBE1] rounded-xl px-4 py-3 text-sm font-bold text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#4A7C59]"
-          />
-        </div>
-
-        {/* SEO Preview Box */}
-        <div className="bg-[#FAF7F2] p-4 rounded-xl border border-[#EFEBE1]">
-          <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Search Preview</p>
-          <h4 className="text-sm font-bold text-[#1a0dab] mb-1">{formData.title || 'Blog Title'} - Ayurcare360</h4>
-          <p className="text-[10px] text-[#006621] mb-1">ayurcare360.com/blog/article-slug</p>
-          <p className="text-xs text-[#545454] line-clamp-2 leading-relaxed">
-            {formData.shortDescription || 'Write a short description to see how this post will appear in search results...'}
-          </p>
-        </div>
+      {/* Focus Keyword */}
+      <div className="pt-6 border-t border-[#EFEBE1]">
+        <h3 className="text-sm font-extrabold text-gray-900 mb-4 flex items-center gap-2">
+          <Key size={16} className="text-[#3A6447]" /> Focus Keyword (SEO)
+        </h3>
+        <input
+          type="text"
+          name="focusKeyword"
+          value={formData.focusKeyword}
+          onChange={onChange}
+          placeholder="Main SEO keyword"
+          className="w-full bg-[#FAF7F2] border border-[#EFEBE1] rounded-2xl py-3 px-4 text-sm font-medium text-gray-700 focus:outline-none focus:ring-2 focus:ring-[#3A6447]/20"
+        />
       </div>
-
     </div>
   );
 };
-
 export default PublishingSidebar;

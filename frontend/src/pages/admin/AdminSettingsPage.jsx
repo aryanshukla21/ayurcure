@@ -1,12 +1,53 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
+import { adminApi } from '../../api/adminApi';
 import AdminMetricsRow from '../../components/admin/settings/AdminMetricsRow';
 import AdminsTable from '../../components/admin/settings/AdminsTable';
+import { Loader2 } from 'lucide-react';
 
 const AdminSettingsPage = () => {
+  const [isLoading, setIsLoading] = useState(true);
+  const [data, setData] = useState({
+    metrics: { revenue: 0, score: "0/100", sessions: 0 },
+    admins: []
+  });
+
+  useEffect(() => {
+    const fetchSettingsData = async () => {
+      try {
+        const [revRes, scoreRes, sessionRes, adminsRes] = await Promise.all([
+          adminApi.getSettingsTotalRevenue(),
+          adminApi.getSecurityScore(),
+          adminApi.getActiveSessions(),
+          adminApi.getAllAdmins() // Fetching the dynamic admin list
+        ]);
+
+        setData({
+          metrics: {
+            revenue: revRes.revenue || 0,
+            score: scoreRes.score || "0/100",
+            sessions: sessionRes.sessions || 0
+          },
+          admins: adminsRes.admins || []
+        });
+      } catch (error) {
+        console.error("Failed to fetch settings data", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchSettingsData();
+  }, []);
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-full min-h-[60vh]">
+        <Loader2 className="w-12 h-12 text-[#3A6447] animate-spin" />
+      </div>
+    );
+  }
+
   return (
     <div className="p-8 md:p-10 max-w-[1600px] mx-auto animate-in fade-in duration-300 flex flex-col h-full">
-      
-      {/* Header */}
       <div className="mb-8">
         <h1 className="text-3xl md:text-[32px] font-extrabold text-gray-900 tracking-tight leading-none mb-2">
           Staff Management
@@ -16,14 +57,12 @@ const AdminSettingsPage = () => {
         </p>
       </div>
 
-      {/* Top Metrics Cards */}
-      <AdminMetricsRow />
+      <AdminMetricsRow metrics={data.metrics} />
 
-      {/* Main Table Area */}
       <div className="flex-1">
-        <AdminsTable />
+        {/* Pass the fetched admins to the table */}
+        <AdminsTable admins={data.admins} />
       </div>
-
     </div>
   );
 };

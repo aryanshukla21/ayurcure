@@ -1,51 +1,28 @@
 import React from 'react';
-import { Sparkles, ClipboardEdit, Eye } from 'lucide-react';
+import { BookOpen, TrendingUp, AlertCircle, Users } from 'lucide-react';
 
-const BlogMetricsRow = () => {
+const BlogMetricsRow = ({ metrics, totalBlogs }) => {
+  const data = [
+    { title: 'Total Articles', value: totalBlogs || 0, icon: <BookOpen size={20} />, bg: 'bg-blue-50', color: 'text-blue-600' },
+    { title: 'Top Category', value: metrics?.trendingCategory || 'N/A', icon: <TrendingUp size={20} />, bg: 'bg-green-50', color: 'text-green-600' },
+    { title: 'Drafts/Reviews', value: metrics?.reviewRequired || 0, icon: <AlertCircle size={20} />, bg: 'bg-amber-50', color: 'text-amber-600' },
+    { title: 'Total Readers', value: Number(metrics?.totalTraffic || 0).toLocaleString(), icon: <Users size={20} />, bg: 'bg-purple-50', color: 'text-purple-600' },
+  ];
+
   return (
-    <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-8">
-      
-      {/* Trending Category */}
-      <div className="bg-[#FAF7F2] rounded-[24px] p-6 border border-[#EFEBE1] shadow-sm">
-        <div className="flex items-center gap-3 mb-3">
-          <div className="text-[#9333EA]">
-             <Sparkles size={20} />
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mt-8">
+      {data.map((item, index) => (
+        <div key={index} className="bg-white rounded-3xl p-6 shadow-sm border border-gray-100 flex items-center gap-5">
+          <div className={`w-14 h-14 rounded-2xl flex items-center justify-center ${item.bg} ${item.color}`}>
+            {item.icon}
           </div>
-          <h3 className="text-sm font-bold text-gray-900">Trending Category</h3>
-        </div>
-        <p className="text-xs font-medium text-gray-600 leading-relaxed">
-          <span className="font-bold text-gray-900">"Pitta Balancing"</span> diet searches are up 45% this week.
-        </p>
-      </div>
-
-      {/* Review Required */}
-      <div className="bg-[#FAF7F2] rounded-[24px] p-6 border border-[#EFEBE1] shadow-sm">
-        <div className="flex items-center gap-3 mb-3">
-          <div className="text-[#D9774B]">
-             <ClipboardEdit size={20} />
+          <div>
+            <p className="text-[11px] font-extrabold text-gray-400 uppercase tracking-widest mb-1">{item.title}</p>
+            <h3 className="text-2xl font-black text-gray-900 truncate max-w-[120px]">{item.value}</h3>
           </div>
-          <h3 className="text-sm font-bold text-gray-900">Review Required</h3>
         </div>
-        <p className="text-xs font-medium text-gray-600 leading-relaxed">
-          <span className="font-bold text-gray-900">3 drafts</span> are awaiting clinical validation before publishing.
-        </p>
-      </div>
-
-      {/* Blog Traffic */}
-      <div className="bg-[#E7F3EB] rounded-[24px] p-6 border border-[#C2D1C7] shadow-sm">
-        <div className="flex items-center gap-3 mb-3">
-          <div className="text-[#3A6447]">
-             <Eye size={20} />
-          </div>
-          <h3 className="text-sm font-bold text-[#2C4D36]">Blog Traffic</h3>
-        </div>
-        <p className="text-xs font-medium text-[#3A6447] leading-relaxed">
-          Total <span className="font-extrabold">12.4k views</span> this month across all wellness blogs.
-        </p>
-      </div>
-
+      ))}
     </div>
   );
 };
-
 export default BlogMetricsRow;

@@ -1,27 +1,20 @@
 import React from 'react';
 
 const AboutSection = ({ formData, onChange, isEditing = true }) => {
-  const inputBaseClass = `w-full mt-1 p-3.5 rounded-xl border text-sm font-medium transition-colors outline-none focus:ring-2 focus:ring-[#3A6447]/20 resize-none ${!isEditing ? 'bg-gray-50 border-transparent text-gray-500 cursor-not-allowed' : 'bg-[#FAF7F2] border-[#EFEBE1] text-gray-900'
-    }`;
-
   return (
-    <div className="bg-white rounded-[32px] p-8 border border-[#EFEBE1] shadow-sm">
-      <h3 className="text-lg font-bold text-gray-900 mb-6">About the Doctor</h3>
-
-      <div>
-        <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Biography & Philosophy</label>
+    <div className="bg-white rounded-[32px] p-8 border border-[#EFEBE1] shadow-sm flex flex-col h-full min-h-[300px]">
+      <h2 className="text-xl font-extrabold text-gray-900 mb-6">About / Bio</h2>
+      <div className="flex-1 flex flex-col">
         <textarea
           name="about"
           value={formData.about}
           onChange={onChange}
           disabled={!isEditing}
-          placeholder="Briefly describe the doctor's philosophy, specialties, and background..."
-          rows="6"
-          className={inputBaseClass}
+          className="flex-1 w-full bg-[#FAF7F2] border border-[#EFEBE1] rounded-2xl py-4 px-5 text-sm font-medium text-gray-700 focus:outline-none disabled:opacity-70 resize-y leading-relaxed min-h-[150px]"
+          placeholder="Enter a brief professional biography..."
         ></textarea>
       </div>
     </div>
   );
 };
-
 export default AboutSection;

@@ -1,52 +1,37 @@
 import React from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
+import { ChevronRight } from 'lucide-react';
 
-const DOCTORS = [
-  { name: 'Dr. James Wilson', spec: 'Cardiology', status: 'ACTIVE', img: 'https://ui-avatars.com/api/?name=JW&background=FDF9EE&color=3A6447' },
-  { name: 'Dr. Sarah Chen', spec: 'Pediatrics', status: 'ACTIVE', img: 'https://ui-avatars.com/api/?name=SC&background=FDF9EE&color=D9774B' },
-  { name: 'Dr. Robert Fox', spec: 'Orthopedics', status: 'INACTIVE', img: 'https://ui-avatars.com/api/?name=RF&background=FDF9EE&color=A67C00' },
-];
-
-const RecentDoctorsList = () => {
-  const navigate = useNavigate();
-
+const RecentDoctorsList = ({ doctors = [] }) => {
   return (
-    <div className="bg-white rounded-[32px] p-8 border border-[#EFEBE1] shadow-sm h-full flex flex-col">
-      <div className="flex justify-between items-center mb-6">
-        <h3 className="text-lg font-bold text-gray-900">Recent Doctors</h3>
-        <button
-          onClick={() => navigate('/admin/doctors')}
-          className="text-xs font-bold text-gray-500 hover:text-[#3A6447] uppercase tracking-widest transition-colors"
-        >
-          View All
-        </button>
+    <div className="bg-white rounded-3xl shadow-sm border border-gray-100 p-6 h-full flex flex-col">
+      <div className="flex items-center justify-between mb-6">
+        <h3 className="text-lg font-extrabold text-gray-900">New Doctors</h3>
+        <Link to="/admin/doctors" className="text-sm font-bold text-[#3A6447] hover:text-[#2C4D36] flex items-center gap-1 transition-colors">
+          All <ChevronRight size={16} />
+        </Link>
       </div>
-
-      <div className="flex text-[10px] font-bold text-gray-400 uppercase tracking-widest pb-4 border-b border-[#EFEBE1]">
-        <div className="w-[50%]">Name</div>
-        <div className="w-[30%]">Specialization</div>
-        <div className="w-[20%] text-right">Status</div>
-      </div>
-
-      <div className="flex-1 space-y-1 mt-3">
-        {DOCTORS.map((doc, i) => (
-          <div key={i} className="flex items-center py-3 border-b border-transparent hover:border-[#EFEBE1] transition-colors group cursor-pointer">
-            <div className="w-[50%] flex items-center gap-3">
-              <img src={doc.img} alt={doc.name} className="w-10 h-10 rounded-full border border-[#EFEBE1]" />
-              <span className="text-sm font-bold text-gray-900 group-hover:text-[#3A6447] transition-colors">{doc.name}</span>
-            </div>
-            <div className="w-[30%] text-xs font-medium text-gray-500">{doc.spec}</div>
-            <div className="w-[20%] text-right">
-              <span className={`px-3 py-1 rounded-full text-[9px] font-extrabold uppercase tracking-widest ${doc.status === 'ACTIVE' ? 'bg-[#E7F3EB] text-[#3A6447]' : 'bg-[#FDF1E8] text-[#D9774B]'
-                }`}>
-                {doc.status}
+      <div className="space-y-4 flex-1">
+        {doctors.length === 0 ? (
+          <p className="text-gray-500 text-center py-4">No recent doctors</p>
+        ) : (
+          doctors.map((doc, idx) => (
+            <div key={idx} className="flex items-center gap-4 p-3 hover:bg-gray-50 rounded-2xl transition-colors">
+              <div className="w-12 h-12 rounded-full bg-[#E7F3EB] text-[#3A6447] flex items-center justify-center font-bold text-sm">
+                {doc.name ? doc.name.charAt(0) : 'D'}
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-bold text-gray-900 truncate">{doc.name}</p>
+                <p className="text-[10px] font-extrabold text-gray-500 uppercase tracking-widest mt-0.5 truncate">{doc.specialization}</p>
+              </div>
+              <span className={`px-2.5 py-1 rounded-md text-[10px] font-extrabold uppercase ${doc.status === 'Verified' ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'}`}>
+                {doc.status === 'Verified' ? 'Active' : 'Pending'}
               </span>
             </div>
-          </div>
-        ))}
+          ))
+        )}
       </div>
     </div>
   );
 };
-
 export default RecentDoctorsList;

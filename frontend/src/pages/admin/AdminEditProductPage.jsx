@@ -10,7 +10,6 @@ const AdminEditProductPage = () => {
     <div className="p-8 max-w-5xl mx-auto w-full animate-in fade-in duration-500">
       <div className="mb-8">
         <div className="flex items-center text-gray-500 text-[10px] font-bold uppercase tracking-widest mb-3">
-          {/* This Link makes the breadcrumb functional */}
           <Link to="/admin/inventory" className="hover:text-[#3A6447] transition-colors cursor-pointer">
             Inventory Management
           </Link>
@@ -20,7 +19,8 @@ const AdminEditProductPage = () => {
         <h1 className="text-3xl font-extrabold text-gray-900 tracking-tight mb-2">Modify Product</h1>
       </div>
 
-      <EditProductForm />
+      {/* Passing ID down to form so the form handles fetch and submit natively */}
+      <EditProductForm productId={id} />
     </div>
   );
 };

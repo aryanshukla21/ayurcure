@@ -1,51 +1,41 @@
 import React from 'react';
-import { Printer } from 'lucide-react';
+import { CheckCircle, Clock, XCircle, Printer } from 'lucide-react';
+import { adminApi } from '../../../../api/adminApi';
 
-const OrderSummaryHeader = ({ order }) => {
+const OrderSummaryHeader = ({ order, orderId }) => {
+  if (!order) return null;
 
-  // Triggers the browser's native print/save-as-pdf dialog
-  const handlePrint = () => {
-    window.print();
+  const handlePrint = async () => {
+    try {
+      const blob = await adminApi.printInvoice(orderId);
+      const url = window.URL.createObjectURL(new Blob([blob]));
+      window.open(url, '_blank');
+    } catch (e) {
+      window.print();
+    }
   };
 
   return (
-    <div className="bg-white rounded-[32px] p-8 border border-[#EFEBE1] shadow-sm mb-8 flex flex-col md:flex-row md:items-center justify-between gap-6">
-
-      <div className="flex flex-col md:flex-row md:items-center gap-8">
-        <div>
-          <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Order Reference</p>
-          <h2 className="text-2xl font-extrabold text-gray-900">{order?.id}</h2>
+    <div className="bg-white rounded-3xl p-6 shadow-sm border border-gray-100 flex flex-col md:flex-row justify-between items-center gap-6 mb-8">
+      <div className="flex items-center gap-6">
+        <div className={`w-14 h-14 rounded-full flex items-center justify-center border-4 
+          ${order.status === 'Delivered' ? 'bg-green-50 text-green-600 border-green-100' :
+            order.status === 'Cancelled' ? 'bg-red-50 text-red-600 border-red-100' : 'bg-amber-50 text-amber-600 border-amber-100'}`}>
+          {order.status === 'Delivered' ? <CheckCircle size={24} /> :
+            order.status === 'Cancelled' ? <XCircle size={24} /> : <Clock size={24} />}
         </div>
-
-        <div className="hidden md:block w-px h-10 bg-[#EFEBE1]"></div>
-
         <div>
-          <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Placed On</p>
-          <h2 className="text-base font-bold text-gray-900">{order?.date}</h2>
-        </div>
-
-        <div className="hidden md:block w-px h-10 bg-[#EFEBE1]"></div>
-
-        <div className="flex items-center gap-3">
-          <span className="px-4 py-1.5 bg-[#E7F3EB] text-[#3A6447] text-[10px] font-extrabold uppercase tracking-widest rounded-full shadow-sm">
-            {order?.orderStatus}
-          </span>
-          <span className="px-4 py-1.5 bg-[#E7F3EB] text-[#3A6447] text-[10px] font-extrabold uppercase tracking-widest rounded-full shadow-sm">
-            {order?.paymentStatus}
-          </span>
+          <p className="text-sm font-bold text-gray-400 mb-1">Status</p>
+          <h2 className="text-2xl font-black text-gray-900">{order.status}</h2>
         </div>
       </div>
 
-      {/* Added onClick handler and 'print:hidden' so the button hides when printing/downloading the PDF */}
-      <button
-        onClick={handlePrint}
-        className="bg-[#3A6447] hover:bg-[#2C4D36] text-white font-bold py-3.5 px-8 rounded-full flex items-center justify-center gap-2 transition-colors shadow-sm text-sm w-full md:w-auto cursor-pointer print:hidden"
-      >
-        <Printer size={18} /> Print Invoice
-      </button>
-
+      <div className="flex gap-4 w-full md:w-auto">
+        <button onClick={handlePrint} className="flex-1 md:flex-none flex items-center justify-center gap-2 px-6 py-3 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-2xl font-bold text-sm transition-colors print:hidden">
+          <Printer size={16} /> Print Invoice
+        </button>
+      </div>
     </div>
   );
 };
-
 export default OrderSummaryHeader;

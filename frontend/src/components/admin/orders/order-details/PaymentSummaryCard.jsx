@@ -1,36 +1,40 @@
 import React from 'react';
-import { AlertCircle } from 'lucide-react';
+import { CreditCard } from 'lucide-react';
 
 const PaymentSummaryCard = ({ summary }) => {
+  if (!summary) return null;
+
   return (
-    <div className="bg-[#FAF7F2] rounded-[32px] p-8 border border-[#EFEBE1] shadow-sm">
-      <h3 className="text-lg font-bold text-green-700 mb-6">Payment Summary</h3>
-      
-      <div className="space-y-4 mb-6">
-        <div className="flex justify-between text-sm font-medium text-gray-600">
-          <span>Product Total</span>
-          <span className="text-gray-900 font-bold">₹{summary.productTotal}</span>
+    <div className="bg-[#3A6447] rounded-3xl p-8 shadow-sm text-white">
+      <div className="flex items-center gap-3 mb-8">
+        <div className="p-2 bg-white/20 rounded-lg"><CreditCard size={18} /></div>
+        <h3 className="text-lg font-extrabold">Payment Info</h3>
+      </div>
+
+      <div className="space-y-4 text-sm font-medium mb-8">
+        <div className="flex justify-between">
+          <span className="text-white/70">Subtotal</span>
+          <span>₹{Number(summary.subtotal).toLocaleString()}</span>
         </div>
-        <div className="flex justify-between text-sm font-medium text-gray-600">
-          <span>Delivery Charges</span>
-          <span className="text-gray-900 font-bold">₹{summary.delivery}</span>
+        <div className="flex justify-between">
+          <span className="text-white/70">Discount</span>
+          <span className="text-green-300">-₹{Number(summary.discount).toLocaleString()}</span>
+        </div>
+        <div className="flex justify-between">
+          <span className="text-white/70">Shipping</span>
+          <span>{Number(summary.shipping) === 0 ? 'Free' : `₹${Number(summary.shipping).toLocaleString()}`}</span>
         </div>
       </div>
 
-      <div className="flex justify-between items-center py-6 border-t border-[#EFEBE1] mb-6">
-        <span className="text-sm font-bold text-gray-900">Final Amount</span>
-        <span className="text-2xl font-extrabold text-[#3A6447]">₹{summary.finalAmount}</span>
+      <div className="pt-4 border-t border-white/20 flex justify-between items-center">
+        <span className="font-bold text-white/90 uppercase tracking-widest text-xs">Total Paid</span>
+        <span className="text-2xl font-black">₹{Number(summary.total).toLocaleString()}</span>
       </div>
 
-      {/* Gateway Notice Box */}
-      <div className="bg-[#FEF5D3]/50 border border-[#FEF5D3] rounded-2xl p-4 flex items-start gap-3">
-        <AlertCircle size={16} className="text-[#A67C00] shrink-0 mt-0.5" />
-        <p className="text-[11px] font-bold text-[#A67C00] leading-relaxed">
-          Payment verified via Razorpay Gateway. Tax compliance verified for Karnataka state.
-        </p>
+      <div className="mt-4 text-xs font-bold text-white/60 bg-black/20 py-2 px-4 rounded-xl inline-block">
+        Via {summary.method}
       </div>
     </div>
   );
 };
-
 export default PaymentSummaryCard;

@@ -1,60 +1,63 @@
 import React from 'react';
-import { Info, ChevronDown } from 'lucide-react';
 
 const BlogInfoSection = ({ formData, onChange }) => {
   return (
-    <div className="flex flex-col gap-6">
-      <div className="flex items-center gap-3 mb-2">
-        <Info size={18} className="text-[#3A6447]" />
-        <h3 className="text-lg font-bold text-gray-900">Blog Information</h3>
-      </div>
-
-      <div className="flex flex-col gap-1.5">
-        <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Blog Title</label>
-        <input 
-          type="text" 
-          name="title" 
-          value={formData.title} 
-          onChange={onChange} 
-          placeholder="Enter a compelling title..." 
-          className="w-full bg-white border border-[#EFEBE1] rounded-xl px-4 py-3 text-sm font-bold text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#4A7C59]" 
-        />
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div className="flex flex-col gap-1.5 relative">
-          <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Category</label>
-          <select 
-            name="category" 
-            value={formData.category} 
-            onChange={onChange} 
-            className="w-full bg-white border border-[#EFEBE1] rounded-xl px-4 py-3 text-sm font-bold text-gray-900 appearance-none focus:outline-none focus:ring-2 focus:ring-[#4A7C59] cursor-pointer"
-          >
-            <option value="Ayurveda Insights">Ayurveda Insights</option>
-            <option value="Lifestyle">Lifestyle</option>
-            <option value="Nutrition">Nutrition</option>
-            <option value="Yoga">Yoga</option>
-          </select>
-          <ChevronDown size={16} className="absolute right-4 top-[34px] text-gray-500 pointer-events-none" />
+    <div className="bg-white rounded-[32px] p-8 border border-[#EFEBE1] shadow-sm">
+      <h2 className="text-xl font-extrabold text-gray-900 mb-6">Basic Information</h2>
+      <div className="space-y-6">
+        <div>
+          <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-2">Blog Title</label>
+          <input
+            type="text"
+            name="title"
+            value={formData.title}
+            onChange={onChange}
+            className="w-full bg-[#FAF7F2] border border-[#EFEBE1] rounded-2xl py-3.5 px-4 text-sm font-bold text-gray-700 focus:outline-none focus:ring-2 focus:ring-[#3A6447]/20 transition-all"
+            placeholder="Enter blog title"
+          />
         </div>
-        
-        <div className="flex flex-col gap-1.5 relative">
-          <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Target Audience</label>
-          <select 
-            name="audience" 
-            value={formData.audience} 
-            onChange={onChange} 
-            className="w-full bg-white border border-[#EFEBE1] rounded-xl px-4 py-3 text-sm font-bold text-gray-900 appearance-none focus:outline-none focus:ring-2 focus:ring-[#4A7C59] cursor-pointer"
-          >
-            <option value="General Public">General Public</option>
-            <option value="Patients">Existing Patients</option>
-            <option value="Practitioners">Medical Practitioners</option>
-          </select>
-          <ChevronDown size={16} className="absolute right-4 top-[34px] text-gray-500 pointer-events-none" />
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div>
+            <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-2">Category</label>
+            <select
+              name="category"
+              value={formData.category}
+              onChange={onChange}
+              className="w-full bg-[#FAF7F2] border border-[#EFEBE1] rounded-2xl py-3.5 px-4 text-sm font-bold text-gray-700 focus:outline-none focus:ring-2 focus:ring-[#3A6447]/20 transition-all cursor-pointer"
+            >
+              <option value="Ayurveda Insights">Ayurveda Insights</option>
+              <option value="Wellness & Lifestyle">Wellness & Lifestyle</option>
+              <option value="Diet & Nutrition">Diet & Nutrition</option>
+              <option value="Case Studies">Case Studies</option>
+            </select>
+          </div>
+          <div>
+            <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-2">Target Audience</label>
+            <select
+              name="audience"
+              value={formData.audience}
+              onChange={onChange}
+              className="w-full bg-[#FAF7F2] border border-[#EFEBE1] rounded-2xl py-3.5 px-4 text-sm font-bold text-gray-700 focus:outline-none focus:ring-2 focus:ring-[#3A6447]/20 transition-all cursor-pointer"
+            >
+              <option value="General Public">General Public</option>
+              <option value="Patients">Patients</option>
+              <option value="Medical Professionals">Medical Professionals</option>
+            </select>
+          </div>
+        </div>
+        <div>
+          <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-2">Short Description</label>
+          <textarea
+            name="shortDescription"
+            value={formData.shortDescription}
+            onChange={onChange}
+            rows="3"
+            className="w-full bg-[#FAF7F2] border border-[#EFEBE1] rounded-2xl py-3.5 px-4 text-sm font-bold text-gray-700 focus:outline-none focus:ring-2 focus:ring-[#3A6447]/20 transition-all"
+            placeholder="Brief summary of the article..."
+          />
         </div>
       </div>
     </div>
   );
 };
-
 export default BlogInfoSection;

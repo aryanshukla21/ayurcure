@@ -1,60 +1,37 @@
 import React from 'react';
-import { Trash2 } from 'lucide-react';
+import { AlertTriangle, X } from 'lucide-react';
 
-const DeleteDoctorModal = ({ isOpen, onClose, onConfirm, selectedCount, doctorName }) => {
-  if (!isOpen) return null;
-
-  // Dynamically format the name based on how many doctors are selected
-  const nameToDisplay = selectedCount > 1 ? `${selectedCount} selected doctors` : (doctorName || 'this doctor');
+const DeleteDoctorModal = ({ doctor, onClose, onConfirm }) => {
+  if (!doctor) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/40 backdrop-blur-sm p-4">
-      
-      {/* Modal Box */}
-      <div className="bg-[#FAF7F2] w-full max-w-md rounded-[32px] p-8 shadow-xl relative animate-in fade-in zoom-in duration-200">
-        
-        {/* Header */}
-        <div className="flex items-start gap-4 mb-6">
-          <div className="w-12 h-12 rounded-2xl bg-[#FDF1E8] flex items-center justify-center text-[#D9774B] shrink-0">
-            <Trash2 size={24} />
-          </div>
-          <div>
-            <h2 className="text-xl font-extrabold text-gray-900">Delete Doctor</h2>
-            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-1">
-              Permanent administrative action
-            </p>
-          </div>
-        </div>
-
-        {/* Warning Box */}
-        <div className="bg-[#FDF9EE] border border-[#EFEBE1] border-l-4 border-l-[#D9774B] rounded-r-2xl p-5 mb-8">
-          <p className="text-sm font-bold text-gray-900 mb-2">
-            Are you sure you want to delete {selectedCount > 1 ? 'these doctors' : 'this doctor'}?
-          </p>
-          <p className="text-xs font-medium text-gray-600 leading-relaxed">
-            The action will remove all schedules and active patient assignments for <span className="font-bold text-gray-900">{nameToDisplay}</span>. This cannot be undone.
-          </p>
-        </div>
-
-        {/* Actions (Stacked rounded-full buttons) */}
-        <div className="flex flex-col gap-3">
-          <button 
-            onClick={onConfirm}
-            className="w-full bg-[#D9774B] hover:bg-[#C26236] text-white font-bold py-3.5 rounded-full transition-colors shadow-sm"
-          >
-            Confirm Delete
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+      <div className="bg-white rounded-3xl w-full max-w-md shadow-2xl overflow-hidden scale-in-center">
+        <div className="p-6 sm:p-8 flex flex-col items-center text-center relative">
+          <button onClick={onClose} className="absolute top-4 right-4 text-gray-400 hover:text-gray-700 bg-gray-50 hover:bg-gray-100 p-2 rounded-full transition-colors">
+            <X size={18} />
           </button>
-          <button 
-            onClick={onClose}
-            className="w-full bg-[#3A6447] hover:bg-[#2C4D36] text-white font-bold py-3.5 rounded-full transition-colors shadow-sm"
-          >
-            Cancel
-          </button>
-        </div>
 
+          <div className="w-16 h-16 bg-red-50 text-red-500 rounded-full flex items-center justify-center mb-6">
+            <AlertTriangle size={32} />
+          </div>
+
+          <h3 className="text-xl font-extrabold text-gray-900 mb-2">Remove Doctor Profile?</h3>
+          <p className="text-sm font-medium text-gray-500 leading-relaxed mb-8">
+            You are about to permanently delete <span className="font-bold text-gray-900">{doctor.name}'s</span> profile. This action will remove their access and delist them from the platform. This cannot be undone.
+          </p>
+
+          <div className="flex w-full gap-3">
+            <button onClick={onClose} className="flex-1 py-3 bg-gray-50 hover:bg-gray-100 text-gray-700 font-bold rounded-2xl transition-colors text-sm">
+              Keep Profile
+            </button>
+            <button onClick={onConfirm} className="flex-1 py-3 bg-red-500 hover:bg-red-600 text-white font-bold rounded-2xl transition-colors shadow-sm text-sm">
+              Yes, Remove
+            </button>
+          </div>
+        </div>
       </div>
     </div>
   );
 };
-
 export default DeleteDoctorModal;

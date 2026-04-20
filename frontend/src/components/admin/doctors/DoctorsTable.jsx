@@ -1,186 +1,93 @@
-import React, { useState, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Search, ChevronDown, Trash2, Plus, Edit2, ChevronLeft, ChevronRight } from 'lucide-react';
-import DeleteDoctorModal from './DeleteDoctorModal';
+import React, { useState } from 'react';
+import { Link } from 'react-router-dom';
+import { Search, Filter, Star, Edit, Trash2 } from 'lucide-react';
 
-// Initial Dummy Data
-const INITIAL_DOCTORS = [
-  { id: 1, name: 'Dr. Anjali Sharma', email: 'anjali.s@ayurcare.com', spec: 'Ayurveda Specialist', exp: '12 Years', fee: '$120.00', status: 'ACTIVE', img: 'https://ui-avatars.com/api/?name=AS&background=FDF9EE&color=3A6447' },
-  { id: 2, name: 'Dr. Rajesh Kumar', email: 'rajesh.k@ayurcare.com', spec: 'Yoga Therapist', exp: '8 Years', fee: '$80.00', status: 'INACTIVE', img: 'https://ui-avatars.com/api/?name=RK&background=FDF9EE&color=D9774B' },
-  { id: 3, name: 'Dr. Meera Nair', email: 'meera.n@ayurcare.com', spec: 'Pancha-Karma Specialist', exp: '15 Years', fee: '$150.00', status: 'ACTIVE', img: 'https://ui-avatars.com/api/?name=MN&background=FDF9EE&color=3A6447' },
-  { id: 4, name: 'Dr. David Thorne', email: 'david.t@ayurcare.com', spec: 'General Medicine', exp: '10 Years', fee: '$100.00', status: 'ACTIVE', img: 'https://ui-avatars.com/api/?name=DT&background=FDF9EE&color=3A6447' },
-];
+const DoctorsTable = ({ doctors = [], onDelete }) => {
+  const [searchTerm, setSearchTerm] = useState('');
 
-const DoctorsTable = () => {
-  const navigate = useNavigate();
-
-  const [doctorsData, setDoctorsData] = useState(INITIAL_DOCTORS);
-  const [selectedIds, setSelectedIds] = useState([]);
-  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
-
-  // New States for Search and Filter
-  const [searchQuery, setSearchQuery] = useState('');
-  const [filterSpec, setFilterSpec] = useState('All');
-
-  // Dynamically get unique specializations from the data for the dropdown
-  const uniqueSpecs = ['All', ...new Set(INITIAL_DOCTORS.map(doc => doc.spec))];
-
-  // Derived state to get the currently filtered and searched doctors
-  const displayedDoctors = useMemo(() => {
-    return doctorsData.filter(doc => {
-      const matchesSearch = doc.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        doc.email.toLowerCase().includes(searchQuery.toLowerCase());
-      const matchesSpec = filterSpec === 'All' || doc.spec === filterSpec;
-
-      return matchesSearch && matchesSpec;
-    });
-  }, [doctorsData, searchQuery, filterSpec]);
-
-  const handleSelectAll = (e) => {
-    // Only select currently visible doctors when searching/filtering
-    if (e.target.checked) setSelectedIds(displayedDoctors.map(d => d.id));
-    else setSelectedIds([]);
-  };
-
-  const handleSelectOne = (e, id) => {
-    if (e.target.checked) setSelectedIds([...selectedIds, id]);
-    else setSelectedIds(selectedIds.filter(selectedId => selectedId !== id));
-  };
-
-  const handleConfirmDelete = () => {
-    const updatedDoctors = doctorsData.filter(doc => !selectedIds.includes(doc.id));
-    setDoctorsData(updatedDoctors);
-    setSelectedIds([]);
-    setIsDeleteModalOpen(false);
-  };
-
-  const selectedDoctorName = selectedIds.length === 1 ? doctorsData.find(d => d.id === selectedIds[0])?.name : '';
+  const filteredDoctors = doctors.filter(doc =>
+    (doc.name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (doc.specialization || '').toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
   return (
-    <div className="bg-white rounded-[32px] p-8 border border-[#EFEBE1] shadow-sm flex flex-col h-full relative">
-
-      <DeleteDoctorModal isOpen={isDeleteModalOpen} onClose={() => setIsDeleteModalOpen(false)} onConfirm={handleConfirmDelete} selectedCount={selectedIds.length} doctorName={selectedDoctorName} />
-
-      <div className="flex flex-col xl:flex-row justify-between gap-4 mb-8">
-        <div className="flex flex-1 gap-4">
-          <div className="relative w-full max-w-sm">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
-            <input
-              type="text"
-              placeholder="Search by name or email"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full bg-[#FAF7F2] border border-[#EFEBE1] rounded-full py-3.5 pl-12 pr-4 text-sm font-bold text-gray-700 focus:outline-none focus:ring-2 focus:ring-[#3A6447]/20 transition-all"
-            />
-          </div>
-          <div className="relative w-48 hidden md:block">
-            <select
-              value={filterSpec}
-              onChange={(e) => setFilterSpec(e.target.value)}
-              className="w-full bg-[#FAF7F2] border border-[#EFEBE1] rounded-full py-3.5 pl-5 pr-10 text-sm font-bold text-gray-700 appearance-none focus:outline-none focus:ring-2 focus:ring-[#3A6447]/20 cursor-pointer"
-            >
-              {uniqueSpecs.map(spec => (
-                <option key={spec} value={spec}>{spec === 'All' ? 'All Specializations' : spec}</option>
-              ))}
-            </select>
-            <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" size={18} />
-          </div>
-        </div>
-
-        <div className="flex items-center gap-3">
-          <button disabled={selectedIds.length === 0} onClick={() => setIsDeleteModalOpen(true)} className="bg-[#D92D20] hover:bg-[#B42318] disabled:bg-red-200 disabled:cursor-not-allowed text-white font-bold py-3.5 px-6 rounded-full flex items-center justify-center gap-2 shadow-sm transition-colors text-sm w-full md:w-auto cursor-pointer">
-            <Trash2 size={16} /> Delete Selected
-          </button>
-          <button onClick={() => navigate('/admin/doctors/add')} className="bg-[#3A6447] hover:bg-[#2C4D36] text-white font-bold py-3.5 px-6 rounded-full flex items-center justify-center gap-2 shadow-sm transition-colors text-sm w-full md:w-auto shrink-0 cursor-pointer">
-            <Plus size={16} /> Add Doctor
-          </button>
-        </div>
-      </div>
-
-      <div className="flex items-center text-[10px] font-bold text-gray-400 uppercase tracking-widest pb-4 border-b border-[#EFEBE1]">
-        <div className="w-12 pl-2">
+    <div className="flex flex-col h-full bg-white">
+      <div className="p-6 border-b border-gray-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white">
+        <div className="relative max-w-md w-full">
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
           <input
-            type="checkbox"
-            className="w-4 h-4 rounded border-gray-300 text-[#3A6447] focus:ring-[#3A6447] cursor-pointer"
-            checked={selectedIds.length === displayedDoctors.length && displayedDoctors.length > 0}
-            onChange={handleSelectAll}
+            type="text"
+            placeholder="Search by doctor name or specialization..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full pl-11 pr-4 py-2.5 bg-gray-50 border-none rounded-2xl text-sm focus:ring-2 focus:ring-[#4A7C59]/20 transition-all outline-none"
           />
         </div>
-        <div className="w-[25%]">Name</div>
-        <div className="w-[25%]">Specialization</div>
-        <div className="w-[15%]">Experience</div>
-        <div className="w-[15%]">Fees</div>
-        <div className="w-[15%]">Status</div>
-        <div className="w-[10%] text-right pr-2">Action</div>
+        <button className="flex items-center gap-2 bg-gray-50 hover:bg-gray-100 text-gray-600 px-5 py-2.5 rounded-2xl text-sm font-bold transition-colors">
+          <Filter size={16} /> Filters
+        </button>
       </div>
 
-      <div className="flex-1 mt-2 space-y-1 min-h-[300px]">
-        {displayedDoctors.length === 0 ? (
-          <div className="text-center py-10 text-sm font-bold text-gray-400">No doctors match your search.</div>
-        ) : (
-          displayedDoctors.map((doc) => (
-            <div key={doc.id} className="flex items-center py-4 border-b border-transparent hover:border-[#EFEBE1] hover:bg-[#FDF9EE]/50 rounded-2xl transition-colors px-2 -mx-2">
-
-              <div className="w-12 shrink-0">
-                <input
-                  type="checkbox"
-                  className="w-4 h-4 rounded border-gray-300 text-[#3A6447] focus:ring-[#3A6447] cursor-pointer"
-                  checked={selectedIds.includes(doc.id)}
-                  onChange={(e) => handleSelectOne(e, doc.id)}
-                />
-              </div>
-
-              <div className="w-[25%] flex items-center gap-3 cursor-pointer" onClick={() => navigate(`/admin/doctors/edit/${doc.id}`)}>
-                <img src={doc.img} alt={doc.name} className="w-10 h-10 rounded-full border border-[#EFEBE1] shadow-sm" />
-                <div>
-                  <p className="text-sm font-bold text-gray-900 hover:text-[#3A6447] transition-colors">{doc.name}</p>
-                  <p className="text-[11px] font-medium text-gray-500">{doc.email}</p>
-                </div>
-              </div>
-
-              <div className="w-[25%] text-sm font-medium text-gray-600">{doc.spec}</div>
-              <div className="w-[15%] text-sm font-medium text-gray-600">{doc.exp}</div>
-              <div className="w-[15%] text-sm font-bold text-gray-900">{doc.fee}</div>
-              <div className="w-[15%]">
-                <span className={`px-3 py-1.5 rounded-full text-[9px] font-extrabold uppercase tracking-widest ${doc.status === 'ACTIVE' ? 'bg-[#E7F3EB] text-[#3A6447]' : 'bg-[#FDF1E8] text-[#D9774B]'}`}>
-                  {doc.status}
-                </span>
-              </div>
-
-              <div className="w-[10%] text-right pr-4 flex justify-end">
-                <div className="relative group">
-                  <button
-                    onClick={() => navigate(`/admin/doctors/edit/${doc.id}`)}
-                    className="text-gray-400 hover:text-[#3A6447] transition-colors p-2 rounded-full hover:bg-gray-100 cursor-pointer outline-none"
-                  >
-                    <Edit2 size={16} />
-                  </button>
-
-                  <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2.5 py-1.5 bg-gray-900 text-white text-[10px] font-bold rounded-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none z-10 shadow-sm">
-                    Edit Doctor
-                    <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-gray-900"></div>
-                  </div>
-                </div>
-              </div>
-
-            </div>
-          ))
-        )}
+      <div className="overflow-x-auto bg-white flex-1">
+        <table className="w-full text-left border-collapse">
+          <thead>
+            <tr className="bg-gray-50/50 text-[11px] uppercase tracking-widest text-gray-500">
+              <th className="px-6 py-4 font-extrabold">Doctor Details</th>
+              <th className="px-6 py-4 font-extrabold">Specialization</th>
+              <th className="px-6 py-4 font-extrabold">Experience</th>
+              <th className="px-6 py-4 font-extrabold">Rating</th>
+              <th className="px-6 py-4 font-extrabold">Status</th>
+              <th className="px-6 py-4 font-extrabold text-right">Actions</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-gray-50">
+            {filteredDoctors.length === 0 ? (
+              <tr><td colSpan="6" className="p-8 text-center text-gray-500">No doctors found.</td></tr>
+            ) : (
+              filteredDoctors.map((doctor) => (
+                <tr key={doctor.id} className="hover:bg-gray-50/50 transition-colors group">
+                  <td className="px-6 py-4">
+                    <div className="flex items-center gap-4">
+                      <div className="w-12 h-12 rounded-full bg-[#FDF9EE] text-[#4A7C59] flex items-center justify-center font-bold text-lg border border-[#4A7C59]/20">
+                        {doctor.name?.charAt(0) || 'D'}
+                      </div>
+                      <div>
+                        <p className="font-bold text-gray-900 text-sm">{doctor.name}</p>
+                        <p className="text-xs text-gray-500 mt-0.5">{doctor.email}</p>
+                      </div>
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 text-sm font-bold text-gray-700">{doctor.specialization}</td>
+                  <td className="px-6 py-4 text-sm font-medium text-gray-600">{doctor.experience || 0} Years</td>
+                  <td className="px-6 py-4">
+                    <div className="flex items-center gap-1.5 text-sm font-bold text-gray-900">
+                      <Star size={14} className="fill-amber-400 text-amber-400" />
+                      {doctor.rating || 'N/A'}
+                    </div>
+                  </td>
+                  <td className="px-6 py-4">
+                    <span className={`px-3 py-1 rounded-full text-[10px] font-extrabold uppercase tracking-wider
+                      ${doctor.status === 'Verified' ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'}`}>
+                      {doctor.status === 'Verified' ? 'Active' : 'Pending'}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4 text-right">
+                    <div className="flex items-center justify-end gap-2">
+                      <Link to={`/admin/doctors/edit/${doctor.id}`} className="text-blue-500 hover:bg-blue-50 p-2 rounded-lg transition-colors">
+                        <Edit size={16} />
+                      </Link>
+                      <button onClick={() => onDelete(doctor.id)} className="text-red-500 hover:bg-red-50 p-2 rounded-lg transition-colors">
+                        <Trash2 size={16} />
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
       </div>
-
-      <div className="flex flex-col md:flex-row justify-between items-center mt-6 pt-6 border-t border-[#EFEBE1] gap-4">
-        <p className="text-[11px] font-bold text-gray-400 uppercase tracking-widest">
-          Showing {displayedDoctors.length > 0 ? 1 : 0} to {displayedDoctors.length} of {displayedDoctors.length} Doctors
-        </p>
-        <div className="flex items-center gap-1 text-sm font-bold">
-          <button className="p-1.5 rounded-full text-gray-400 hover:text-gray-900 hover:bg-gray-100 transition-colors"><ChevronLeft size={18} /></button>
-          <button className="w-8 h-8 rounded-full flex items-center justify-center bg-[#3A6447] text-white shadow-sm">1</button>
-          <button className="p-1.5 rounded-full text-gray-400 hover:text-gray-900 hover:bg-gray-100 transition-colors"><ChevronRight size={18} /></button>
-        </div>
-      </div>
-
     </div>
   );
 };
-
 export default DoctorsTable;

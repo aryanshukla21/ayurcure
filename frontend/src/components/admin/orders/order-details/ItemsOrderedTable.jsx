@@ -1,34 +1,38 @@
 import React from 'react';
+import { Package } from 'lucide-react';
 
-const ItemsOrderedTable = ({ items }) => {
+const ItemsOrderedTable = ({ items = [] }) => {
   return (
-    <div className="bg-white rounded-[32px] p-8 border border-[#EFEBE1] shadow-sm mb-8">
-      <h3 className="text-lg font-bold text-green-700 mb-6">Items Ordered</h3>
-
-      <div className="flex items-center text-[10px] font-bold text-gray-400 uppercase tracking-widest pb-4 border-b border-[#EFEBE1]">
-        <div className="w-[45%] pl-2">Product Name</div>
-        <div className="w-[15%] text-center">Qty</div>
-        <div className="w-[20%] text-right">Price</div>
-        <div className="w-[20%] text-right pr-2">Subtotal</div>
+    <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
+      <div className="p-6 border-b border-gray-100 flex items-center gap-3">
+        <div className="p-2 bg-blue-50 text-blue-600 rounded-lg"><Package size={16} /></div>
+        <h3 className="text-lg font-extrabold text-gray-900">Items Ordered</h3>
       </div>
-
-      <div className="mt-2 space-y-2">
-        {items.map((item, i) => (
-          <div key={i} className="flex items-center py-4 border-b border-[#EFEBE1] last:border-0 px-2">
-            <div className="w-[45%] flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-[#FDF9EE] flex items-center justify-center border border-[#EFEBE1]">
-                 <span className="text-[10px] font-extrabold text-[#3A6447]">AYU</span>
-              </div>
-              <span className="text-sm font-bold text-gray-900">{item.name}</span>
-            </div>
-            <div className="w-[15%] text-sm font-bold text-gray-900 text-center">{item.qty}</div>
-            <div className="w-[20%] text-sm font-medium text-gray-600 text-right">₹{item.price}</div>
-            <div className="w-[20%] text-sm font-extrabold text-green-700 text-right pr-2">₹{item.subtotal}</div>
-          </div>
-        ))}
+      <div className="overflow-x-auto">
+        <table className="w-full text-left">
+          <thead>
+            <tr className="bg-gray-50/50 text-[11px] uppercase tracking-widest text-gray-500">
+              <th className="px-6 py-4 font-extrabold">Product Name</th>
+              <th className="px-6 py-4 font-extrabold">Quantity</th>
+              <th className="px-6 py-4 font-extrabold">Price</th>
+              <th className="px-6 py-4 font-extrabold text-right">Subtotal</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-gray-50">
+            {items.map((item, index) => (
+              <tr key={index}>
+                <td className="px-6 py-4 font-bold text-gray-900 text-sm">{item.product_name}</td>
+                <td className="px-6 py-4 font-medium text-gray-500 text-sm">x{item.quantity}</td>
+                <td className="px-6 py-4 font-medium text-gray-500 text-sm">₹{Number(item.price).toLocaleString()}</td>
+                <td className="px-6 py-4 font-black text-gray-900 text-sm text-right">
+                  ₹{(Number(item.price) * Number(item.quantity)).toLocaleString()}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </div>
     </div>
   );
 };
-
 export default ItemsOrderedTable;

@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { ShieldCheck, Save, ChevronRight, Loader2, Edit2, X } from 'lucide-react';
+import { adminApi } from '../../api/adminApi';
 
-// REUSING the components you created in the Add Doctor step!
 import PersonalInfoSection from '../../components/admin/doctors/add-doctor/PersonalInfoSection';
 import ConsultationSection from '../../components/admin/doctors/add-doctor/ConsultationSection';
 import ProfessionalSection from '../../components/admin/doctors/add-doctor/ProfessionalSection';
@@ -12,39 +12,51 @@ const AdminEditDoctorPage = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(true);
-
-  // Edit Mode State
   const [isEditing, setIsEditing] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [error, setError] = useState('');
 
-  // Form State
   const [formData, setFormData] = useState({
     fullName: '', email: '', phone: '', emergencyContact: '', address: '', password: '',
-    fees: '', startTime: '', endTime: '', specialization: '', registrationNumber: '',
-    qualifications: '', experience: '', about: ''
+    fees: '', startTime: '09:00', endTime: '17:00', specialization: '', registrationNumber: '',
+    qualifications: '', experience: '', about: '', status: ''
   });
 
-  // Simulate fetching the doctor's data based on the ID
+  const [originalData, setOriginalData] = useState(null);
+
   useEffect(() => {
-    setIsLoading(true);
-    setTimeout(() => {
-      setFormData({
-        fullName: 'Dr. Anjali Sharma',
-        email: 'anjali.s@ayurcare.com',
-        phone: '+91 98765 43210',
-        emergencyContact: '+91 91234 56789',
-        address: '108 Wellness Avenue, Kerala 682001',
-        password: '', // Leave blank for security
-        fees: '1200',
-        startTime: '09:00',
-        endTime: '16:00',
-        specialization: 'Ayurvedic General Medicine',
-        registrationNumber: 'AYU-2012-9042',
-        qualifications: 'BAMS, MD (Ayurveda)',
-        experience: '12',
-        about: 'Dr. Anjali specializes in holistic healing and chronic disease management using traditional Ayurvedic principles combined with modern lifestyle adjustments.'
-      });
-      setIsLoading(false);
-    }, 400); // 400ms fake load time
+    const fetchDoctor = async () => {
+      try {
+        const res = await adminApi.getDoctorDetails(id);
+        if (res && res.data) {
+          const mappedData = {
+            fullName: res.data.full_name || '',
+            email: res.data.email || '',
+            phone: res.data.phone || '',
+            emergencyContact: res.data.emergency_contact || '',
+            address: res.data.address || '',
+            password: '', // Blank for security
+            fees: res.data.consultation_fee || '',
+            startTime: res.data.start_time || '09:00',
+            endTime: res.data.end_time || '17:00',
+            specialization: res.data.specialization || '',
+            registrationNumber: res.data.registration_number || '',
+            qualifications: res.data.qualifications || '',
+            experience: res.data.experience_years || '',
+            about: res.data.bio || '',
+            status: res.data.verification_status || 'Verified'
+          };
+          setFormData(mappedData);
+          setOriginalData(mappedData);
+        }
+      } catch (err) {
+        console.error("Fetch failed", err);
+        setError("Failed to load doctor profile.");
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchDoctor();
   }, [id]);
 
   const handleInputChange = (e) => {
@@ -52,31 +64,40 @@ const AdminEditDoctorPage = () => {
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
-  const handleSaveChanges = () => {
-    console.log('Saving updated doctor data for ID:', id, formData);
-    // Exit edit mode after saving
-    setIsEditing(false);
-    // Simulate API save, then route back
-    // navigate('/admin/doctors'); // Temporarily commented out so you can see the buttons change back
+  const handleSaveChanges = async () => {
+    setIsSaving(true);
+    setError('');
+    try {
+      const payload = {
+        specialization: formData.specialization,
+        experience_years: parseInt(formData.experience) || 0,
+        consultation_fee: parseFloat(formData.fees) || 0,
+        verification_status: formData.status
+        // Backend handles these fields in updateDoctorDetails
+      };
+
+      await adminApi.updateDoctorDetails(id, payload);
+      setIsEditing(false);
+      setOriginalData(formData); // Update original to new saved state
+    } catch (err) {
+      setError(err.response?.data?.message || 'Failed to save changes.');
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const handleDiscardChanges = () => {
+    setFormData(originalData); // Reset
     setIsEditing(false);
-    // Optional: Reset formData back to original fetched data here
+    setError('');
   };
 
   if (isLoading) {
-    return (
-      <div className="flex items-center justify-center h-full min-h-[60vh]">
-        <Loader2 className="w-12 h-12 text-[#3A6447] animate-spin" />
-      </div>
-    );
+    return <div className="flex items-center justify-center h-full min-h-[60vh]"><Loader2 className="w-12 h-12 text-[#3A6447] animate-spin" /></div>;
   }
 
   return (
     <div className="p-8 md:p-10 max-w-[1600px] mx-auto flex flex-col h-full animate-in fade-in duration-300">
-
-      {/* Header & Breadcrumbs */}
       <div className="mb-10">
         <div className="flex items-center text-gray-500 text-[10px] font-bold uppercase tracking-widest mb-3">
           <Link to="/admin/doctors" className="hover:text-[#4A7C59] transition-colors">Doctors</Link>
@@ -94,36 +115,27 @@ const AdminEditDoctorPage = () => {
             </span>
           </div>
 
-          {/* TOP BUTTONS */}
           <div className="flex items-center gap-4 w-full xl:w-auto">
             {!isEditing ? (
-              <button
-                onClick={() => setIsEditing(true)}
-                className="flex-1 xl:flex-none px-6 py-3 bg-[#3A6447] hover:bg-[#2C4D36] text-white text-sm font-bold rounded-full flex items-center justify-center gap-2 transition-colors shadow-sm cursor-pointer"
-              >
+              <button onClick={() => setIsEditing(true)} className="flex-1 xl:flex-none px-6 py-3 bg-[#3A6447] hover:bg-[#2C4D36] text-white text-sm font-bold rounded-full flex items-center justify-center gap-2 transition-colors shadow-sm cursor-pointer">
                 <Edit2 size={16} /> Edit Profile
               </button>
             ) : (
               <>
-                <button
-                  onClick={handleDiscardChanges}
-                  className="flex-1 xl:flex-none px-6 py-3 bg-white border border-[#EFEBE1] hover:bg-gray-50 text-gray-700 text-sm font-bold rounded-full flex items-center justify-center gap-2 transition-colors shadow-sm cursor-pointer"
-                >
+                <button onClick={handleDiscardChanges} disabled={isSaving} className="flex-1 xl:flex-none px-6 py-3 bg-white border border-[#EFEBE1] hover:bg-gray-50 disabled:opacity-50 text-gray-700 text-sm font-bold rounded-full flex items-center justify-center gap-2 transition-colors shadow-sm cursor-pointer">
                   <X size={16} /> Discard Changes
                 </button>
-                <button
-                  onClick={handleSaveChanges}
-                  className="flex-1 xl:flex-none px-6 py-3 bg-[#3A6447] hover:bg-[#2C4D36] text-white text-sm font-bold rounded-full flex items-center justify-center gap-2 transition-colors shadow-sm cursor-pointer"
-                >
-                  <Save size={16} /> Save Changes
+                <button onClick={handleSaveChanges} disabled={isSaving} className="flex-1 xl:flex-none px-6 py-3 bg-[#3A6447] hover:bg-[#2C4D36] disabled:bg-[#3A6447]/70 text-white text-sm font-bold rounded-full flex items-center justify-center gap-2 transition-colors shadow-sm cursor-pointer">
+                  {isSaving ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
+                  {isSaving ? 'Saving...' : 'Save Changes'}
                 </button>
               </>
             )}
           </div>
         </div>
+        {error && <p className="text-sm font-bold text-red-600 mt-4 bg-red-50 p-3 rounded-xl inline-block">{error}</p>}
       </div>
 
-      {/* Main Grid Layout (Reusing components) */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-x-12 gap-y-10 flex-1 mb-8">
         <div className="lg:col-span-2 flex flex-col gap-12">
           <PersonalInfoSection formData={formData} onChange={handleInputChange} isEditing={isEditing} />
@@ -134,44 +146,6 @@ const AdminEditDoctorPage = () => {
           <AboutSection formData={formData} onChange={handleInputChange} isEditing={isEditing} />
         </div>
       </div>
-
-      {/* Bottom Action Footer */}
-      <div className="flex flex-col md:flex-row justify-between items-center pt-8 border-t border-[#EFEBE1] gap-6">
-        <div className="flex items-center gap-3 text-gray-500">
-          <div className="w-8 h-8 rounded-full bg-[#E7F3EB] flex items-center justify-center text-[#3A6447]">
-            <ShieldCheck size={16} />
-          </div>
-          <p className="text-xs font-bold">All modifications are tracked in the Audit Log.</p>
-        </div>
-
-        {/* BOTTOM BUTTONS */}
-        <div className="flex items-center gap-4 w-full md:w-auto">
-          {!isEditing ? (
-            <button
-              onClick={() => setIsEditing(true)}
-              className="flex-1 md:flex-none px-6 py-3 bg-[#3A6447] hover:bg-[#2C4D36] text-white text-sm font-bold rounded-full flex items-center justify-center gap-2 transition-colors shadow-sm cursor-pointer"
-            >
-              <Edit2 size={16} /> Edit Profile
-            </button>
-          ) : (
-            <>
-              <button
-                onClick={handleDiscardChanges}
-                className="flex-1 md:flex-none px-6 py-3 bg-white border border-[#EFEBE1] hover:bg-gray-50 text-gray-700 text-sm font-bold rounded-full flex items-center justify-center gap-2 transition-colors shadow-sm cursor-pointer"
-              >
-                <X size={16} /> Discard Changes
-              </button>
-              <button
-                onClick={handleSaveChanges}
-                className="flex-1 md:flex-none px-6 py-3 bg-[#3A6447] hover:bg-[#2C4D36] text-white text-sm font-bold rounded-full flex items-center justify-center gap-2 transition-colors shadow-sm cursor-pointer"
-              >
-                <Save size={16} /> Save Changes
-              </button>
-            </>
-          )}
-        </div>
-      </div>
-
     </div>
   );
 };

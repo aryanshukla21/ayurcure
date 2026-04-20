@@ -1,35 +1,39 @@
 import React from 'react';
-import { User, MapPin, Phone, Mail } from 'lucide-react';
+import { User, Mail, Phone, MapPin } from 'lucide-react';
 
 const CustomerInfoCard = ({ customer }) => {
-  return (
-    <div className="bg-white rounded-[32px] p-8 border border-[#EFEBE1] shadow-sm h-full">
-      <div className="flex items-center gap-3 mb-6 pb-6 border-b border-[#EFEBE1]">
-        <div className="w-10 h-10 rounded-full bg-[#FDF1E8] flex items-center justify-center text-[#D9774B]">
-          <User size={20} />
-        </div>
-        <div>
-          <p className="text-[12px] font-bold text-green-700 uppercase tracking-widest mb-0.5">Customer</p>
-          <h3 className="text-lg font-bold text-gray-900 leading-tight">{customer.name}</h3>
-        </div>
-      </div>
+  if (!customer) return null;
 
-      <div className="flex flex-col gap-5">
-        <div className="flex items-start gap-3">
-          <MapPin size={16} className="text-gray-400 shrink-0 mt-0.5" />
-          <p className="text-sm font-medium text-gray-600 leading-relaxed">{customer.address}</p>
+  return (
+    <div className="bg-white rounded-3xl p-8 shadow-sm border border-gray-100">
+      <h3 className="text-lg font-extrabold text-gray-900 mb-6">Customer Details</h3>
+      <div className="space-y-5">
+        <div className="flex items-center gap-4">
+          <div className="w-10 h-10 rounded-full bg-[#FDF9EE] text-[#4A7C59] flex items-center justify-center font-bold">
+            {customer.name?.charAt(0) || 'C'}
+          </div>
+          <div>
+            <p className="font-bold text-gray-900 text-sm">{customer.name}</p>
+            <p className="text-xs text-gray-500 font-medium">Registered Patient</p>
+          </div>
         </div>
-        <div className="flex items-center gap-3">
-          <Phone size={16} className="text-gray-400 shrink-0" />
-          <p className="text-sm font-bold text-gray-900">{customer.phone}</p>
-        </div>
-        <div className="flex items-center gap-3">
-          <Mail size={16} className="text-gray-400 shrink-0" />
-          <p className="text-sm font-medium text-gray-900 break-all">{customer.email}</p>
+
+        <div className="pt-4 border-t border-gray-50 space-y-4">
+          <div className="flex items-center gap-3 text-sm">
+            <Mail size={16} className="text-gray-400" />
+            <span className="font-bold text-gray-700">{customer.email || 'N/A'}</span>
+          </div>
+          <div className="flex items-center gap-3 text-sm">
+            <Phone size={16} className="text-gray-400" />
+            <span className="font-bold text-gray-700">{customer.phone || 'N/A'}</span>
+          </div>
+          <div className="flex items-start gap-3 text-sm">
+            <MapPin size={16} className="text-gray-400 mt-0.5" />
+            <span className="font-bold text-gray-700 leading-relaxed">{customer.shipping_address || 'N/A'}</span>
+          </div>
         </div>
       </div>
     </div>
   );
 };
-
 export default CustomerInfoCard;

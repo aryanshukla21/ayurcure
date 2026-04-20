@@ -2,7 +2,7 @@ import React from 'react';
 import { NavLink } from 'react-router-dom';
 import { LayoutDashboard, Users, Stethoscope, ShoppingCart, Package, FileText, BarChart3, Settings } from 'lucide-react';
 
-const AdminSidebar = () => {
+const AdminSidebar = ({ systemStatus = 'normal' }) => {
   const navItems = [
     { name: 'Dashboard', path: '/admin/dashboard', icon: LayoutDashboard },
     { name: 'Doctors', path: '/admin/doctors', icon: Stethoscope },
@@ -14,12 +14,13 @@ const AdminSidebar = () => {
     { name: 'Settings', path: '/admin/settings', icon: Settings },
   ];
 
+  const isSystemNormal = systemStatus === 'normal';
+
   return (
     <div className="w-64 bg-[#3A6447] min-h-screen text-white flex flex-col fixed left-0 top-0 bottom-0 z-50">
 
       {/* Logo Area */}
       <div className="p-8 flex items-center gap-3">
-        {/* Replaced the "A" box with your new logo image */}
         <img
           src="/Favicon_up.png"
           alt="Ayurcare360 Logo"
@@ -32,7 +33,7 @@ const AdminSidebar = () => {
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 px-4 space-y-2">
+      <nav className="flex-1 px-4 space-y-2 overflow-y-auto custom-scrollbar">
         {navItems.map((item) => (
           <NavLink
             key={item.name}
@@ -51,10 +52,10 @@ const AdminSidebar = () => {
       {/* System Status */}
       <div className="p-6 mt-auto">
         <div className="bg-white/10 rounded-2xl p-4 flex items-center gap-3 border border-white/5">
-          <div className="w-2 h-2 rounded-full bg-green-400 animate-pulse"></div>
+          <div className={`w-2 h-2 rounded-full ${isSystemNormal ? 'bg-green-400 animate-pulse' : 'bg-red-400 animate-pulse'}`}></div>
           <div>
             <p className="text-[10px] font-bold uppercase tracking-widest text-white/60 mb-0.5">System Status</p>
-            <p className="text-xs font-bold text-white">All systems normal</p>
+            <p className="text-xs font-bold text-white">{isSystemNormal ? 'All systems normal' : 'System degraded'}</p>
           </div>
         </div>
       </div>

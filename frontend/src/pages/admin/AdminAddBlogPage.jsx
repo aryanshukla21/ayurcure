@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { ChevronRight } from 'lucide-react';
+import { adminApi } from '../../api/adminApi';
 
 import BlogInfoSection from '../../components/admin/blogs/add-blog/BlogInfoSection';
 import ContentEditorSection from '../../components/admin/blogs/add-blog/ContentEditorSection';
@@ -8,6 +9,8 @@ import PublishingSidebar from '../../components/admin/blogs/add-blog/PublishingS
 
 const AdminAddBlogPage = () => {
   const navigate = useNavigate();
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState('');
 
   const [formData, setFormData] = useState({
     title: '',
@@ -25,21 +28,41 @@ const AdminAddBlogPage = () => {
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
-  const handleSaveDraft = () => {
-    setFormData(prev => ({ ...prev, status: 'Draft' }));
-    console.log('Saved as draft:', formData);
-    navigate('/admin/blogs');
+  const submitBlog = async (statusOverride) => {
+    setIsSubmitting(true);
+    setError('');
+
+    const finalStatus = statusOverride || formData.status;
+
+    try {
+      const payload = {
+        title: formData.title,
+        content: formData.content,
+        category: formData.category,
+        status: finalStatus
+      };
+
+      const res = await adminApi.addNewBlog(payload);
+
+      if (res.success) {
+        navigate('/admin/blogs');
+      } else {
+        setError(res.message || 'Failed to save blog.');
+      }
+    } catch (err) {
+      console.error('Blog submission failed', err);
+      setError('An error occurred while saving the blog.');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
-  const handlePublish = () => {
-    setFormData(prev => ({ ...prev, status: 'Published' }));
-    console.log('Publishing blog:', formData);
-    navigate('/admin/blogs');
-  };
+  const handleSaveDraft = () => submitBlog('Draft');
+  const handlePublish = () => submitBlog('Published');
 
   return (
     <div className="p-8 md:p-10 max-w-[1600px] mx-auto animate-in fade-in duration-300 flex flex-col min-h-screen">
-      
+
       {/* Header & Breadcrumbs */}
       <div className="mb-8 flex flex-col md:flex-row md:items-end justify-between gap-6">
         <div>
@@ -54,28 +77,31 @@ const AdminAddBlogPage = () => {
           <p className="text-sm font-medium text-gray-500">
             Create a new editorial piece for the healthcare community.
           </p>
+          {error && <p className="text-sm font-bold text-red-600 mt-3 bg-red-50 p-3 rounded-xl inline-block">{error}</p>}
         </div>
-        
+
         {/* Top Right Actions */}
         <div className="flex items-center gap-4">
-          <button 
+          <button
+            disabled={isSubmitting}
             onClick={handleSaveDraft}
-            className="bg-white border border-[#EFEBE1] hover:bg-gray-50 text-gray-700 font-bold py-3.5 px-6 rounded-full transition-colors shadow-sm text-sm"
+            className="bg-white border border-[#EFEBE1] hover:bg-gray-50 disabled:opacity-50 text-gray-700 font-bold py-3.5 px-6 rounded-full transition-colors shadow-sm text-sm"
           >
-            Save as Draft
+            {isSubmitting && formData.status === 'Draft' ? 'Saving...' : 'Save as Draft'}
           </button>
-          <button 
+          <button
+            disabled={isSubmitting}
             onClick={handlePublish}
-            className="bg-[#3A6447] hover:bg-[#2C4D36] text-white font-bold py-3.5 px-6 rounded-full transition-colors shadow-sm text-sm"
+            className="bg-[#3A6447] hover:bg-[#2C4D36] disabled:bg-[#3A6447]/70 disabled:cursor-not-allowed text-white font-bold py-3.5 px-6 rounded-full transition-colors shadow-sm text-sm"
           >
-            Publish Blog
+            {isSubmitting && formData.status === 'Published' ? 'Publishing...' : 'Publish Blog'}
           </button>
         </div>
       </div>
 
       {/* Main Grid: 2/3 Content Editor | 1/3 Publishing Sidebar */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 flex-1">
-        
+
         {/* Left Column (Content Editor) */}
         <div className="lg:col-span-2 flex flex-col gap-10">
           <BlogInfoSection formData={formData} onChange={handleInputChange} />
@@ -89,14 +115,15 @@ const AdminAddBlogPage = () => {
 
       </div>
 
-      {/* Bottom Floating Publish Button (Optional, mimics PDF bottom right) */}
+      {/* Bottom Floating Publish Button */}
       <div className="mt-8 flex justify-between items-center text-sm font-medium text-gray-400 border-t border-[#EFEBE1] pt-6">
         <p>Last saved: Just now</p>
-        <button 
+        <button
+          disabled={isSubmitting}
           onClick={handlePublish}
-          className="bg-[#3A6447] hover:bg-[#2C4D36] text-white font-bold py-3.5 px-8 rounded-full transition-colors shadow-sm text-sm uppercase tracking-widest"
+          className="bg-[#3A6447] hover:bg-[#2C4D36] disabled:bg-[#3A6447]/70 disabled:cursor-not-allowed text-white font-bold py-3.5 px-8 rounded-full transition-colors shadow-sm text-sm uppercase tracking-widest"
         >
-          Publish Blog
+          {isSubmitting ? 'Processing...' : 'Publish Blog'}
         </button>
       </div>
 

@@ -1,43 +1,27 @@
 import React from 'react';
+import { PieChart } from 'lucide-react';
 
-const RevenueStreamCard = () => {
+const RevenueStreamCard = ({ stream = [] }) => {
   return (
-    <div className="bg-white rounded-[32px] p-8 border border-[#EFEBE1] shadow-sm mb-8">
-      <h3 className="text-lg font-bold text-gray-900 mb-8">Revenue Stream Analysis</h3>
-      
-      <div className="flex flex-col md:flex-row items-center gap-10">
-        
-        {/* CSS Donut Chart */}
-        <div className="relative w-40 h-40 shrink-0">
-          <div className="w-full h-full rounded-full" style={{ background: 'conic-gradient(#6D5E7B 0% 35%, #D49A44 35% 100%)' }}></div>
-          {/* Inner white circle to make it a donut */}
-          <div className="absolute inset-4 bg-white rounded-full flex flex-col items-center justify-center shadow-inner">
-            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Total</span>
-            <span className="text-xl font-extrabold text-gray-900 leading-none">100%</span>
-          </div>
-        </div>
+    <div className="bg-white rounded-3xl p-8 shadow-sm border border-gray-100 mb-8">
+      <div className="flex items-center gap-3 mb-6">
+        <div className="p-2 bg-indigo-50 text-indigo-600 rounded-lg"><PieChart size={18} /></div>
+        <h3 className="text-lg font-extrabold text-gray-900">Revenue Stream Analysis</h3>
+      </div>
 
-        {/* Breakdown Cards */}
-        <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 gap-6 w-full">
-          
-          {/* Product Revenue */}
-          <div className="bg-[#FAF7F2] rounded-2xl p-6 border-l-4 border-l-[#D49A44] border border-y-[#EFEBE1] border-r-[#EFEBE1]">
-            <p className="text-[10px] font-bold text-[#D49A44] uppercase tracking-widest mb-1.5">Product Revenue</p>
-            <h3 className="text-2xl font-extrabold text-gray-900 mb-1">₹3,14,000</h3>
-            <p className="text-xs font-medium text-gray-500">~ 65% of total income</p>
-          </div>
-
-          {/* Consultation Revenue */}
-          <div className="bg-[#FAF7F2] rounded-2xl p-6 border-l-4 border-l-[#6D5E7B] border border-y-[#EFEBE1] border-r-[#EFEBE1]">
-            <p className="text-[10px] font-bold text-[#6D5E7B] uppercase tracking-widest mb-1.5">Consultation Revenue</p>
-            <h3 className="text-2xl font-extrabold text-gray-900 mb-1">₹1,68,900</h3>
-            <p className="text-xs font-medium text-gray-500">~ 35% of total income</p>
-          </div>
-
-        </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+        {stream.length === 0 ? (
+          <p className="text-gray-500">No revenue data available.</p>
+        ) : (
+          stream.map((s, index) => (
+            <div key={index} className="p-6 bg-gray-50 rounded-2xl border border-gray-100 flex items-center justify-between">
+              <span className="font-bold text-gray-700">{s.stream}</span>
+              <span className="text-xl font-black text-[#3A6447]">₹{Number(s.value).toLocaleString()}</span>
+            </div>
+          ))
+        )}
       </div>
     </div>
   );
 };
-
 export default RevenueStreamCard;

@@ -1,63 +1,46 @@
 import React from 'react';
-import { ShieldPlus } from 'lucide-react';
+import { Activity } from 'lucide-react';
 
 const PatientMedicalInfoCard = ({ medicalInfo }) => {
+  if (!medicalInfo) return null;
+
   return (
-    <div className="bg-[#FAF7F2] rounded-[32px] p-8 md:p-10 border border-[#EFEBE1] shadow-sm h-full flex flex-col">
-      
-      {/* Header */}
-      <div className="flex items-center gap-3 ">
-        <ShieldPlus size={24} className="text-[#4A7C59]" strokeWidth={2.5} />
-        <h3 className="text-2xl font-extrabold text-gray-900 tracking-tight">Medical Info</h3>
+    <div className="bg-[#FDF9EE] rounded-3xl p-8 shadow-sm border border-[#EAE5D9] h-full flex flex-col">
+      <div className="flex items-center gap-3 mb-8">
+        <div className="p-2 bg-amber-100 text-amber-700 rounded-lg"><Activity size={18} /></div>
+        <h3 className="text-lg font-extrabold text-gray-900">Medical Profile</h3>
       </div>
 
-      {/* Conditions */}
-      <div className="mb-8">
-        <p className="text-[11px] font-bold text-[#8C7A6B] uppercase tracking-widest mb-4">
-          Conditions
-        </p>
-        <div className="flex flex-wrap gap-3">
-          {medicalInfo.conditions.map((condition, i) => (
-            <span key={i} className="bg-white border border-[#EFEBE1] text-gray-800 px-4 py-2 rounded-xl text-sm font-bold shadow-sm">
-              {condition}
-            </span>
-          ))}
+      <div className="space-y-6 flex-1">
+        <div>
+          <p className="text-[10px] font-extrabold text-gray-500 uppercase tracking-widest mb-2">Prakriti Type</p>
+          <span className="px-4 py-1.5 bg-[#4A7C59] text-white text-xs font-bold rounded-full">
+            {medicalInfo.prakriti_type || 'Unassessed'}
+          </span>
+        </div>
+
+        <div>
+          <p className="text-[10px] font-extrabold text-gray-500 uppercase tracking-widest mb-2">Allergies</p>
+          <div className="bg-white p-3 rounded-xl border border-gray-100 text-sm font-bold text-red-600">
+            {medicalInfo.allergies || 'None reported'}
+          </div>
+        </div>
+
+        <div>
+          <p className="text-[10px] font-extrabold text-gray-500 uppercase tracking-widest mb-2">Chronic Conditions</p>
+          <div className="bg-white p-3 rounded-xl border border-gray-100 text-sm font-bold text-gray-700 leading-relaxed">
+            {medicalInfo.conditions || 'No chronic conditions reported.'}
+          </div>
+        </div>
+
+        <div>
+          <p className="text-[10px] font-extrabold text-gray-500 uppercase tracking-widest mb-2">Current Medications</p>
+          <div className="bg-white p-3 rounded-xl border border-gray-100 text-sm font-bold text-gray-700 leading-relaxed">
+            {medicalInfo.medications || 'Not currently on any medications.'}
+          </div>
         </div>
       </div>
-
-      {/* Allergies */}
-      <div className="mb-10">
-        <p className="text-[11px] font-bold text-[#8C7A6B] uppercase tracking-widest mb-4">
-          Allergies
-        </p>
-        <div className="flex flex-wrap gap-3">
-          {medicalInfo.allergies.map((allergy, i) => (
-            <span key={i} className="bg-[#FEE4E2]/60 text-[#D92D20] px-4 py-2 rounded-xl text-sm font-bold">
-              {allergy}
-            </span>
-          ))}
-        </div>
-      </div>
-
-      {/* Current Medications Box */}
-      <div className="bg-[#EFEBE1]/60 rounded-[24px] p-6 border border-[#EFEBE1] mt-auto">
-        <p className="text-[11px] font-bold text-[#6D5E7B] uppercase tracking-widest mb-4">
-          Current Medications
-        </p>
-        <ul className="space-y-3">
-          {medicalInfo.medications.map((med, i) => (
-            <li key={i} className="flex items-start gap-2">
-              <span className="w-1.5 h-1.5 rounded-full bg-[#6D5E7B] mt-2 shrink-0"></span>
-              <span className="text-sm font-bold text-gray-900">
-                {med.name} {med.dosage}
-              </span>
-            </li>
-          ))}
-        </ul>
-      </div>
-
     </div>
   );
 };
-
 export default PatientMedicalInfoCard;

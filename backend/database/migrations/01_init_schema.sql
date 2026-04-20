@@ -189,6 +189,9 @@ CREATE TABLE DoctorProfiles (
     education_details JSONB, 
     sub_specializations TEXT[], 
     certifications TEXT[],
+
+    philosophy_of_care TEXT,
+    preferences JSONB DEFAULT '{}',
     
     total_earnings DECIMAL(12, 2) DEFAULT 0.00,
     admin_comments TEXT,
@@ -283,6 +286,7 @@ CREATE TABLE Orders (
     payment_status VARCHAR(50),
     order_status VARCHAR(50),
     delivery_eta TIMESTAMP,
+    pending_tasks INT DEFAULT 0,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -346,4 +350,15 @@ CREATE TABLE AdminActionLogs (
     target_entity_id UUID,
     details TEXT,
     timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE Blogs (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    title VARCHAR(255) NOT NULL,
+    content TEXT NOT NULL,
+    category VARCHAR(100),
+    author_id UUID REFERENCES Users(id) ON DELETE SET NULL,
+    status VARCHAR(50) DEFAULT 'Draft', -- Draft, Published
+    views INT DEFAULT 0,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );

@@ -1,72 +1,37 @@
 import React from 'react';
 
 const ProfessionalSection = ({ formData, onChange, isEditing = true }) => {
-  const inputBaseClass = `w-full mt-1 p-3.5 rounded-xl border text-sm font-bold transition-colors outline-none focus:ring-2 focus:ring-[#3A6447]/20 ${!isEditing ? 'bg-gray-50 border-transparent text-gray-500 cursor-not-allowed appearance-none' : 'bg-[#FAF7F2] border-[#EFEBE1] text-gray-900'
-    }`;
-
   return (
     <div className="bg-white rounded-[32px] p-8 border border-[#EFEBE1] shadow-sm">
-      <h3 className="text-lg font-bold text-gray-900 mb-6">Professional Credentials</h3>
-
+      <h2 className="text-xl font-extrabold text-gray-900 mb-6">Professional Credentials</h2>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div>
-          <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Specialization</label>
-          <select
-            name="specialization"
-            value={formData.specialization}
-            onChange={onChange}
-            disabled={!isEditing}
-            className={inputBaseClass}
-          >
-            <option value="">Select Specialization</option>
-            <option value="Ayurvedic General Medicine">Ayurvedic General Medicine</option>
-            <option value="Yoga Therapy">Yoga Therapy</option>
-            <option value="Pancha-Karma Specialist">Pancha-Karma Specialist</option>
-          </select>
+          <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-2">Specialization</label>
+          <input type="text" name="specialization" value={formData.specialization} onChange={onChange} disabled={!isEditing} className="w-full bg-[#FAF7F2] border border-[#EFEBE1] rounded-2xl py-3.5 px-4 text-sm font-bold text-gray-700 focus:outline-none disabled:opacity-70" />
         </div>
-
         <div>
-          <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Registration Number</label>
-          <input
-            type="text"
-            name="registrationNumber"
-            value={formData.registrationNumber}
-            onChange={onChange}
-            disabled={!isEditing}
-            placeholder="e.g. AYU-2023-XXXX"
-            className={inputBaseClass}
-          />
+          <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-2">Medical Reg. Number</label>
+          <input type="text" name="registrationNumber" value={formData.registrationNumber} onChange={onChange} disabled={!isEditing} className="w-full bg-[#FAF7F2] border border-[#EFEBE1] rounded-2xl py-3.5 px-4 text-sm font-bold text-gray-700 focus:outline-none disabled:opacity-70" />
         </div>
-
+        <div className="md:col-span-2">
+          <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-2">Qualifications</label>
+          <input type="text" name="qualifications" value={formData.qualifications} onChange={onChange} disabled={!isEditing} placeholder="e.g. BAMS, MD Ayurveda" className="w-full bg-[#FAF7F2] border border-[#EFEBE1] rounded-2xl py-3.5 px-4 text-sm font-bold text-gray-700 focus:outline-none disabled:opacity-70" />
+        </div>
         <div>
-          <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Qualifications</label>
-          <input
-            type="text"
-            name="qualifications"
-            value={formData.qualifications}
-            onChange={onChange}
-            disabled={!isEditing}
-            placeholder="e.g. BAMS, MD"
-            className={inputBaseClass}
-          />
+          <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-2">Years of Experience</label>
+          <input type="number" name="experience" value={formData.experience} onChange={onChange} disabled={!isEditing} className="w-full bg-[#FAF7F2] border border-[#EFEBE1] rounded-2xl py-3.5 px-4 text-sm font-bold text-gray-700 focus:outline-none disabled:opacity-70" />
         </div>
-
-        <div>
-          <label className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Years of Experience</label>
-          <input
-            type="number"
-            name="experience"
-            value={formData.experience}
-            onChange={onChange}
-            disabled={!isEditing}
-            placeholder="e.g. 5"
-            min="0"
-            className={inputBaseClass}
-          />
-        </div>
+        {formData.status !== undefined && (
+          <div>
+            <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-2">Verification Status</label>
+            <select name="status" value={formData.status} onChange={onChange} disabled={!isEditing} className="w-full bg-[#FAF7F2] border border-[#EFEBE1] rounded-2xl py-3.5 px-4 text-sm font-bold text-gray-700 focus:outline-none disabled:opacity-70 cursor-pointer">
+              <option value="Verified">Verified</option>
+              <option value="Pending">Pending</option>
+            </select>
+          </div>
+        )}
       </div>
     </div>
   );
 };
-
 export default ProfessionalSection;
