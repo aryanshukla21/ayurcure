@@ -28,6 +28,13 @@ router.get('/pharmacy-store/wellness-products', ctrl.getWellnessProducts);
 router.get('/pharmacy-store/product/:id/details', ctrl.getProductDetails);
 
 // ==========================================
+// 1.5 WEBHOOKS (Publicly Accessible, Bypasses JWT)
+// ==========================================
+// Action Required: Add Razorpay webhook to catch automated payment events.
+// We use express.raw() here because crypto HMAC verification requires the exact bytes sent by Razorpay.
+router.post('/webhook/razorpay', express.raw({ type: 'application/json' }), ctrl.handleRazorpayWebhook);
+
+// ==========================================
 // AUTHENTICATION MIDDLEWARE
 // ==========================================
 // Protect all Order and Cart routes below this line

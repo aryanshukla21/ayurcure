@@ -3,6 +3,8 @@ const PatientModel = require('../models/patientModel');
 const logger = require('../utils/logger');
 const fs = require('fs');
 const path = require('path');
+const { generateInvoicePdf } = require('../utils/generatePdf');
+const paymentService = require('../services/paymentService');
 
 // ==========================================
 // UTILITY HELPERS
@@ -292,6 +294,7 @@ exports.getPaymentSummary = async (req, res) => {
     }
 };
 
+// --- UPDATED METHOD ---
 exports.downloadInvoice = async (req, res) => {
     try {
         const patientId = await getPatientId(req.user.id, res);
@@ -303,41 +306,16 @@ exports.downloadInvoice = async (req, res) => {
 
         if (!invoiceData) return res.status(404).json({ error: 'Invoice data not found' });
 
-        // Build a text-based invoice (Replace with PDFKit for production PDF)
-        let invoiceText = `
-        ====================================================
-                       AYURCURE INVOICE
-        ====================================================
-        Order ID: ${invoiceData.order_id}
-        Date: ${new Date(invoiceData.created_at).toLocaleDateString()}
-        
-        BILLED TO:
-        ${invoiceData.patient_name}
-        ${invoiceData.patient_email}
-        Shipping Address: ${invoiceData.shipping_address}
-        
-        ----------------------------------------------------
-        ITEMS:
-        `;
+        // Generate PDF Buffer using the utility
+        const pdfBuffer = await generateInvoicePdf(invoiceData, productsData);
 
-        productsData.forEach(p => {
-            invoiceText += `${p.name} (Qty: ${p.quantity}) - Rs. ${p.subtotal}\n`;
-        });
+        // Set Headers for File Download
+        res.setHeader('Content-Disposition', `attachment; filename="Invoice_${invoiceData.order_id}.pdf"`);
+        res.setHeader('Content-Type', 'application/pdf');
 
-        invoiceText += `
-        ----------------------------------------------------
-        Discount Applied: Rs. ${invoiceData.discount_applied || 0}
-        TOTAL AMOUNT: Rs. ${invoiceData.total_amount}
-        
-        Payment Method: ${invoiceData.payment_method}
-        Payment Status: ${invoiceData.payment_status}
-        ====================================================
-        Thank you for choosing AyurCure!
-        `;
+        // Send the PDF buffer directly
+        res.send(pdfBuffer);
 
-        res.setHeader('Content-disposition', `attachment; filename=Invoice_${invoiceData.order_id}.txt`);
-        res.setHeader('Content-type', 'text/plain');
-        res.send(invoiceText);
     } catch (err) {
         logger.error(`downloadInvoice Error: ${err.message}`);
         res.status(500).json({ error: 'Failed to download invoice' });
@@ -410,5 +388,68 @@ exports.applyPromoCode = async (req, res) => {
     } catch (err) {
         logger.error(`applyPromoCode Error: ${err.message}`);
         res.status(500).json({ error: 'Failed to apply promo code' });
+    }
+};
+
+// ==========================================
+// 5. PAYMENT WEBHOOK MODULE
+// ==========================================
+
+exports.handleRazorpayWebhook = async (req, res) => {
+    try {
+        // Because of express.raw() in the router, req.body is a raw Buffer representing the exact payload
+        const rawBody = req.body;
+        const signature = req.headers['x-razorpay-signature'];
+
+        if (!signature) {
+            logger.warn('Webhook received without a signature header.');
+            return res.status(400).send('Signature missing');
+        }
+
+        // Verify the event is genuinely from Razorpay
+        const isValid = paymentService.verifyWebhookSignature(rawBody, signature);
+
+        if (!isValid) {
+            logger.warn('Invalid Razorpay Webhook Signature detected. Potential spoofing attempt.');
+            return res.status(400).send('Invalid signature');
+        }
+
+        // Now that it is verified, parse the raw Buffer back into JSON to read the event data
+        const event = JSON.parse(rawBody.toString('utf8'));
+        logger.info(`Valid Webhook received: ${event.event}`);
+
+        // Handle specific Razorpay events
+        switch (event.event) {
+            case 'payment.captured':
+            case 'order.paid':
+                const paymentEntity = event.payload.payment.entity;
+                const razorpayOrderId = paymentEntity.order_id; // The gateway order ID
+
+                // ACTION REQUIRED: Ensure EcommerceModel has an 'updatePaymentStatus' or similar method 
+                // that finds an order by razorpay_order_id and updates its status.
+                // Example:
+                // await EcommerceModel.updatePaymentStatus(razorpayOrderId, 'Paid');
+
+                logger.info(`Order mapped to Gateway ID ${razorpayOrderId} successfully marked as Paid via Webhook.`);
+                break;
+
+            case 'payment.failed':
+                const failedEntity = event.payload.payment.entity;
+                logger.warn(`Payment failed for Gateway ID ${failedEntity.order_id}. Reason: ${failedEntity.error_description}`);
+                // Optional: Update DB to 'Payment Failed'
+                break;
+
+            default:
+                // Ignore unhandled event types silently to keep Razorpay happy
+                break;
+        }
+
+        // Acknowledge receipt of the webhook to Razorpay immediately
+        res.status(200).send('OK');
+
+    } catch (err) {
+        logger.error(`handleRazorpayWebhook Error: ${err.message}`);
+        // Send a 500 so Razorpay knows to retry the webhook later
+        res.status(500).send('Webhook Processing Error');
     }
 };

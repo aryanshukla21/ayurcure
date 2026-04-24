@@ -2,9 +2,10 @@ const jwt = require('jsonwebtoken');
 const logger = require('../utils/logger');
 
 /**
- * Authenticates the request by validating the Bearer token in the Authorization header.
+ * Authenticates the request by validating the Bearer token in the Authorization header or secure cookie.
  */
 const requireAuth = (req, res, next) => {
+    // 1. Checks cookies first, falls back to auth header if needed.
     const token = req.cookies?.token || (req.headers.authorization && req.headers.authorization.split(' ')[1]);
 
     if (!token) {

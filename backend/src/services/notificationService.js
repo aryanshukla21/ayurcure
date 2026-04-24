@@ -3,24 +3,34 @@ const sgMail = require('@sendgrid/mail');
 const admin = require('firebase-admin');
 const logger = require('../utils/logger');
 
-// Initialized SendGrid securely
+// Initialize SendGrid securely
 if (process.env.SENDGRID_API_KEY) {
     sgMail.setApiKey(process.env.SENDGRID_API_KEY);
+} else {
+    logger.warn('SENDGRID_API_KEY missing. Emails will be simulated.');
 }
 
-// Initialize Firebase Admin for Push Notifications
+// Initialize Firebase Admin for Push Notifications using Base64
 try {
     if (process.env.FIREBASE_SERVICE_ACCOUNT_BASE64) {
-        // Expecting a base64 encoded string of your firebase-service-account.json
-        const serviceAccount = JSON.parse(Buffer.from(process.env.FIREBASE_SERVICE_ACCOUNT_BASE64, 'base64').toString('utf-8'));
+        let serviceAccount;
+        try {
+            // Safely decode the base64 string back into a JSON object
+            const decodedString = Buffer.from(process.env.FIREBASE_SERVICE_ACCOUNT_BASE64, 'base64').toString('utf-8');
+            serviceAccount = JSON.parse(decodedString);
+        } catch (parseError) {
+            logger.error('CRITICAL: FIREBASE_SERVICE_ACCOUNT_BASE64 is malformed or not a valid base64 JSON string.');
+            throw parseError; // Break out to the outer catch block
+        }
+
         if (!admin.apps.length) {
             admin.initializeApp({
                 credential: admin.credential.cert(serviceAccount)
             });
-            logger.info('Firebase Admin SDK initialized successfully.');
+            logger.info('✅ Firebase Admin SDK initialized successfully via Base64 payload.');
         }
     } else {
-        logger.warn('FIREBASE_SERVICE_ACCOUNT_BASE64 missing. Push notifications disabled.');
+        logger.warn('⚠️ FIREBASE_SERVICE_ACCOUNT_BASE64 missing. Push notifications disabled.');
     }
 } catch (error) {
     logger.error(`Firebase Init Error: ${error.message}`);
@@ -34,8 +44,9 @@ class NotificationService {
                 process.env.TWILIO_AUTH_TOKEN
             );
             this.verifySid = process.env.TWILIO_VERIFY_SERVICE_SID;
+            logger.info('✅ Twilio client initialized successfully.');
         } else {
-            logger.warn('Twilio credentials missing. SMS and Phone OTP integrations will fail.');
+            logger.warn('⚠️ Twilio credentials missing. SMS and Phone OTP integrations will fail.');
         }
     }
 

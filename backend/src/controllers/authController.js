@@ -9,12 +9,13 @@ const { OAuth2Client } = require('google-auth-library');
 const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 const tempOtpCache = new Map();
 
+// --- UPDATED COOKIE FUNCTION ---
 const setTokenCookie = (res, token) => {
     res.cookie('token', token, {
         httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: 'lax',
-        maxAge: 7 * 24 * 60 * 60 * 1000
+        secure: process.env.NODE_ENV === 'production', // Must be true in production (requires HTTPS)
+        sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax', // 'none' required for cross-domain
+        maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
     });
 };
 
@@ -72,7 +73,7 @@ exports.verifyAndRegister = async (req, res) => {
         }
 
         const token = authService.generateToken(newUser);
-        setTokenCookie(res, token);
+        setTokenCookie(res, token); // Use updated cookie function
 
         res.status(201).json({ message: 'Registration complete.', user: { id: newUser.id, role: newUser.role } });
     } catch (error) {
@@ -104,7 +105,7 @@ exports.login = async (req, res) => {
         }
 
         const token = authService.generateToken(user);
-        setTokenCookie(res, token);
+        setTokenCookie(res, token); // Use updated cookie function
 
         res.status(200).json({ user: { id: user.id, role: user.role } });
     } catch (error) {
@@ -155,7 +156,7 @@ exports.verifyEmailToken = async (req, res) => {
         await UserModel.updatePasswordAndClearOtp(user.id, user.password_hash);
 
         const jwtToken = authService.generateToken(user);
-        setTokenCookie(res, jwtToken);
+        setTokenCookie(res, jwtToken); // Use updated cookie function
 
         res.status(200).json({ message: 'Email verified successfully.' });
     } catch (error) {
@@ -266,7 +267,7 @@ exports.ssoLogin = async (req, res) => {
         }
 
         const token = authService.generateToken(user);
-        setTokenCookie(res, token);
+        setTokenCookie(res, token); // Use updated cookie function
 
         res.status(200).json({
             user: { id: user.id, role: user.role, full_name: user.full_name },
@@ -358,6 +359,11 @@ exports.checkAuth = (req, res) => { res.status(200).json({ user: req.user }); };
 
 // Clear the cookie to log the user out
 exports.logout = (req, res) => {
-    res.clearCookie('token', { httpOnly: true, secure: process.env.NODE_ENV === 'production', sameSite: 'lax' });
+    // --- UPDATED LOGOUT COOKIE PARAMS ---
+    res.clearCookie('token', {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax'
+    });
     res.status(200).json({ message: 'Logged out successfully.' });
 };
