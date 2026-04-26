@@ -1,101 +1,89 @@
 import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
-import { Leaf, Mail, ArrowRight, ArrowLeft, HelpCircle } from 'lucide-react';
+import { Link, useNavigate } from 'react-router-dom';
+import { Phone, ArrowRight } from 'lucide-react';
 
 const ForgotPasswordPage = () => {
-  const [email, setEmail] = useState('');
+  const navigate = useNavigate();
+  const [mobile, setMobile] = useState('');
 
-  const handleSubmit = (e) => {
+  const handleSendOTP = (e) => {
     e.preventDefault();
-    console.log('Sending reset link to:', email);
-    // Add password reset logic here
-    alert("If an account exists, a reset link will be sent.");
+    console.log("Sending recovery OTP to:", mobile);
+    // navigate('/auth/verify-reset-otp');
   };
 
   return (
-    <div className="min-h-screen bg-[#FDFBF7] font-sans flex flex-col relative overflow-hidden">
+    <div className="bg-[#FAF7F2] text-gray-900 font-sans min-h-screen flex flex-col items-center">
 
-      {/* Decorative Background Elements */}
-      <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none">
-        <div className="absolute top-[-10%] left-[-5%] w-[800px] h-[800px] rounded-full bg-gradient-to-br from-[#F5EFE6]/40 to-transparent blur-3xl"></div>
-        <div className="absolute bottom-[-10%] right-[-5%] w-[600px] h-[600px] rounded-full bg-gradient-to-tl from-[#F5EFE6]/60 to-transparent blur-3xl"></div>
-      </div>
-
-
-      <main className="flex-1 flex flex-col items-center justify-center px-4 sm:px-6 relative z-10 w-full py-12">
-
-        {/* Header Logo Section */}
-        <div className="flex flex-col items-center mb-8 text-center">
-          <div className="w-12 h-12 bg-[#52735B] rounded-xl flex items-center justify-center text-white mb-4 shadow-sm">
-            <Leaf size={22} strokeWidth={2.5} />
-          </div>
-          <span className="text-[11px] font-extrabold text-[#8C8276] uppercase tracking-[0.2em]">
-            AyurCare360
-          </span>
+      <header className="w-full pt-16 flex flex-col items-center gap-3">
+        <h1 className="font-extrabold text-2xl tracking-tight text-[#3A6447]">AyurCare360</h1>
+        <div className="w-16 h-16 rounded-full overflow-hidden bg-white border border-[#EFEBE1] shadow-sm flex items-center justify-center">
+          <img alt="AyurCare360 Brand Logo" className="w-full h-full object-cover p-2" src="/Favicon_up.png" />
         </div>
+      </header>
 
-        {/* Main Card */}
-        <div className="w-full max-w-[420px] bg-white rounded-3xl p-8 sm:p-10 shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-[#EFEBE1]/50">
+      <main className="flex-grow flex items-center justify-center px-6 w-full max-w-md">
+        <div className="bg-white rounded-[32px] p-8 md:p-12 w-full shadow-sm border border-[#EFEBE1]">
+          <div className="text-center mb-8">
+            <h2 className="text-3xl font-extrabold text-gray-900 tracking-tight mb-3">Forgot password?</h2>
+            <p className="text-gray-500 font-medium text-sm leading-relaxed">
+              Enter your registered mobile number to receive a verification code.
+            </p>
+          </div>
 
-          <h1 className="text-3xl font-bold text-[#6A5A4A] tracking-tight mb-3">
-            Forgot Password?
-          </h1>
-          <p className="text-sm font-medium text-gray-500 leading-relaxed mb-8">
-            Enter your email address and we'll send you instructions to reset your password.
-          </p>
-
-          <form onSubmit={handleSubmit} className="flex flex-col gap-6">
-
-            {/* Email Input */}
-            <div className="flex flex-col gap-2">
-              <label className="text-[10px] font-extrabold text-gray-500 uppercase tracking-widest">
-                Email Address
+          <form className="space-y-6" onSubmit={handleSendOTP}>
+            <div className="space-y-2">
+              <label className="block text-[10px] font-bold uppercase tracking-widest text-gray-400 ml-1" htmlFor="mobile">
+                Mobile Number
               </label>
               <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none text-gray-400">
+                  <Phone size={18} />
+                </div>
                 <input
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="patient@example.com"
-                  className="w-full bg-[#F8F6F0] rounded-xl pl-4 pr-12 py-3.5 text-sm font-medium text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-[#52735B]/20 transition-all border border-transparent focus:border-[#EFEBE1]"
+                  className="w-full h-12 pl-12 pr-4 bg-white border border-[#EFEBE1] rounded-xl focus:border-[#3A6447] focus:ring-1 focus:ring-[#3A6447]/30 text-sm font-medium text-gray-900 placeholder:text-gray-400 transition-all outline-none"
+                  id="mobile"
+                  name="mobile"
+                  placeholder="+91 00000 00000"
+                  type="tel"
+                  value={mobile}
+                  onChange={(e) => setMobile(e.target.value)}
                   required
                 />
-                <div className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400">
-                  <Mail size={18} />
-                </div>
               </div>
             </div>
 
-            {/* Submit Button */}
             <button
+              className="w-full py-4 bg-[#3A6447] hover:bg-[#2C4D36] transition-colors text-white font-bold rounded-full flex items-center justify-center gap-2 shadow-sm"
               type="submit"
-              className="w-full bg-[#52735B] hover:bg-[#425E4A] text-white font-bold py-3.5 rounded-xl transition-colors shadow-sm flex items-center justify-center gap-2 group mt-2"
             >
-              Send Reset Link
-              <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />
+              <span>Send OTP</span>
+              <ArrowRight size={18} />
             </button>
+
+            <div className="pt-4 text-center">
+              <Link className="text-[#3A6447] text-sm font-bold hover:underline transition-all" to="/login">
+                Back to Login
+              </Link>
+            </div>
           </form>
-
-          {/* Back to Login Link */}
-          <div className="mt-8 text-center">
-            <Link to="/login" className="inline-flex items-center gap-2 text-sm font-bold text-[#5B4F80] hover:text-[#433A5E] transition-colors">
-              <ArrowLeft size={16} /> Back to login
-            </Link>
-          </div>
         </div>
-
-        {/* Support Pill */}
-        <div className="mt-8 bg-[#F8F6F0] border border-[#EFEBE1] rounded-full px-5 py-2.5 flex items-center gap-2 shadow-sm">
-          <HelpCircle size={14} className="text-[#52735B] fill-[#52735B] text-white" />
-          <span className="text-xs font-medium text-gray-500">
-            Need urgent help?{' '}
-            <Link to="/contact" className="text-[#5B4F80] font-bold hover:underline">
-              Contact Support
-            </Link>
-          </span>
-        </div>
-
       </main>
+
+      <footer className="w-full py-8 bg-transparent flex flex-col items-center justify-center gap-4">
+        <div className="flex items-center gap-6">
+          <Link className="text-[10px] font-bold tracking-widest uppercase text-gray-400 hover:text-[#3A6447] transition-colors" to="/privacy">
+            Privacy Policy
+          </Link>
+          <div className="w-1 h-1 rounded-full bg-[#EFEBE1]"></div>
+          <Link className="text-[10px] font-bold tracking-widest uppercase text-gray-400 hover:text-[#3A6447] transition-colors" to="/terms">
+            Terms & Conditions
+          </Link>
+        </div>
+        <p className="text-[10px] font-bold tracking-widest uppercase text-gray-400">
+          © {new Date().getFullYear()} AyurCare360.
+        </p>
+      </footer>
     </div>
   );
 };

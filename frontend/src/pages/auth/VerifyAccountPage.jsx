@@ -1,172 +1,128 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
-import { Shield, Clock, Leaf, Loader2 } from 'lucide-react';
-import { authApi } from '../../api/authApi';
+import React, { useState, useRef } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import { Timer } from 'lucide-react';
 
 const VerifyAccountPage = () => {
   const navigate = useNavigate();
-  const location = useLocation();
-  const [emailOtp, setEmailOtp] = useState(new Array(6).fill(""));
-  const [phoneOtp, setPhoneOtp] = useState(new Array(6).fill(""));
-  const [timeLeft, setTimeLeft] = useState(299);
-  const [errorMsg, setErrorMsg] = useState('');
-  const [isVerifying, setIsVerifying] = useState(false);
+  const [otp, setOtp] = useState(new Array(6).fill(""));
+  const inputRefs = useRef([]);
 
-  const emailRefs = useRef([]);
-  const phoneRefs = useRef([]);
+  const handleChange = (element, index) => {
+    if (isNaN(element.value)) return false;
 
-  const registrationData = location.state?.registrationData;
+    setOtp([...otp.map((d, idx) => (idx === index ? element.value : d))]);
 
-  useEffect(() => {
-    if (!registrationData) {
-      navigate('/signup');
-    }
-  }, [registrationData, navigate]);
-
-  useEffect(() => {
-    if (timeLeft <= 0) return;
-    const timerId = setInterval(() => setTimeLeft(prev => prev - 1), 1000);
-    return () => clearInterval(timerId);
-  }, [timeLeft]);
-
-  const formatTime = (seconds) => {
-    const m = Math.floor(seconds / 60);
-    const s = seconds % 60;
-    return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
-  };
-
-  const handleOtpChange = (e, index, type) => {
-    const value = e.target.value;
-    if (isNaN(value)) return;
-
-    const currentArr = type === 'email' ? [...emailOtp] : [...phoneOtp];
-    const currentRefs = type === 'email' ? emailRefs : phoneRefs;
-
-    currentArr[index] = value.substring(value.length - 1);
-
-    if (type === 'email') setEmailOtp(currentArr);
-    else setPhoneOtp(currentArr);
-
-    if (value && index < 5 && currentRefs.current[index + 1]) {
-      currentRefs.current[index + 1].focus();
+    // Focus next input
+    if (element.value !== "" && element.nextSibling) {
+      element.nextSibling.focus();
     }
   };
 
-  const handleKeyDown = (e, index, type) => {
-    const currentArr = type === 'email' ? emailOtp : phoneOtp;
-    const currentRefs = type === 'email' ? emailRefs : phoneRefs;
-
-    if (e.key === 'Backspace' && !currentArr[index] && index > 0 && currentRefs.current[index - 1]) {
-      currentRefs.current[index - 1].focus();
-    }
-  };
-
-  const handleVerify = async (e) => {
+  const handleSubmit = (e) => {
     e.preventDefault();
-    setErrorMsg('');
-    const emailCode = emailOtp.join('');
-    const phoneCode = phoneOtp.join('');
+    const otpValue = otp.join("");
+    console.log("Verifying OTP:", otpValue);
 
-    if (emailCode.length === 6 && phoneCode.length === 6) {
-      setIsVerifying(true);
-      try {
-        const payload = {
-          ...registrationData,
-          emailOtp: emailCode,
-          phoneOtp: phoneCode
-        };
-        await authApi.verifyAndRegister(payload);
-        navigate('/login', { state: { message: 'Account verified successfully. Please login.' } });
-      } catch (error) {
-        setErrorMsg(error.response?.data?.error || 'Verification failed. Please check the codes.');
-      } finally {
-        setIsVerifying(false);
-      }
-    } else {
-      setErrorMsg('Please complete both 6-digit verification codes.');
-    }
+    // TODO: Add backend verification logic here
+    // navigate('/auth/step3'); // Proceed to next step
   };
 
   return (
-    <div className="min-h-screen bg-[#FDFBF7] font-sans flex flex-col relative overflow-hidden">
-      <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none">
-        <div className="absolute top-[-10%] left-[-5%] w-[800px] h-[800px] rounded-full bg-gradient-to-br from-[#F5EFE6]/40 to-transparent blur-3xl"></div>
-      </div>
+    <div className="bg-[#F5F1E8] text-[#1d1b16] min-h-screen flex flex-col font-['Manrope']">
 
-      <main className="flex-1 flex flex-col items-center justify-center px-4 relative z-10 w-full py-12">
-        <div className="flex flex-col items-center mb-8 text-center">
-          <div className="w-12 h-12 bg-[#52735B] rounded-xl flex items-center justify-center text-white mb-6 shadow-sm">
-            <Shield size={22} strokeWidth={2.5} />
+      {/* TopAppBar */}
+      <header className="flex flex-col items-center justify-center w-full py-8 px-4">
+        <div className="flex flex-col items-center gap-4">
+          <span className="text-2xl font-['Noto_Serif'] font-bold text-[#5C7F63] tracking-tighter">AyurCare360</span>
+          <div className="w-16 h-16 rounded-full overflow-hidden shadow-sm bg-white flex items-center justify-center">
+            <img alt="AyurCare360 Logo" className="w-full h-full object-cover p-2" src="/Favicon_up.png" />
           </div>
-          <h1 className="text-3xl font-extrabold text-gray-900 mb-3">Verify Your Account</h1>
-          <p className="text-sm text-gray-500">We've sent verification codes to your Email and Phone.</p>
         </div>
+      </header>
 
-        <div className="w-full max-w-[420px] bg-white rounded-3xl p-8 shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-[#EFEBE1]/50">
+      {/* Main Content Canvas */}
+      <main className="flex-grow flex items-center justify-center px-4 py-8 relative">
+        {/* Background Decorative Element */}
+        <div className="absolute top-0 right-0 w-64 h-64 bg-[#fedb98]/10 rounded-full blur-3xl -z-10 translate-x-1/2 -translate-y-1/2"></div>
+        <div className="absolute bottom-0 left-0 w-96 h-96 bg-[#5C7F63]/5 rounded-full blur-3xl -z-10 -translate-x-1/4 translate-y-1/4"></div>
 
-          {errorMsg && <div className="mb-6 p-3 bg-red-50 text-red-600 text-xs font-bold rounded-lg border border-red-100 text-center">{errorMsg}</div>}
+        {/* Verification Card */}
+        <section className="w-full max-w-md bg-[#F9F6F0] rounded-xl p-8 md:p-10 text-center shadow-sm relative overflow-hidden">
 
-          <form onSubmit={handleVerify} className="flex flex-col gap-6">
+          {/* Step Indicator */}
+          <div className="flex justify-center gap-2 mb-10">
+            <div className="h-1 w-8 rounded-full bg-[#5C7F63]/40"></div>
+            <div className="h-1 w-8 rounded-full bg-[#5C7F63]"></div>
+            <div className="h-1 w-8 rounded-full bg-[#e8e2d8]"></div>
+            <div className="h-1 w-8 rounded-full bg-[#e8e2d8]"></div>
+          </div>
 
-            {/* Email OTP */}
-            <div>
-              <label className="text-[10px] font-extrabold text-gray-500 uppercase tracking-widest mb-2 block">Email Code</label>
-              <div className="flex items-center justify-between gap-2">
-                {emailOtp.map((digit, index) => (
-                  <input
-                    key={`email-${index}`}
-                    ref={(el) => (emailRefs.current[index] = el)}
-                    type="text"
-                    inputMode="numeric"
-                    value={digit}
-                    onChange={(e) => handleOtpChange(e, index, 'email')}
-                    onKeyDown={(e) => handleKeyDown(e, index, 'email')}
-                    className="w-11 h-14 bg-[#F8F6F0] rounded-xl text-center text-xl font-bold text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#52735B]/30 border border-transparent focus:border-[#EFEBE1]"
-                    maxLength={1}
-                  />
-                ))}
-              </div>
+          <span className="font-semibold text-[10px] tracking-widest uppercase text-[#414941] mb-4 block">
+            Step 2 of 4
+          </span>
+          <h1 className="text-3xl md:text-4xl font-['Noto_Serif'] italic tracking-tight text-[#5C7F63] mb-3">
+            Verify your number
+          </h1>
+          <p className="font-medium text-sm text-[#414941] mb-10">
+            We’ve sent a 6-digit code to your mobile number
+          </p>
+
+          {/* OTP Input Grid */}
+          <form className="space-y-10" onSubmit={handleSubmit}>
+            <div className="flex justify-between gap-2 max-w-xs mx-auto">
+              {otp.map((data, index) => (
+                <input
+                  key={index}
+                  type="text"
+                  name="otp"
+                  maxLength="1"
+                  placeholder="•"
+                  className="w-10 h-14 text-center text-xl font-bold rounded-lg bg-white border border-[#c1c9bf]/40 focus:ring-1 focus:ring-[#5C7F63] focus:border-[#5C7F63] outline-none transition-all duration-200"
+                  value={data}
+                  onChange={e => handleChange(e.target, index)}
+                  onFocus={e => e.target.select()}
+                />
+              ))}
             </div>
 
-            {/* Phone OTP */}
-            <div>
-              <label className="text-[10px] font-extrabold text-gray-500 uppercase tracking-widest mb-2 block">Phone Code</label>
-              <div className="flex items-center justify-between gap-2">
-                {phoneOtp.map((digit, index) => (
-                  <input
-                    key={`phone-${index}`}
-                    ref={(el) => (phoneRefs.current[index] = el)}
-                    type="text"
-                    inputMode="numeric"
-                    value={digit}
-                    onChange={(e) => handleOtpChange(e, index, 'phone')}
-                    onKeyDown={(e) => handleKeyDown(e, index, 'phone')}
-                    className="w-11 h-14 bg-[#F8F6F0] rounded-xl text-center text-xl font-bold text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#52735B]/30 border border-transparent focus:border-[#EFEBE1]"
-                    maxLength={1}
-                  />
-                ))}
+            <div className="flex flex-col gap-6">
+              <button
+                className="w-full bg-[#5C7F63] text-white py-4 rounded-lg font-bold text-base hover:opacity-90 transition-all duration-300 scale-100 active:scale-95 shadow-sm"
+                type="submit"
+              >
+                Verify & Continue
+              </button>
+
+              <div className="flex items-center justify-center gap-2 group cursor-pointer">
+                <Timer size={18} className="text-[#414941]" />
+                <span className="text-sm text-[#414941] font-medium">
+                  Resend code in <span className="text-[#5C7F63] font-bold">0:30</span>
+                </span>
               </div>
             </div>
-
-            <button
-              type="submit"
-              disabled={emailOtp.join('').length !== 6 || phoneOtp.join('').length !== 6 || isVerifying}
-              className="w-full mt-4 bg-[#52735B] hover:bg-[#425E4A] disabled:bg-[#52735B]/60 disabled:cursor-not-allowed text-white font-bold py-3.5 rounded-xl transition-colors shadow-sm flex justify-center items-center"
-            >
-              {isVerifying ? <Loader2 className="w-5 h-5 animate-spin" /> : "Complete Registration"}
-            </button>
           </form>
 
-          <div className="mt-8 text-center flex flex-col items-center gap-4">
-            <div className="flex items-center gap-2 text-[#8C8C8C] bg-[#F8F6F0] px-4 py-1.5 rounded-full">
-              <Clock size={12} />
-              <span className="text-[10px] font-extrabold uppercase tracking-widest">
-                Codes expire in {formatTime(timeLeft)}
-              </span>
-            </div>
+          {/* Ritual Progress Bar */}
+          <div className="absolute bottom-0 left-0 w-full h-1 bg-[#e8e2d8] overflow-hidden">
+            <div className="h-full bg-gradient-to-r from-[#5C7F63] to-[#735b24] w-2/4"></div>
           </div>
-        </div>
+        </section>
       </main>
+
+      {/* Footer */}
+      <footer className="flex flex-col md:flex-row justify-center items-center gap-4 md:gap-8 w-full py-8 px-4 bg-transparent mt-auto">
+        <span className="text-[10px] tracking-widest uppercase text-[#414941]">
+          © {new Date().getFullYear()} AYURCARE360
+        </span>
+        <div className="flex space-x-6">
+          <Link className="text-[10px] tracking-widest uppercase text-[#414941] hover:text-[#5C7F63] transition-colors duration-300" to="/privacy">
+            Privacy Policy
+          </Link>
+          <Link className="text-[10px] tracking-widest uppercase text-[#414941] hover:text-[#5C7F63] transition-colors duration-300" to="/terms">
+            Terms & Conditions
+          </Link>
+        </div>
+      </footer>
     </div>
   );
 };

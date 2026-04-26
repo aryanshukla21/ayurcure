@@ -21,10 +21,12 @@ import StickyLogo from './components/common/StickyLogo';
 
 // Auth Pages
 import SignInPage from './pages/auth/SignInPage';
-import SignUpPage from './pages/auth/SignUpPage';
+import LogInPage from './pages/auth/LoginPage';
 import VerifyAccountPage from './pages/auth/VerifyAccountPage';
 import ResetPasswordPage from './pages/auth/ResetPasswordPage';
 import ForgotPasswordPage from './pages/auth/ForgotPasswordPage';
+import ProfileCompletionPage from './pages/auth/ProfileCompletionPage';
+
 
 // Admin Pages
 import AdminLayout from './pages/admin/AdminLayout';
@@ -67,6 +69,7 @@ import PatientHealthReportsPage from './pages/patient/PatientHealthReportsPage';
 import PatientProfilePage from './pages/patient/PatientProfilePage';
 import PatientSettingsPage from './pages/patient/PatientSettingsPage';
 import PatientOrderDetailsPage from './pages/patient/PatientOrderDetailsPage';
+import DoctorRecommendationsPage from './pages/patient/DoctorRecommendationsPage';
 
 // Pharmacy Pages
 import PharmacyStore from './pages/patient/PharmacyStore';
@@ -77,6 +80,7 @@ import PharmacyOrdersPage from './pages/patient/PharmacyOrdersPage';
 
 // Video Consultation Room Component (assuming you created it from previous step)
 import VideoConsultationRoom from './pages/patient/VideoConsultationRoom';
+import LoginPage from './pages/auth/LoginPage';
 
 function App() {
   return (
@@ -95,11 +99,12 @@ function App() {
           <Route path="/blogs/:id" element={<BlogDetailsPage />} />
 
           {/* AUTHENTICATION ROUTES */}
-          <Route path="/login" element={<SignInPage />} />
-          <Route path="/signup" element={<SignUpPage />} />
+          <Route path="/signup" element={<SignInPage />} />
+          <Route path="/login" element={<LogInPage />} />
           <Route path="/verify" element={<VerifyAccountPage />} />
           <Route path="/reset-password" element={<ResetPasswordPage />} />
           <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+          <Route path="/profile-completion" element={<ProfileCompletionPage />} />
 
           {/* ADMIN ROUTES */}
           <Route path="/admin" element={<AdminLayout />}>
@@ -143,6 +148,7 @@ function App() {
           <Route path="/patient" element={<PatientLayout />}>
             <Route index element={<Navigate to="dashboard" replace />} />
             <Route path="dashboard" element={<PatientDashboard />} />
+            <Route path="recommendations" element={<DoctorRecommendationsPage />} />
             <Route path="book-appointment" element={<BookAppointmentPage />} />
             <Route path="appointments" element={<PatientAppointments />} />
             <Route path="appointments/:id" element={<PatientAppointmentDetails />} />
@@ -156,6 +162,7 @@ function App() {
             <Route path="health-records" element={<PatientHealthReportsPage />} />
             <Route path="profile" element={<PatientProfilePage />} />
             <Route path="settings" element={<PatientSettingsPage />} />
+
           </Route>
 
           {/* CATCH-ALL */}
