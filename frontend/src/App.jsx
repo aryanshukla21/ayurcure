@@ -26,6 +26,7 @@ import VerifyAccountPage from './pages/auth/VerifyAccountPage';
 import ResetPasswordPage from './pages/auth/ResetPasswordPage';
 import ForgotPasswordPage from './pages/auth/ForgotPasswordPage';
 import ProfileCompletionPage from './pages/auth/ProfileCompletionPage';
+import ConditionsSymptomsPage from './pages/auth/ConditionsSymptomsPage';
 
 
 // Admin Pages
@@ -105,6 +106,7 @@ function App() {
           <Route path="/reset-password" element={<ResetPasswordPage />} />
           <Route path="/forgot-password" element={<ForgotPasswordPage />} />
           <Route path="/profile-completion" element={<ProfileCompletionPage />} />
+          <Route path="/symptoms" element={<ConditionsSymptomsPage />} />
 
           {/* ADMIN ROUTES */}
           <Route path="/admin" element={<AdminLayout />}>

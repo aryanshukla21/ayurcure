@@ -9,7 +9,10 @@ const ForgotPasswordPage = () => {
   const handleSendOTP = (e) => {
     e.preventDefault();
     console.log("Sending recovery OTP to:", mobile);
-    // navigate('/auth/verify-reset-otp');
+
+    // Route the user directly to the Reset Password page 
+    // where they can enter the OTP they just received!
+    navigate('/reset-password');
   };
 
   return (
@@ -18,7 +21,7 @@ const ForgotPasswordPage = () => {
       <header className="w-full pt-16 flex flex-col items-center gap-3">
         <h1 className="font-extrabold text-2xl tracking-tight text-[#3A6447]">AyurCare360</h1>
         <div className="w-16 h-16 rounded-full overflow-hidden bg-white border border-[#EFEBE1] shadow-sm flex items-center justify-center">
-          <img alt="AyurCare360 Brand Logo" className="w-full h-full object-cover p-2" src="/Favicon_up.png" />
+          <img alt="AyurCare360 Brand Logo" className="w-full h-full object-cover p-2 rounded-full" src="/Favicon_up.png" />
         </div>
       </header>
 

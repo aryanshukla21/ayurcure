@@ -1,12 +1,22 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 
 const LoginPage = () => {
     const navigate = useNavigate();
+    const [loginRole, setLoginRole] = useState('patient'); // 'patient' or 'doctor'
 
     const handleLogin = (e) => {
         e.preventDefault();
-        // navigate('/patient/dashboard');
+
+        // You can use the loginRole state here to direct the API call or routing
+        console.log(`Logging in as: ${loginRole}`);
+
+        // Example Routing logic:
+        // if (loginRole === 'doctor') {
+        //   navigate('/doctor/dashboard');
+        // } else {
+        //   navigate('/patient/dashboard');
+        // }
     };
 
     return (
@@ -15,23 +25,49 @@ const LoginPage = () => {
             <main className="flex-grow flex items-center justify-center w-full px-6 py-12">
                 <div className="max-w-md w-full flex flex-col items-center">
 
+                    {/* Brand Logo & Title */}
                     <div className="text-center mb-8 space-y-4">
                         <h1 className="text-2xl font-extrabold text-[#3A6447] tracking-tight">AyurCare360</h1>
                         <div className="relative inline-block">
                             <div className="w-16 h-16 rounded-full overflow-hidden bg-white border border-[#EFEBE1] flex items-center justify-center shadow-sm">
-                                <img alt="AyurCare360 Logo" className="w-full h-full object-cover p-2" src="/Favicon_up.png" />
+                                <img alt="AyurCare360 Logo" className="w-full h-full object-cover p-2 rounded-full" src="/Favicon_up.png" />
                             </div>
                         </div>
                     </div>
 
                     <div className="w-full bg-white rounded-[32px] p-8 md:p-12 shadow-sm border border-[#EFEBE1]">
-                        <header className="text-center mb-10">
+                        <header className="text-center mb-8">
                             <h2 className="text-3xl font-extrabold text-gray-900 tracking-tight mb-2">Welcome back</h2>
                             <p className="text-gray-500 font-medium text-sm">Continue your journey to better health</p>
                         </header>
 
+                        {/* Role Selection Toggle */}
+                        <div className="flex p-1 bg-[#FAF7F2] rounded-xl mb-8 border border-[#EFEBE1]">
+                            <button
+                                type="button"
+                                onClick={() => setLoginRole('patient')}
+                                className={`flex-1 py-2.5 text-sm font-bold rounded-lg transition-all duration-300 ${loginRole === 'patient'
+                                    ? 'bg-white text-[#3A6447] shadow-sm'
+                                    : 'text-gray-500 hover:text-gray-900'
+                                    }`}
+                            >
+                                Patient
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => setLoginRole('doctor')}
+                                className={`flex-1 py-2.5 text-sm font-bold rounded-lg transition-all duration-300 ${loginRole === 'doctor'
+                                    ? 'bg-white text-[#3A6447] shadow-sm'
+                                    : 'text-gray-500 hover:text-gray-900'
+                                    }`}
+                            >
+                                Doctor
+                            </button>
+                        </div>
+
                         <form className="space-y-6" onSubmit={handleLogin}>
 
+                            {/* Email / Mobile Input */}
                             <div className="space-y-2">
                                 <label className="block text-[10px] font-bold uppercase tracking-widest text-gray-400 ml-1" htmlFor="identifier">
                                     Email or Mobile Number
@@ -48,6 +84,7 @@ const LoginPage = () => {
                                 </div>
                             </div>
 
+                            {/* Password Input */}
                             <div className="space-y-2">
                                 <div className="flex justify-between items-center">
                                     <label className="block text-[10px] font-bold uppercase tracking-widest text-gray-400 ml-1" htmlFor="password">
@@ -69,14 +106,16 @@ const LoginPage = () => {
                                 </div>
                             </div>
 
+                            {/* Submit Button */}
                             <button
                                 className="w-full bg-[#3A6447] text-white font-bold py-4 rounded-full hover:bg-[#2C4D36] transition-colors shadow-sm mt-4"
                                 type="submit"
                             >
-                                Login
+                                Login as {loginRole === 'patient' ? 'Patient' : 'Doctor'}
                             </button>
                         </form>
 
+                        {/* Sign Up Link */}
                         <div className="mt-10 text-center">
                             <p className="text-gray-500 text-xs font-medium">
                                 Don’t have an account?
@@ -89,6 +128,7 @@ const LoginPage = () => {
                 </div>
             </main>
 
+            {/* Footer Section */}
             <footer className="flex justify-center items-center space-x-6 w-full py-6 px-4 bg-transparent">
                 <span className="text-[10px] font-bold tracking-widest uppercase text-gray-400">© {new Date().getFullYear()} AYURCARE360</span>
                 <div className="flex space-x-6">

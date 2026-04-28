@@ -14,6 +14,7 @@ const AdminDoctorsPage = () => {
   useEffect(() => {
     const fetchDoctorData = async () => {
       try {
+        // Fetch all data concurrently
         const [totalRes, pendingRes, rateRes, respRes, doctorsListRes] = await Promise.all([
           adminApi.getTotalDoctors(),
           adminApi.getPendingApprovals(),
@@ -41,8 +42,10 @@ const AdminDoctorsPage = () => {
     fetchDoctorData();
   }, []);
 
-  // Handle delete locally to update UI instantly without reload
+  // Instantly updates UI upon successful deletion
   const handleDeleteDoctor = async (id) => {
+    if (!window.confirm("Are you sure you want to delete this doctor?")) return;
+
     try {
       await adminApi.deleteDoctor(id);
       setData(prev => ({
@@ -52,19 +55,20 @@ const AdminDoctorsPage = () => {
       }));
     } catch (error) {
       console.error("Failed to delete doctor", error);
+      alert("Failed to delete doctor.");
     }
   };
 
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-full min-h-[60vh]">
-        <Loader2 className="w-12 h-12 text-[#3A6447] animate-spin" />
+        <Loader2 className="w-10 h-10 text-[#4A7C59] animate-spin" />
       </div>
     );
   }
 
   return (
-    <div className="p-8 md:p-10 max-w-[1600px] mx-auto flex flex-col h-full animate-in fade-in duration-300">
+    <div className="p-8 md:p-10 max-w-[1600px] mx-auto flex flex-col h-full">
 
       {/* Header */}
       <div className="mb-8">

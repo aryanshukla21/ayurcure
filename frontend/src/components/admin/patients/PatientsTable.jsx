@@ -67,6 +67,7 @@ const PatientsTable = ({ patients = [] }) => {
                   </td>
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-3">
+                      {/* Using your exact link format */}
                       <Link to={`/admin/patients/${patient.id}`} className="text-[#4A7C59] hover:text-[#3A6447] text-xs font-bold px-3 py-1.5 bg-[#4A7C59]/10 rounded-full transition-colors">
                         View Profile
                       </Link>

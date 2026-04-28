@@ -35,7 +35,7 @@ const VerifyAccountPage = () => {
         <div className="flex flex-col items-center gap-4">
           <span className="text-2xl font-['Noto_Serif'] font-bold text-[#5C7F63] tracking-tighter">AyurCare360</span>
           <div className="w-16 h-16 rounded-full overflow-hidden shadow-sm bg-white flex items-center justify-center">
-            <img alt="AyurCare360 Logo" className="w-full h-full object-cover p-2" src="/Favicon_up.png" />
+            <img alt="AyurCare360 Logo" className="w-full h-full object-cover p-2 rounded-full" src="/Favicon_up.png" />
           </div>
         </div>
       </header>

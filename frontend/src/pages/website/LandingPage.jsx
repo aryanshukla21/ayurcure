@@ -3,6 +3,8 @@ import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { websiteBlogs } from '../../data/websiteBlogs';
 import globe from '../../images/globe-removebg-preview.jpeg'
+import asthaImg from '../../images/DrAstha.jpeg';
+import abhiImg from '../../images/DrAbhi.jpeg'
 
 // --- ANIMATION WRAPPER COMPONENT ---
 const ScrollReveal = ({ children, direction = 'up', className = "" }) => {
@@ -95,7 +97,7 @@ const LandingPage = ({ isLoggedIn = false, userRole = 'patient', onLogout }) => 
         </button>
 
         <button
-          onClick={() => window.open('https://wa.me/9236313005', '_blank')}
+          onClick={() => window.open('https://wa.me/919236313005', '_blank')}
           className="pointer-events-auto bg-[#25D366] text-white px-6 py-4 rounded-2xl shadow-2xl flex items-center gap-4 group hover:scale-105 transition-all"
         >
           <div className="flex flex-col items-start leading-none">
@@ -114,8 +116,8 @@ const LandingPage = ({ isLoggedIn = false, userRole = 'patient', onLogout }) => 
           {/* Left: Logo & Brand */}
           <div className="flex items-center gap-4 md:gap-6">
             <Link to="/" className="flex items-center gap-2">
-              <div className="w-7 h-7 md:w-8 md:h-8 rounded-full bg-[#2F6F4E]/10 flex items-center justify-center border border-[#2F6F4E]/20">
-                <span className="material-symbols-outlined text-[#2F6F4E] text-lg md:text-xl">eco</span>
+              <div className="w-7 h-7 md:w-8 md:h-8 rounded-full bg-white flex items-center justify-center border border-[#2F6F4E]/20 overflow-hidden shadow-sm">
+                <img alt="AyurCare360 Logo" className="w-full h-full object-cover p-1 rounded-full" src="/Favicon_up.png" />
               </div>
               <span className="text-lg md:text-xl font-['Noto_Serif'] font-bold text-[#2F6F4E] tracking-tight">AyurCare 360</span>
             </Link>
@@ -137,8 +139,8 @@ const LandingPage = ({ isLoggedIn = false, userRole = 'patient', onLogout }) => 
                 </button>
               </div>
             ) : (
-              <button onClick={() => navigate('/patient/book-appointment')} className="bg-[#2F6F4E] hover:bg-[#2F6F4E]/90 text-white px-4 md:px-6 py-2 md:py-3 rounded-full font-['Noto_Serif'] text-xs md:text-sm tracking-tight shadow-sm hover:shadow-md transition-all active:scale-95 font-bold whitespace-nowrap">
-                Book Consultation
+              <button onClick={() => navigate('/login')} className="bg-[#2F6F4E] hover:bg-[#2F6F4E]/90 text-white px-4 md:px-6 py-2 md:py-3 rounded-full font-['Noto_Serif'] text-xs md:text-sm tracking-tight shadow-sm hover:shadow-md transition-all active:scale-95 font-bold whitespace-nowrap">
+                Login
               </button>
             )}
           </div>
@@ -451,21 +453,21 @@ const LandingPage = ({ isLoggedIn = false, userRole = 'patient', onLogout }) => 
             <ScrollReveal direction="right">
               <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 gap-8 w-full max-w-2xl">
                 <div className="flex flex-col gap-4 text-center md:text-left items-center md:items-start">
-                  <img alt="Ayurveda Physician Dr. Ananya Rao" className="w-full max-w-[300px] md:max-w-none aspect-[4/5] object-cover rounded-3xl shadow-xl image-richness border-4 border-white" src="https://lh3.googleusercontent.com/aida-public/AB6AXuD8N08gIAxxLSEC0UFks6TFTJEhoJcdgy3SKIiNPhXFYBU3gtMgt2iWOEjjVj3BAlcs3BjXGVhpCJWI7bGU7ONFZOVo2dtiUt3KWTNQyD6ydaj0W1LOfRzp9upwzua8_7NU7N_4ZNGZ9Sz94siaUKh1JSxaSjONQFdVo1IJ0idAciIC5WojuTdDB_wYm1LS5_pKo2FeFRjAZdhXpOQzAgpNmrN-rNqS4J_NMgM3GkV9-A82UZfrBxG8eeaubJOEn0PPrUfB77Ed9d83" />
+                  <img alt="Ayurveda Physician Dr. Ananya Rao" className="w-full max-w-[300px] md:max-w-none aspect-[4/5] object-cover rounded-3xl shadow-xl image-richness border-4 border-white" src={asthaImg} />
                   <div className="px-2 mt-4">
-                    <p className="font-['Noto_Serif'] text-xl text-[#1E1E1E] font-bold mb-0">Dr. Ananya Rao</p>
-                    <p className="text-[#2F6F4E] font-bold mb-1">Lead Ayurveda Physician</p>
-                    <p className="text-sm text-[#1E1E1E] font-bold">15+ years experience</p>
-                    <p className="text-xs uppercase tracking-tighter text-[#1E1E1E] font-bold mt-1">Specialist in Metabolic Health</p>
+                    <p className="font-['Noto_Serif'] text-xl text-[#1E1E1E] font-bold mb-0">Dr Astha Srivastava</p>
+                    <p className="text-[#2F6F4E] font-bold mb-1">BAMS, DRCH</p>
+                    <p className="text-sm text-[#1E1E1E] font-bold">3+ years experience</p>
+                    <p className="text-xs uppercase tracking-tighter text-[#1E1E1E] font-bold mt-1">Gyenec and obstetrics</p>
                   </div>
                 </div>
                 <div className="flex flex-col gap-4 text-center md:text-left items-center md:items-start mt-4 sm:mt-16">
-                  <img alt="Ayurveda Physician Dr. Vikram Shah" className="w-full max-w-[300px] md:max-w-none aspect-[4/5] object-cover rounded-3xl shadow-xl image-richness border-4 border-white" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCPogc_JCADgNdM9QLOUbqQxY29wj9OqLvgO4mgW7H9CD2ReaULzuk_cMtmvc-ok5tql63vQK02U2CvHwKihLURiCrKZA_QUFaY2XUaPhsCNSJYG4PMHMDRHZsonVjNtK6I7HTyJTd6kl55yQjgVzdHnp8kIQcgsllsAkBkx0PPg_ZWDS0T0LTZXSHRS_lp5-cMFWpAArrMlVL9WTP2JbnzU5qGRO7PA8SGFKATqhoWkMIYUHVMN67b5BUQd9z-Q77XqPTdFGBRjLvW" />
+                  <img alt="Ayurveda Physician Dr. Vikram Shah" className="w-full max-w-[300px] md:max-w-none aspect-[4/5] object-cover rounded-3xl shadow-xl image-richness border-4 border-white" src={abhiImg} />
                   <div className="px-2 mt-4">
-                    <p className="font-['Noto_Serif'] text-xl text-[#1E1E1E] font-bold mb-0">Dr. Vikram Shah</p>
-                    <p className="text-[#2F6F4E] font-bold mb-1">Senior Ayurveda Physician</p>
-                    <p className="text-sm text-[#1E1E1E] font-bold">20+ years experience</p>
-                    <p className="text-xs uppercase tracking-tighter text-[#1E1E1E] font-bold mt-1">Gut Health Specialist</p>
+                    <p className="font-['Noto_Serif'] text-xl text-[#1E1E1E] font-bold mb-0">Dr Abhishek Bajpai </p>
+                    <p className="text-[#2F6F4E] font-bold mb-1">BAMS</p>
+                    <p className="text-sm text-[#1E1E1E] font-bold">5+ years experience</p>
+                    <p className="text-xs uppercase tracking-tighter text-[#1E1E1E] font-bold mt-1">Panchkarma & Skin Disorders</p>
                   </div>
                 </div>
               </div>
@@ -539,7 +541,7 @@ const LandingPage = ({ isLoggedIn = false, userRole = 'patient', onLogout }) => 
           <ScrollReveal direction="up">
             <div className="flex flex-col items-center mb-8 md:mb-12">
               <div className="w-16 h-16 md:w-20 md:h-20 rounded-full bg-[#2F6F4E]/10 flex items-center justify-center mb-6">
-                <span className="material-symbols-outlined text-[#2F6F4E] text-4xl md:text-6xl">eco</span>
+                <img alt="AyurCare360 Logo" className="w-full h-full object-cover p-1 rounded-full" src="/Favicon_up.png" />
               </div>
               <div className="w-24 h-[3px] bg-[#2F6F4E]/30"></div>
             </div>
@@ -577,7 +579,11 @@ const LandingPage = ({ isLoggedIn = false, userRole = 'patient', onLogout }) => 
       <section className="py-12 bg-[#F3EDE3] text-center px-6">
         <div className="flex flex-col items-center gap-4">
           <div className="flex items-center gap-4">
-            <span className="material-symbols-outlined text-[#376645] text-2xl">eco</span>
+            <img
+              alt="AyurCare360 Logo"
+              className="w-8 h-8 object-cover p-1 rounded-full bg-white shadow-sm"
+              src="/Favicon_up.png"
+            />
             <span className="material-symbols-outlined text-[#376645] text-2xl">history_edu</span>
           </div>
           <p className="font-['Noto_Serif'] italic text-xl md:text-3xl text-[#376645]">Built by doctors. Guided by honesty.</p>
@@ -601,12 +607,10 @@ const LandingPage = ({ isLoggedIn = false, userRole = 'patient', onLogout }) => 
           </nav>
 
           {/* Social Icons */}
-          {/* Social Icons */}
           <div className="flex justify-center gap-6 mb-10">
-
             {/* Facebook Icon */}
             <a
-              href="https://www.facebook.com/share/18TNZK4jCS/?mibextid=wwXIfr" /* <-- ADD YOUR FACEBOOK LINK HERE */
+              href="https://www.facebook.com/share/18TNZK4jCS/?mibextid=wwXIfr"
               target="_blank"
               rel="noopener noreferrer"
               aria-label="Facebook"
@@ -619,7 +623,7 @@ const LandingPage = ({ isLoggedIn = false, userRole = 'patient', onLogout }) => 
 
             {/* Instagram Icon */}
             <a
-              href="https://www.instagram.com/ayurcare.360?igsh=Nm45MTBrbnk3ZG9z" /* <-- ADD YOUR INSTAGRAM LINK HERE */
+              href="https://www.instagram.com/ayurcare.360?igsh=Nm45MTBrbnk3ZG9z"
               target="_blank"
               rel="noopener noreferrer"
               aria-label="Instagram"

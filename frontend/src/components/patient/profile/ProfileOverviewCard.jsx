@@ -1,65 +1,67 @@
-import React from 'react';
-import { User, Edit2, Save, Download } from 'lucide-react';
+import React, { useRef } from 'react';
+import { Download, Camera } from 'lucide-react';
 
-const ProfileOverviewCard = ({ profile, isEditing, onEditToggle, isLoading }) => {
-  if (isLoading) {
-    return (
-      <div className="bg-white rounded-[32px] p-8 border border-[#EFEBE1] shadow-sm animate-pulse flex flex-col justify-between h-full min-h-[200px]">
-        <div className="flex items-center gap-6">
-          <div className="w-24 h-24 bg-gray-200 rounded-full shrink-0"></div>
-          <div className="space-y-3 flex-1">
-            <div className="h-8 bg-gray-200 rounded w-3/4"></div>
-            <div className="h-4 bg-gray-100 rounded w-1/2"></div>
-          </div>
-        </div>
-        <div className="flex gap-4 mt-8">
-          <div className="h-12 bg-gray-200 rounded-full w-32"></div>
-          <div className="h-12 bg-gray-100 rounded-full w-32"></div>
-        </div>
-      </div>
-    );
-  }
-
-  const safeProfile = profile || {};
-  const name = safeProfile.name || safeProfile.full_name || 'Patient User';
-  const patientId = safeProfile.patientId || safeProfile.id || 'AYUR-1001';
+const ProfileOverviewCard = ({ profile, isEditing, onEditToggle, onChange, onImageUpload, onDownloadPDF }) => {
+  const fileInputRef = useRef(null);
 
   return (
-    <div className="bg-white rounded-[32px] p-8 border border-[#EFEBE1] shadow-sm relative overflow-hidden group h-full flex flex-col justify-between">
-      <div className="absolute top-0 right-0 w-40 h-40 bg-[#FDF9EE] rounded-bl-full -z-10 group-hover:scale-110 transition-transform duration-700"></div>
+    <div className="bg-[#FAF7F2] rounded-[32px] p-6 flex flex-col md:flex-row gap-8 shadow-sm h-full">
 
-      <div className="flex items-center gap-6 mb-8">
-        <div className="relative">
-          <div className="w-24 h-24 bg-[#E7F3EB] rounded-full flex items-center justify-center text-[#4A7C59] border-4 border-white shadow-sm text-3xl font-bold">
-            {name.charAt(0)}
+      {/* Image Section */}
+      <div className="relative w-40 h-72 rounded-2xl overflow-hidden shrink-0 group">
+        <img
+          src={profile.avatar || `https://ui-avatars.com/api/?name=${profile.full_name || 'User'}&background=EAE5D9&color=4A7C59&size=150`}
+          alt={profile.full_name}
+          className="w-full h-full object-cover transition-all duration-300"
+        />
+        <input type="file" ref={fileInputRef} onChange={onImageUpload} className="hidden" accept="image/*" />
+
+        {isEditing && (
+          <div onClick={() => fileInputRef.current.click()} className="absolute inset-0 bg-black/40 flex items-center justify-center cursor-pointer opacity-0 group-hover:opacity-100 transition-opacity backdrop-blur-[2px]">
+            <button className="bg-white p-3 rounded-full text-gray-900 shadow-lg hover:scale-105 transition-transform"><Camera size={20} /></button>
           </div>
-          <div className="absolute bottom-0 right-0 w-6 h-6 bg-[#4A7C59] rounded-full border-2 border-white flex items-center justify-center">
-            <div className="w-2 h-2 bg-white rounded-full"></div>
-          </div>
-        </div>
-        <div>
-          <h2 className="text-3xl font-extrabold text-gray-900 tracking-tight mb-1">{name}</h2>
-          <p className="text-sm font-bold text-gray-500 uppercase tracking-widest">ID: {patientId}</p>
-        </div>
+        )}
+        {!isEditing && (
+          <div className="absolute bottom-3 left-3 bg-[#D9774B] text-white text-[10px] font-extrabold px-3 py-1 rounded-full uppercase tracking-widest shadow-sm">Active</div>
+        )}
       </div>
 
-      <div className="flex flex-wrap items-center gap-4">
-        <button
-          onClick={onEditToggle}
-          className={`px-6 py-3 rounded-full text-sm font-bold flex items-center gap-2 transition-colors shadow-sm ${isEditing
-              ? 'bg-[#3A6447] hover:bg-[#2C4D36] text-white'
-              : 'bg-white border border-[#EFEBE1] hover:bg-gray-50 text-gray-700'
-            }`}
-        >
-          {isEditing ? <><Save size={16} /> Save Changes</> : <><Edit2 size={16} /> Edit Profile</>}
-        </button>
+      {/* Info Section */}
+      <div className="flex-1 flex flex-col justify-center">
+        <h2 className="text-xl font-bold text-gray-900 mb-6">{profile.full_name || 'Patient Name'}</h2>
 
-        <button className="px-6 py-3 rounded-full text-sm font-bold flex items-center gap-2 bg-[#FDF9EE] text-[#8B6A47] hover:bg-[#F4EBD9] transition-colors shadow-sm">
-          <Download size={16} /> Download Data
-        </button>
+        <div className="grid grid-cols-2 gap-4 mb-6">
+          <div className="bg-[#FDF9EE] rounded-xl p-3 border border-[#EFEBE1]">
+            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Age</p>
+            {isEditing ? <input type="number" name="age" value={profile.age || ''} onChange={onChange} className="w-full bg-transparent font-bold text-gray-900 focus:outline-none" /> : <p className="font-bold text-gray-900">{profile.age || '-'}</p>}
+          </div>
+          <div className="bg-[#FDF9EE] rounded-xl p-3 border border-[#EFEBE1]">
+            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Gender</p>
+            {isEditing ? (
+              <select name="gender" value={profile.gender || ''} onChange={onChange} className="w-full bg-transparent font-bold text-gray-900 focus:outline-none">
+                <option value="Male">Male</option>
+                <option value="Female">Female</option>
+                <option value="Other">Other</option>
+              </select>
+            ) : <p className="font-bold text-gray-900">{profile.gender || '-'}</p>}
+          </div>
+          <div className="col-span-2 bg-[#FDF9EE] rounded-xl p-3 border border-[#EFEBE1]">
+            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Constitution (Prakriti)</p>
+            {isEditing ? <input type="text" name="prakriti_type" value={profile.prakriti_type || ''} onChange={onChange} className="w-full bg-transparent font-bold text-gray-900 focus:outline-none" /> : <p className="font-bold text-gray-900">{profile.prakriti_type || 'Pending Analysis'}</p>}
+          </div>
+        </div>
+
+        {/* Buttons */}
+        <div className="flex gap-3">
+          <button onClick={onEditToggle} className={`px-6 py-3 text-sm font-bold rounded-full transition-colors shadow-sm flex-1 cursor-pointer ${isEditing ? 'bg-[#2C4D36] text-white' : 'bg-[#3A6447] hover:bg-[#2C4D36] text-white'}`}>
+            {isEditing ? 'Save Profile' : 'Edit Profile'}
+          </button>
+          <button onClick={onDownloadPDF} className="px-6 py-3 bg-[#EAE5D9] hover:bg-[#D1CFC8] text-gray-800 text-sm font-bold rounded-full transition-colors shadow-sm flex items-center justify-center gap-2 flex-1 cursor-pointer">
+            <Download size={16} /> Download PDF
+          </button>
+        </div>
       </div>
     </div>
   );
 };
-
 export default ProfileOverviewCard;

@@ -10,7 +10,7 @@ const DoctorMetricsRow = ({ metrics }) => {
   ];
 
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mt-8">
       {data.map((item, index) => (
         <div key={index} className="bg-white rounded-3xl p-6 shadow-sm border border-gray-100 flex items-center gap-5 hover:-translate-y-1 transition-transform">
           <div className={`w-14 h-14 rounded-2xl flex items-center justify-center ${item.bg} ${item.color}`}>
@@ -25,4 +25,5 @@ const DoctorMetricsRow = ({ metrics }) => {
     </div>
   );
 };
+
 export default DoctorMetricsRow;

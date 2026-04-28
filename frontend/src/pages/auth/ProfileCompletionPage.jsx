@@ -13,7 +13,7 @@ const ProfileCompletionPage = () => {
                 <div className="max-w-xl w-full">
                     <div className="flex flex-col items-center mb-10">
                         <div className="w-16 h-16 rounded-full bg-white flex items-center justify-center mb-6 overflow-hidden border border-[#EFEBE1] shadow-sm">
-                            <img alt="AyurCare360 Logo" className="w-full h-full object-cover p-2" src="/Favicon_up.png" />
+                            <img alt="AyurCare360 Logo" className="w-full h-full object-cover p-2 rounded-full" src="/Favicon_up.png" />
                         </div>
 
                         <div className="flex flex-col items-center gap-2 mb-4">

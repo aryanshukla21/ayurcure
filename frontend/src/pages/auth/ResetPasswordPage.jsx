@@ -28,7 +28,7 @@ const ResetPasswordPage = () => {
       <header className="sticky top-0 z-50 bg-[#FAF7F2] w-full px-6 py-8 flex flex-col items-center justify-center gap-3">
         <h1 className="text-2xl font-extrabold tracking-tight text-[#3A6447]">AyurCare360</h1>
         <div className="w-16 h-16 rounded-full bg-white border border-[#EFEBE1] flex items-center justify-center shadow-sm">
-          <img className="w-full h-full object-cover p-2" alt="AyurCare360 Logo" src="/Favicon_up.png" />
+          <img className="w-full h-full object-cover p-2 rounded-full" alt="AyurCare360 Logo" src="/Favicon_up.png" />
         </div>
       </header>
 
