@@ -16,9 +16,9 @@ const SignInPage = () => {
     setError('');
 
     try {
-      await authApi.sendSignupOtps({ email, phone });
-      // Pass data forward so Step 2 and 3 can use it to register
-      navigate('/verify', { state: { email, phone } });
+      const formattedPhone = phone.startsWith('+') ? phone : `+91${phone}`;
+      await authApi.sendSignupOtps({ email, phone: formattedPhone });
+      navigate('/verify', { state: { email, phone: formattedPhone } });
     } catch (err) {
       setError(err.response?.data?.error || "Failed to send verification codes.");
     } finally {

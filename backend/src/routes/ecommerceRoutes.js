@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const ctrl = module.exports; // Self-referencing exports since routes are in same file
+const ctrl = require('../controllers/ecommerceController');
 const { requireAuth } = require('../middlewares/authMiddleware');
 
 // ==========================================
