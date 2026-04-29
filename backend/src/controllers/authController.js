@@ -298,43 +298,69 @@ exports.setupSsoPassword = async (req, res) => {
 
 exports.forgotPassword = async (req, res) => {
     try {
-        const { email } = req.body;
-        const user = await UserModel.getUserByEmail(email);
+        const { email, phone } = req.body;
+        let user;
 
-        if (user && user.auth_provider === 'local') {
-            const otp = authService.generateOTP();
-            const otpHash = await authService.hashData(otp);
-            const expiryDate = new Date(Date.now() + 5 * 60000); // 5 mins
+        // Find user by either email or phone
+        if (email) user = await UserModel.getUserByEmail(email);
+        else if (phone) user = await UserModel.getUserByPhone(phone);
+        else return res.status(400).json({ error: 'Email or mobile number required.' });
 
-            await UserModel.updateOtp(user.id, otpHash, expiryDate);
-            await notificationService.sendEmailVerification(email, otp);
+        if (!user) return res.status(404).json({ error: 'No account found with this information.' });
+
+        if (user.auth_provider === 'local') {
+            if (email) {
+                // Email OTP Logic (Stored in DB)
+                const otp = authService.generateOTP();
+                const otpHash = await authService.hashData(otp);
+                const expiryDate = new Date(Date.now() + 5 * 60000); // 5 mins
+                await UserModel.updateOtp(user.id, otpHash, expiryDate);
+                await notificationService.sendEmailVerification(email, otp);
+            } else if (phone) {
+                // Phone OTP Logic (Handled by Twilio Verify)
+                await notificationService.sendPhoneOTP(phone);
+            }
         }
 
-        res.status(200).json({ message: 'If registered, a reset code has been sent via email.' });
+        res.status(200).json({ message: 'If registered, a reset code has been sent.' });
     } catch (error) {
+        logger.error(`Forgot Password Error: ${error.message}`);
         res.status(500).json({ error: 'Error processing request.' });
     }
 };
 
 exports.resetPassword = async (req, res) => {
     try {
-        const { email, otp, newPassword } = req.body;
+        const { email, phone, otp, newPassword } = req.body;
+        let user;
 
-        const user = await UserModel.getUserByEmail(email);
+        if (email) user = await UserModel.getUserByEmail(email);
+        else if (phone) user = await UserModel.getUserByPhone(phone);
+        else return res.status(400).json({ error: 'Email or mobile number required.' });
+
         if (!user) return res.status(404).json({ error: 'User not found.' });
 
-        if (!user.otp_hash || new Date() > user.otp_expires_at) {
-            return res.status(401).json({ error: 'OTP expired or invalid.' });
+        // Verify based on identifier type
+        if (email) {
+            if (!user.otp_hash || new Date() > user.otp_expires_at) {
+                return res.status(401).json({ error: 'OTP expired or invalid.' });
+            }
+            const isValid = await authService.verifyHash(otp, user.otp_hash);
+            if (!isValid) return res.status(401).json({ error: 'Invalid verification code.' });
+        } else if (phone) {
+            const isApproved = await notificationService.verifyPhoneOTP(phone, otp);
+            if (!isApproved) {
+                return res.status(401).json({ error: 'Invalid or expired phone OTP.' });
+            }
         }
 
-        const isValid = await authService.verifyHash(otp, user.otp_hash);
-        if (!isValid) return res.status(401).json({ error: 'Invalid verification code.' });
-
+        // Update Password
         const new_password_hash = await authService.hashData(newPassword);
         await UserModel.updatePasswordAndClearOtp(user.id, new_password_hash);
 
         res.status(200).json({ message: 'Password reset successfully.' });
     } catch (error) {
+        logger.error(`Reset Password Error: ${error.message}`);
         res.status(500).json({ error: 'Error resetting password.' });
     }
 };

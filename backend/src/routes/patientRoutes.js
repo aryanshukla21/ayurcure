@@ -2,7 +2,11 @@ const express = require('express');
 const router = express.Router();
 const ctrl = require('../controllers/patientController');
 const { requireAuth } = require('../middlewares/authMiddleware');
-const upload = require('../middlewares/uploadMiddleware');
+// Change this:
+// const upload = require('../middlewares/uploadMiddleware');
+
+// To this:
+const { upload, uploadToS3 } = require('../middlewares/uploadMiddleware');
 
 // ==========================================
 // AUTHENTICATION MIDDLEWARE
@@ -52,7 +56,11 @@ router.put('/settings/update-setting-data', ctrl.updateSettingsData);
 // ==========================================
 // Uses multer middleware to handle multipart/form-data. 
 // Expecting the frontend FormData to append the file using the key 'report'.
-router.post('/health-records/upload-new-report', upload.single('report'), ctrl.uploadReport);
+// Change this:
+// router.post('/health-records/upload-new-report', upload.single('report'), ctrl.uploadReport);
+
+// To this:
+router.post('/health-records/upload-new-report', upload.single('report'), uploadToS3, ctrl.uploadReport);
 
 router.get('/health-records/recent-reports', ctrl.getRecentReports);
 

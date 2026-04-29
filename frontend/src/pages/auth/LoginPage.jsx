@@ -1,31 +1,49 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { authApi } from '../../api/authApi';
 
 const LoginPage = () => {
     const navigate = useNavigate();
-    const [loginRole, setLoginRole] = useState('patient'); // 'patient' or 'doctor'
+    const [loginRole, setLoginRole] = useState('patient');
+    const [isLoading, setIsLoading] = useState(false);
+    const [error, setError] = useState('');
 
-    const handleLogin = (e) => {
+    const handleLogin = async (e) => {
         e.preventDefault();
+        setError('');
+        setIsLoading(true);
 
-        // You can use the loginRole state here to direct the API call or routing
-        console.log(`Logging in as: ${loginRole}`);
+        const identifier = e.target.identifier.value;
+        const password = e.target.password.value;
 
-        // Example Routing logic:
-        // if (loginRole === 'doctor') {
-        //   navigate('/doctor/dashboard');
-        // } else {
-        //   navigate('/patient/dashboard');
-        // }
+        // Determine if the input is an email or phone number
+        const isEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(identifier);
+
+        const payload = {
+            password,
+            role: loginRole,
+            ...(isEmail ? { email: identifier } : { phone: identifier })
+        };
+
+        try {
+            const response = await authApi.login(payload);
+
+            if (response.user.role === 'doctor') {
+                navigate('/doctor/dashboard');
+            } else {
+                navigate('/patient/dashboard');
+            }
+        } catch (err) {
+            setError(err.response?.data?.error || 'Invalid credentials. Please try again.');
+        } finally {
+            setIsLoading(false);
+        }
     };
 
     return (
         <div className="bg-[#FAF7F2] text-gray-900 min-h-screen flex flex-col items-center justify-center font-sans">
-
             <main className="flex-grow flex items-center justify-center w-full px-6 py-12">
                 <div className="max-w-md w-full flex flex-col items-center">
-
-                    {/* Brand Logo & Title */}
                     <div className="text-center mb-8 space-y-4">
                         <h1 className="text-2xl font-extrabold text-[#3A6447] tracking-tight">AyurCare360</h1>
                         <div className="relative inline-block">
@@ -41,50 +59,40 @@ const LoginPage = () => {
                             <p className="text-gray-500 font-medium text-sm">Continue your journey to better health</p>
                         </header>
 
-                        {/* Role Selection Toggle */}
                         <div className="flex p-1 bg-[#FAF7F2] rounded-xl mb-8 border border-[#EFEBE1]">
                             <button
                                 type="button"
                                 onClick={() => setLoginRole('patient')}
-                                className={`flex-1 py-2.5 text-sm font-bold rounded-lg transition-all duration-300 ${loginRole === 'patient'
-                                    ? 'bg-white text-[#3A6447] shadow-sm'
-                                    : 'text-gray-500 hover:text-gray-900'
-                                    }`}
+                                className={`flex-1 py-2.5 text-sm font-bold rounded-lg transition-all duration-300 ${loginRole === 'patient' ? 'bg-white text-[#3A6447] shadow-sm' : 'text-gray-500 hover:text-gray-900'}`}
                             >
                                 Patient
                             </button>
                             <button
                                 type="button"
                                 onClick={() => setLoginRole('doctor')}
-                                className={`flex-1 py-2.5 text-sm font-bold rounded-lg transition-all duration-300 ${loginRole === 'doctor'
-                                    ? 'bg-white text-[#3A6447] shadow-sm'
-                                    : 'text-gray-500 hover:text-gray-900'
-                                    }`}
+                                className={`flex-1 py-2.5 text-sm font-bold rounded-lg transition-all duration-300 ${loginRole === 'doctor' ? 'bg-white text-[#3A6447] shadow-sm' : 'text-gray-500 hover:text-gray-900'}`}
                             >
                                 Doctor
                             </button>
                         </div>
 
-                        <form className="space-y-6" onSubmit={handleLogin}>
+                        {error && <p className="text-red-500 text-xs text-center mb-4 font-bold">{error}</p>}
 
-                            {/* Email / Mobile Input */}
+                        <form className="space-y-6" onSubmit={handleLogin}>
                             <div className="space-y-2">
                                 <label className="block text-[10px] font-bold uppercase tracking-widest text-gray-400 ml-1" htmlFor="identifier">
                                     Email or Mobile Number
                                 </label>
-                                <div className="relative group">
-                                    <input
-                                        className="w-full bg-white border border-[#EFEBE1] rounded-xl px-4 py-3.5 text-sm font-medium text-gray-900 focus:border-[#3A6447] focus:ring-1 focus:ring-[#3A6447]/30 transition-all outline-none placeholder:text-gray-400"
-                                        id="identifier"
-                                        name="identifier"
-                                        placeholder="name@example.com"
-                                        type="text"
-                                        required
-                                    />
-                                </div>
+                                <input
+                                    className="w-full bg-white border border-[#EFEBE1] rounded-xl px-4 py-3.5 text-sm font-medium text-gray-900 focus:border-[#3A6447] focus:ring-1 focus:ring-[#3A6447]/30 transition-all outline-none placeholder:text-gray-400"
+                                    id="identifier"
+                                    name="identifier"
+                                    placeholder="name@example.com or +91..."
+                                    type="text"
+                                    required
+                                />
                             </div>
 
-                            {/* Password Input */}
                             <div className="space-y-2">
                                 <div className="flex justify-between items-center">
                                     <label className="block text-[10px] font-bold uppercase tracking-widest text-gray-400 ml-1" htmlFor="password">
@@ -94,28 +102,25 @@ const LoginPage = () => {
                                         Forgot password?
                                     </Link>
                                 </div>
-                                <div className="relative group">
-                                    <input
-                                        className="w-full bg-white border border-[#EFEBE1] rounded-xl px-4 py-3.5 text-sm font-medium text-gray-900 focus:border-[#3A6447] focus:ring-1 focus:ring-[#3A6447]/30 transition-all outline-none placeholder:text-gray-400"
-                                        id="password"
-                                        name="password"
-                                        placeholder="••••••••"
-                                        type="password"
-                                        required
-                                    />
-                                </div>
+                                <input
+                                    className="w-full bg-white border border-[#EFEBE1] rounded-xl px-4 py-3.5 text-sm font-medium text-gray-900 focus:border-[#3A6447] focus:ring-1 focus:ring-[#3A6447]/30 transition-all outline-none placeholder:text-gray-400"
+                                    id="password"
+                                    name="password"
+                                    placeholder="••••••••"
+                                    type="password"
+                                    required
+                                />
                             </div>
 
-                            {/* Submit Button */}
                             <button
-                                className="w-full bg-[#3A6447] text-white font-bold py-4 rounded-full hover:bg-[#2C4D36] transition-colors shadow-sm mt-4"
+                                className="w-full bg-[#3A6447] text-white font-bold py-4 rounded-full hover:bg-[#2C4D36] transition-colors shadow-sm mt-4 disabled:opacity-50"
                                 type="submit"
+                                disabled={isLoading}
                             >
-                                Login as {loginRole === 'patient' ? 'Patient' : 'Doctor'}
+                                {isLoading ? 'Logging in...' : `Login as ${loginRole === 'patient' ? 'Patient' : 'Doctor'}`}
                             </button>
                         </form>
 
-                        {/* Sign Up Link */}
                         <div className="mt-10 text-center">
                             <p className="text-gray-500 text-xs font-medium">
                                 Don’t have an account?
@@ -127,19 +132,6 @@ const LoginPage = () => {
                     </div>
                 </div>
             </main>
-
-            {/* Footer Section */}
-            <footer className="flex justify-center items-center space-x-6 w-full py-6 px-4 bg-transparent">
-                <span className="text-[10px] font-bold tracking-widest uppercase text-gray-400">© {new Date().getFullYear()} AYURCARE360</span>
-                <div className="flex space-x-6">
-                    <Link className="text-[10px] font-bold tracking-widest uppercase text-gray-400 hover:text-[#3A6447] transition-colors" to="/privacy">
-                        Privacy Policy
-                    </Link>
-                    <Link className="text-[10px] font-bold tracking-widest uppercase text-gray-400 hover:text-[#3A6447] transition-colors" to="/terms">
-                        Terms & Conditions
-                    </Link>
-                </div>
-            </footer>
         </div>
     );
 };

@@ -18,6 +18,8 @@ export const patientApi = {
     updateProfileContact: async (data) => (await axiosInstance.put('/api/patient/profile/contact-information/update', data)).data,
     getProfileEmergency: async () => (await axiosInstance.get('/api/patient/profile/emergency-contact')).data,
     updateProfileEmergency: async (data) => (await axiosInstance.put('/api/patient/profile/emergency-contact/update', data)).data,
+    getProfileMedical: async () => (await axiosInstance.get('/api/patient/profile/medical-information')).data,
+    updateProfileMedical: async (data) => (await axiosInstance.put('/api/patient/profile/medical-information/update', data)).data, // <-- ADD THIS
 
     // --- SETTINGS ---
     getSettingsAccount: async () => (await axiosInstance.get('/api/patient/settings/account-details')).data,

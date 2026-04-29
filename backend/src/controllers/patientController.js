@@ -182,6 +182,19 @@ exports.getProfileMedical = async (req, res) => {
     }
 };
 
+exports.updateProfileMedical = async (req, res) => {
+    try {
+        const patientId = await getPatientId(req.user.id, res);
+        if (!patientId) return;
+
+        const data = await PatientModel.updateProfileMedical(patientId, req.body);
+        res.status(200).json({ message: 'Medical info updated', data });
+    } catch (err) {
+        logger.error(`updateProfileMedical Error: ${err.message}`);
+        res.status(500).json({ error: 'Failed to update medical info' });
+    }
+};
+
 exports.getProfileContact = async (req, res) => {
     try {
         const patientId = await getPatientId(req.user.id, res);
