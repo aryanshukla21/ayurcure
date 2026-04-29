@@ -32,4 +32,16 @@ export const ecommerceApi = {
     getCartProductDetails: async () => (await axiosInstance.get('/api/cart/product-details')).data,
     getCartOrderSummary: async () => (await axiosInstance.get('/api/cart/order-summary')).data,
     applyPromoCode: async (code) => (await axiosInstance.post('/api/cart/apply-promo-code', { code })).data,
+
+    // --- CHECKOUT & PAYMENTS ---
+    createOrder: async (payload) => {
+        // Updated to use axiosInstance and added '/api/' prefix if that matches your backend routing
+        const response = await axiosInstance.post('/api/ecommerce/orders', payload);
+        return response.data;
+    },
+    verifyPayment: async (payload) => {
+        // Updated to use axiosInstance and added '/api/' prefix
+        const response = await axiosInstance.post('/api/ecommerce/orders/verify', payload);
+        return response.data;
+    },
 };

@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const ctrl = require('../controllers/ecommerceController');
+const ctrl = module.exports; // Self-referencing exports since routes are in same file
 const { requireAuth } = require('../middlewares/authMiddleware');
 
 // ==========================================
@@ -101,5 +101,15 @@ router.get('/cart/order-summary', ctrl.getCartOrderSummary);
 
 // Frontend: ecommerceApi.applyPromoCode
 router.post('/cart/apply-promo-code', ctrl.applyPromoCode);
+
+
+// ==========================================
+// 5. CHECKOUT & PAYMENT INTEGRATION
+// ==========================================
+// Frontend: ecommerceApi.createOrder
+router.post('/ecommerce/orders', ctrl.createOrder);
+
+// Frontend: ecommerceApi.verifyPayment
+router.post('/ecommerce/orders/verify', ctrl.verifyPayment);
 
 module.exports = router;

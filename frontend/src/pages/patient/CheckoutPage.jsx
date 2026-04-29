@@ -77,7 +77,7 @@ const CheckoutPage = () => {
         };
 
         try {
-            // If COD, just place order directly
+            // 1. If COD, place order directly and finish
             if (selectedPayment === 'cod') {
                 await ecommerceApi.createOrder(orderPayload);
                 clearCart();
@@ -85,7 +85,7 @@ const CheckoutPage = () => {
                 return;
             }
 
-            // For Online Payments: Load Razorpay
+            // 2. For Online Payments: Load Razorpay SDK
             const res = await loadRazorpayScript();
             if (!res) {
                 alert('Razorpay SDK failed to load. Are you online?');
@@ -93,30 +93,32 @@ const CheckoutPage = () => {
                 return;
             }
 
-            // 1. Create order on backend (Backend must call razorpay.orders.create)
+            // 3. Create initial pending order on backend
             const orderData = await ecommerceApi.createOrder(orderPayload);
 
-            // 2. Open Razorpay Checkout Modal
+            // 4. Configure Razorpay Checkout Modal
             const options = {
-                key: import.meta.env.VITE_RAZORPAY_KEY_ID, // Your public Razorpay key
+                key: import.meta.env.VITE_RAZORPAY_KEY_ID,
                 amount: orderData.amount, // amount in paise
-                currency: "INR",
-                name: "AyurCare360",
+                currency: orderData.currency || "INR", // Dynamically use backend currency
+                name: "AyurCure",
                 description: "Pharmacy Order Payment",
-                order_id: orderData.razorpay_order_id, // Returned from backend
+                order_id: orderData.razorpay_order_id,
                 handler: async function (response) {
-                    // 3. Verify payment on backend
+                    // 5. Success Handler: Verify payment signature on backend
                     try {
                         await ecommerceApi.verifyPayment({
                             razorpay_payment_id: response.razorpay_payment_id,
                             razorpay_order_id: response.razorpay_order_id,
                             razorpay_signature: response.razorpay_signature,
-                            order_id: orderData.id // your internal DB order ID
+                            order_id: orderData.id
                         });
                         clearCart();
                         navigate('/patient/pharmacy-orders', { state: { success: true } });
                     } catch (err) {
-                        alert("Payment verification failed!");
+                        console.error(err);
+                        alert("Payment verification failed! Please contact support if amount was deducted.");
+                        setIsSubmitting(false); // Reset UI so they can retry
                     }
                 },
                 prefill: {
@@ -125,17 +127,31 @@ const CheckoutPage = () => {
                     contact: formData.mobile
                 },
                 theme: {
-                    color: "#52735B"
+                    color: "#52735B" // Your AyurCure theme color
+                },
+                modal: {
+                    // Handle user closing the popup manually
+                    ondismiss: function () {
+                        setIsSubmitting(false);
+                    }
                 }
             };
 
             const paymentObject = new window.Razorpay(options);
+
+            // 6. Handle Payment Failure explicitly
+            paymentObject.on('payment.failed', function (response) {
+                console.error("Payment Failed:", response.error);
+                alert(`Payment Failed: ${response.error.description}`);
+                setIsSubmitting(false);
+            });
+
+            // 7. Open the modal
             paymentObject.open();
 
         } catch (error) {
             console.error('Checkout error:', error);
             alert('Failed to process checkout. Please try again.');
-        } finally {
             setIsSubmitting(false);
         }
     };

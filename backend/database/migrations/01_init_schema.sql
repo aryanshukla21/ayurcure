@@ -284,9 +284,22 @@ CREATE TABLE Orders (
     shipping_address TEXT NOT NULL,
     payment_method VARCHAR(50),
     payment_status VARCHAR(50),
+    razorpay_order_id VARCHAR(255), 
+    razorpay_payment_id VARCHAR(255),
     order_status VARCHAR(50),
     delivery_eta TIMESTAMP,
     pending_tasks INT DEFAULT 0,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE PaymentHistory (
+    id SERIAL PRIMARY KEY,
+    order_id UUID REFERENCES Orders(id) ON DELETE CASCADE,
+    patient_id UUID REFERENCES PatientProfiles(id) ON DELETE CASCADE,
+    razorpay_order_id VARCHAR(255),
+    razorpay_payment_id VARCHAR(255),
+    amount DECIMAL(10, 2) NOT NULL,
+    status VARCHAR(50) NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 

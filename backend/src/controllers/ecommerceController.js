@@ -294,7 +294,6 @@ exports.getPaymentSummary = async (req, res) => {
     }
 };
 
-// --- UPDATED METHOD ---
 exports.downloadInvoice = async (req, res) => {
     try {
         const patientId = await getPatientId(req.user.id, res);
@@ -392,7 +391,7 @@ exports.applyPromoCode = async (req, res) => {
 };
 
 // ==========================================
-// 5. PAYMENT WEBHOOK MODULE
+// 5. PAYMENT & WEBHOOK MODULE
 // ==========================================
 
 exports.handleRazorpayWebhook = async (req, res) => {
@@ -423,12 +422,15 @@ exports.handleRazorpayWebhook = async (req, res) => {
             case 'payment.captured':
             case 'order.paid':
                 const paymentEntity = event.payload.payment.entity;
-                const razorpayOrderId = paymentEntity.order_id; // The gateway order ID
+                const razorpayOrderId = paymentEntity.order_id;
+                const razorpayPaymentId = paymentEntity.id;
 
-                // ACTION REQUIRED: Ensure EcommerceModel has an 'updatePaymentStatus' or similar method 
-                // that finds an order by razorpay_order_id and updates its status.
-                // Example:
-                // await EcommerceModel.updatePaymentStatus(razorpayOrderId, 'Paid');
+                // Use Razorpay's Order ID to find your internal order and update its status
+                await EcommerceModel.updatePaymentStatusByRazorpayOrderId(
+                    razorpayOrderId,
+                    'Paid',
+                    razorpayPaymentId
+                );
 
                 logger.info(`Order mapped to Gateway ID ${razorpayOrderId} successfully marked as Paid via Webhook.`);
                 break;
@@ -451,5 +453,79 @@ exports.handleRazorpayWebhook = async (req, res) => {
         logger.error(`handleRazorpayWebhook Error: ${err.message}`);
         // Send a 500 so Razorpay knows to retry the webhook later
         res.status(500).send('Webhook Processing Error');
+    }
+};
+
+exports.createOrder = async (req, res) => {
+    try {
+        const patientId = await getPatientId(req.user.id, res);
+        if (!patientId) return;
+
+        const { items, total_amount, shipping_address, payment_method } = req.body;
+
+        // 1. Save the initial order to the database (Status: 'Pending')
+        const internalOrderId = await EcommerceModel.createNewOrder({
+            patientId,
+            items,
+            total_amount,
+            shipping_address,
+            payment_method,
+            status: 'Pending'
+        });
+
+        // 2. Handle Cash on Delivery (COD)
+        if (payment_method === 'Cash') {
+            return res.status(200).json({
+                success: true,
+                message: 'Order placed successfully',
+                id: internalOrderId
+            });
+        }
+
+        // 3. Handle Online Payment via Razorpay
+        // Your paymentService expects (amountInRupees, receiptId)
+        const razorpayOrder = await paymentService.createOrder(total_amount, internalOrderId);
+
+        // Save Razorpay order ID to internal database for webhook mapping
+        await EcommerceModel.saveRazorpayOrderId(internalOrderId, razorpayOrder.id);
+
+        // Return both internal DB ID and Razorpay Order details to frontend
+        res.status(200).json({
+            id: internalOrderId,
+            amount: razorpayOrder.amount,
+            razorpay_order_id: razorpayOrder.id,
+            currency: razorpayOrder.currency
+        });
+
+    } catch (err) {
+        logger.error(`createOrder Error: ${err.message}`);
+        res.status(500).json({ error: 'Failed to create order' });
+    }
+};
+
+exports.verifyPayment = async (req, res) => {
+    try {
+        const { razorpay_payment_id, razorpay_order_id, razorpay_signature, order_id } = req.body;
+
+        // 1. Verify the signature cryptographically
+        const isValid = paymentService.verifyPaymentSignature(
+            razorpay_order_id,
+            razorpay_payment_id,
+            razorpay_signature
+        );
+
+        if (!isValid) {
+            // Update order status to failed if necessary
+            await EcommerceModel.updatePaymentStatus(order_id, 'Failed');
+            return res.status(400).json({ error: 'Payment verification failed' });
+        }
+
+        // 2. Update internal database status to 'Paid'
+        await EcommerceModel.updatePaymentStatus(order_id, 'Paid', razorpay_payment_id);
+
+        res.status(200).json({ success: true, message: 'Payment verified successfully' });
+    } catch (err) {
+        logger.error(`verifyPayment Error: ${err.message}`);
+        res.status(500).json({ error: 'Internal server error during verification' });
     }
 };

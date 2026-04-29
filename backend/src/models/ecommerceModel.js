@@ -239,6 +239,136 @@ class EcommerceModel {
             estimated_tax_percentage: 18.00
         };
     }
+
+    // ==========================================
+    // 5. CHECKOUT & PAYMENT LIFECYCLE
+    // ==========================================
+
+    static async createNewOrder(orderData) {
+        const { patientId, items, total_amount, shipping_address, payment_method, status } = orderData;
+        const client = await db.connect(); // Use a dedicated client for transaction
+
+        try {
+            await client.query('BEGIN');
+
+            // 1. Insert the main order
+            const orderQuery = `
+                INSERT INTO Orders (patient_id, total_amount, shipping_address, payment_method, order_status, payment_status)
+                VALUES ($1, $2, $3, $4, $5, 'Pending')
+                RETURNING id;
+            `;
+            const orderRes = await client.query(orderQuery, [
+                patientId, total_amount, shipping_address, payment_method, status
+            ]);
+            const orderId = orderRes.rows[0].id;
+
+            // 2. Insert all cart items associated with this order
+            for (let item of items) {
+                const itemQuery = `
+                    INSERT INTO OrderItems (order_id, product_id, quantity, price_at_purchase)
+                    VALUES ($1, $2, $3, $4);
+                `;
+                await client.query(itemQuery, [orderId, item.product_id, item.quantity, item.price]);
+            }
+
+            await client.query('COMMIT');
+            return orderId;
+        } catch (error) {
+            await client.query('ROLLBACK');
+            throw error;
+        } finally {
+            client.release();
+        }
+    }
+
+    static async saveRazorpayOrderId(internalOrderId, razorpayOrderId) {
+        const query = `
+            UPDATE Orders 
+            SET razorpay_order_id = $1 
+            WHERE id = $2;
+        `;
+        await db.query(query, [razorpayOrderId, internalOrderId]);
+    }
+
+    static async updatePaymentStatus(internalOrderId, status, razorpayPaymentId = null) {
+        const client = await db.connect();
+        try {
+            await client.query('BEGIN');
+
+            // 1. Update the main Orders table
+            const updateQuery = `
+                UPDATE Orders 
+                SET payment_status = $1, razorpay_payment_id = $2
+                WHERE id = $3
+                RETURNING id, patient_id, razorpay_order_id, total_amount;
+            `;
+            const orderRes = await client.query(updateQuery, [status, razorpayPaymentId, internalOrderId]);
+
+            // 2. Log the payment event into the dedicated PaymentHistory table
+            if (orderRes.rows.length > 0) {
+                const order = orderRes.rows[0];
+                const insertHistoryQuery = `
+                    INSERT INTO PaymentHistory (order_id, patient_id, razorpay_order_id, razorpay_payment_id, amount, status)
+                    VALUES ($1, $2, $3, $4, $5, $6);
+                `;
+                await client.query(insertHistoryQuery, [
+                    order.id,
+                    order.patient_id,
+                    order.razorpay_order_id,
+                    razorpayPaymentId,
+                    order.total_amount,
+                    status
+                ]);
+            }
+
+            await client.query('COMMIT');
+        } catch (error) {
+            await client.query('ROLLBACK');
+            throw error;
+        } finally {
+            client.release();
+        }
+    }
+
+    static async updatePaymentStatusByRazorpayOrderId(razorpayOrderId, status, razorpayPaymentId = null) {
+        const client = await db.connect();
+        try {
+            await client.query('BEGIN');
+
+            // 1. Update the main Orders table
+            const updateQuery = `
+                UPDATE Orders 
+                SET payment_status = $1, razorpay_payment_id = $2
+                WHERE razorpay_order_id = $3
+                RETURNING id, patient_id, razorpay_order_id, total_amount;
+            `;
+            const orderRes = await client.query(updateQuery, [status, razorpayPaymentId, razorpayOrderId]);
+
+            // 2. Log the payment event into the dedicated PaymentHistory table
+            if (orderRes.rows.length > 0) {
+                const order = orderRes.rows[0];
+                const insertHistoryQuery = `
+                    INSERT INTO PaymentHistory (order_id, patient_id, razorpay_order_id, razorpay_payment_id, amount, status)
+                    VALUES ($1, $2, $3, $4, $5, $6);
+                `;
+                await client.query(insertHistoryQuery, [
+                    order.id,
+                    order.patient_id,
+                    order.razorpay_order_id,
+                    razorpayPaymentId,
+                    order.total_amount,
+                    status
+                ]);
+            }
+
+            await client.query('COMMIT');
+        } catch (error) {
+            await client.query('ROLLBACK');
+            throw error;
+        } finally {
+            client.release();
+        }
+    }
 }
 
 module.exports = EcommerceModel;
