@@ -8,17 +8,28 @@ const ProfileCompletionPage = () => {
     const navigate = useNavigate();
     const location = useLocation();
 
-    // Data passed from Step 1 & 2
-    const { email, phone, otpValue } = location.state || {};
+    // Extract BOTH specific OTPs passed from Step 2
+    const { email, phone, emailOtp, phoneOtp } = location.state || {};
 
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState('');
 
+    // --- RELOAD DETECTION LOGIC ---
     useEffect(() => {
-        if (!email || !phone) {
-            navigate('/signup'); // Kick back to step 1 if data is missing
+        const navEntries = window.performance.getEntriesByType('navigation');
+        const isReload = navEntries.length > 0 && navEntries[0].type === 'reload';
+
+        if (isReload || !email || !phone || !emailOtp || !phoneOtp) {
+            navigate('/signup', { replace: true });
         }
-    }, [email, phone, navigate]);
+    }, [email, phone, emailOtp, phoneOtp, navigate]);
+
+    useEffect(() => {
+        // Ensure we have all required data before rendering, otherwise kick back to start
+        if (!email || !phone || !emailOtp || !phoneOtp) {
+            navigate('/signup');
+        }
+    }, [email, phone, emailOtp, phoneOtp, navigate]);
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -39,8 +50,9 @@ const ProfileCompletionPage = () => {
                 email: email,
                 phone: phone,
                 password: password,
-                emailOtp: otpValue, // Combined OTP verified
-                phoneOtp: otpValue
+                // Pass the correctly separated OTP variables here
+                emailOtp: emailOtp,
+                phoneOtp: phoneOtp
             });
 
             // 2. Update Personal Info (Age & Gender)
@@ -52,7 +64,8 @@ const ProfileCompletionPage = () => {
             // Proceed to Step 4
             navigate('/symptoms');
         } catch (err) {
-            setError(err.response?.data?.error || 'Registration failed. Check your details or OTPs.');
+            // Uses the customMessage from the new Axios interceptor, or falls back safely
+            setError(err.customMessage || err.response?.data?.error || 'Registration failed. Check your details or OTPs.');
         } finally {
             setIsLoading(false);
         }

@@ -7,14 +7,18 @@ const logger = require('../utils/logger');
 const { OAuth2Client } = require('google-auth-library');
 
 const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
-const tempOtpCache = new Map();
 
-// --- UPDATED COOKIE FUNCTION ---
+// ==========================================
+// THE CACHES
+// ==========================================
+const tempOtpCache = new Map(); // Stores generated Email OTPs
+const verifiedPhonesCache = new Map(); // Stores successful Twilio Phone verifications (Prevents 404 Double-Dip)
+
 const setTokenCookie = (res, token) => {
     res.cookie('token', token, {
         httpOnly: true,
-        secure: process.env.NODE_ENV === 'production', // Must be true in production (requires HTTPS)
-        sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax', // 'none' required for cross-domain
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
         maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
     });
 };
@@ -26,29 +30,112 @@ const setTokenCookie = (res, token) => {
 // STEP 1: Send OTPs but DO NOT create the user in the database yet
 exports.sendSignupOtps = async (req, res) => {
     try {
-        const { email, phone } = req.body;
+        let { email, phone } = req.body;
         if (!email || !phone) return res.status(400).json({ error: 'Email and Phone are required.' });
 
-        await notificationService.sendPhoneOTP(phone);
+        email = email.toLowerCase().trim();
+
+        const existingUser = await UserModel.getUserByEmail(email) || await UserModel.getUserByPhone(phone);
+        if (existingUser) {
+            return res.status(409).json({ error: 'Account already exists. Please login.' });
+        }
+
         const emailOtp = authService.generateOTP();
         tempOtpCache.set(email, { otp: emailOtp, expiresAt: Date.now() + 5 * 60000 });
-        await notificationService.sendEmailVerification(email, emailOtp);
+
+        await Promise.all([
+            notificationService.sendPhoneOTP(phone).catch(err => {
+                logger.error(`SMS Error: ${err.message}`);
+                throw new Error('Failed to send SMS OTP.');
+            }),
+            notificationService.sendEmailVerification(email, emailOtp).catch(err => {
+                logger.error(`Email Error: ${err.message}`);
+                throw new Error('Failed to send Email OTP. Check SendGrid/SMTP config.');
+            })
+        ]);
 
         res.status(200).json({ message: 'Verification codes sent.' });
     } catch (error) {
         logger.error(`Pre-Signup OTP Error: ${error.message}`);
-        res.status(500).json({ error: 'Failed to send verification codes.' });
+        res.status(500).json({ error: error.message || 'Failed to send verification codes.' });
+    }
+};
+
+// STEP 2: Pre-Registration & Post-Registration OTP Verification
+exports.verifyOtp = async (req, res) => {
+    try {
+        let { email, phone, otp } = req.body;
+
+        if (!otp) return res.status(400).json({ error: 'OTP is required.' });
+
+        // Email Verification Logic
+        if (email) {
+            email = email.toLowerCase().trim();
+
+            // Check if user is already in DB (Forgot Password flow)
+            const user = await UserModel.getUserByEmail(email);
+            if (user) {
+                req.body.token = otp;
+                return await exports.verifyEmailToken(req, res);
+            }
+
+            // Otherwise, it's the Signup Flow
+            if (!tempOtpCache.has(email)) {
+                return res.status(400).json({ error: 'OTP expired or server restarted. Please click resend.' });
+            }
+
+            const cachedData = tempOtpCache.get(email);
+            if (cachedData.otp !== otp) return res.status(400).json({ error: 'Invalid Email OTP.' });
+            if (Date.now() > cachedData.expiresAt) {
+                tempOtpCache.delete(email);
+                return res.status(400).json({ error: 'Email OTP has expired. Please resend.' });
+            }
+
+            return res.status(200).json({ message: 'Email OTP verified successfully.' });
+        }
+
+        // Phone Verification Logic
+        if (phone && !email) {
+            const isApproved = await notificationService.verifyPhoneOTP(phone, otp);
+            if (!isApproved) return res.status(400).json({ error: 'Invalid or expired phone OTP.' });
+
+            // TWILIO FIX: Cache the approval so Step 3 doesn't hit Twilio again
+            verifiedPhonesCache.set(phone, { verified: true, expiresAt: Date.now() + 15 * 60000 });
+
+            return res.status(200).json({ message: 'Phone OTP verified successfully.' });
+        }
+
+        res.status(400).json({ error: 'Email or Phone required.' });
+    } catch (error) {
+        logger.error(`OTP Verify Error: ${error.message}`);
+        res.status(500).json({ error: 'Verification failed.' });
     }
 };
 
 // STEP 3: Verify both OTPs and Permanently Store User Details
 exports.verifyAndRegister = async (req, res) => {
     try {
-        const { role, full_name, email, phone, password, emailOtp, phoneOtp } = req.body;
+        let { role, full_name, email, phone, password, emailOtp, phoneOtp } = req.body;
+        email = email.toLowerCase().trim();
 
-        const isPhoneValid = await notificationService.verifyPhoneOTP(phone, phoneOtp);
-        if (!isPhoneValid) return res.status(401).json({ error: 'Invalid or expired Phone OTP.' });
+        // 1. Verify Phone (TWILIO FIX: Check cache first to prevent 404 error)
+        let isPhoneValid = false;
+        const cachedPhoneData = verifiedPhonesCache.get(phone);
 
+        if (cachedPhoneData && Date.now() <= cachedPhoneData.expiresAt) {
+            isPhoneValid = true;
+        } else {
+            // Fallback just in case cache expired or they skipped Step 2
+            try {
+                isPhoneValid = await notificationService.verifyPhoneOTP(phone, phoneOtp);
+            } catch (err) {
+                logger.error(`Twilio fallback error: ${err.message}`);
+            }
+        }
+
+        if (!isPhoneValid) return res.status(401).json({ error: 'Invalid, expired, or previously consumed Phone OTP.' });
+
+        // 2. Verify Email
         const cachedEmailData = tempOtpCache.get(email);
         if (!cachedEmailData || cachedEmailData.otp !== emailOtp || Date.now() > cachedEmailData.expiresAt) {
             return res.status(401).json({ error: 'Invalid or expired Email OTP.' });
@@ -56,7 +143,9 @@ exports.verifyAndRegister = async (req, res) => {
 
         // Remove from cache after successful final registration
         tempOtpCache.delete(email);
+        verifiedPhonesCache.delete(phone);
 
+        // 3. Create User
         const password_hash = await authService.hashData(password);
         const newUser = await UserModel.createUser({
             role: role || 'patient',
@@ -197,79 +286,38 @@ exports.verifyPhoneOTP = async (req, res) => {
     }
 };
 
-// STEP 2: Pre-Registration & Post-Registration OTP Verification
-exports.verifyOtp = async (req, res) => {
-    try {
-        const { email, phone, otp } = req.body;
-
-        if (!otp) return res.status(400).json({ error: 'OTP is required.' });
-
-        // 1. Check pre-registration cache (Signup Step 2)
-        if (email && tempOtpCache.has(email)) {
-            const cachedData = tempOtpCache.get(email);
-            if (cachedData.otp !== otp) {
-                return res.status(400).json({ error: 'Invalid OTP.' });
-            }
-            if (Date.now() > cachedData.expiresAt) {
-                return res.status(400).json({ error: 'OTP has expired.' });
-            }
-            // Valid pre-registration OTP! Do NOT delete from cache yet so verifyAndRegister can use it.
-            return res.status(200).json({ message: 'OTP verified successfully.' });
-        }
-
-        // 2. Check pre-registration phone (Signup Step 2)
-        if (phone && !email) {
-            const isApproved = await notificationService.verifyPhoneOTP(phone, otp);
-            if (!isApproved) return res.status(400).json({ error: 'Invalid or expired phone OTP.' });
-            return res.status(200).json({ message: 'Phone OTP verified successfully.' });
-        }
-
-        // 3. Fallback to legacy/DB verification (Forgot Password / Email Verification)
-        if (email) {
-            req.body.token = otp;
-            return await exports.verifyEmailToken(req, res);
-        } else if (phone) {
-            if (!req.user) {
-                const user = await UserModel.getUserByEmail(email);
-                if (user) req.user = user;
-            }
-            return await exports.verifyPhoneOTP(req, res);
-        }
-
-        res.status(400).json({ error: 'Email or Phone required.' });
-    } catch (error) {
-        logger.error(`OTP Verify Error: ${error.message}`);
-        res.status(500).json({ error: 'Verification failed.' });
-    }
-};
-
 // Handle Pre-Registration (Timer) & Post-Registration Resends
 exports.resendOtp = async (req, res) => {
     try {
-        const { email, phone } = req.body;
-        let successMessage = '';
+        let { email, phone } = req.body;
+        let messages = [];
 
         if (email) {
-            // Check if user is in DB (Forgot password / account active flow)
+            email = email.toLowerCase().trim();
             const user = await UserModel.getUserByEmail(email);
+
             if (user) {
-                return await exports.requestEmailVerification(req, res);
+                // Forgot password / active account flow
+                const otp = authService.generateOTP();
+                const otpHash = await authService.hashData(otp);
+                await UserModel.updateOtp(user.id, otpHash, new Date(Date.now() + 5 * 60000));
+                await notificationService.sendEmailVerification(email, otp);
             } else {
-                // User is in pre-registration (Signup Step 2)
+                // Pre-registration flow
                 const emailOtp = authService.generateOTP();
                 tempOtpCache.set(email, { otp: emailOtp, expiresAt: Date.now() + 5 * 60000 });
                 await notificationService.sendEmailVerification(email, emailOtp);
-                successMessage = 'Verification code sent to email.';
             }
+            messages.push('email');
         }
 
         if (phone) {
             await notificationService.sendPhoneOTP(phone);
-            successMessage = successMessage ? 'Verification codes sent to email and phone.' : 'Verification code sent to phone.';
+            messages.push('phone');
         }
 
-        if (successMessage) {
-            return res.status(200).json({ message: successMessage });
+        if (messages.length > 0) {
+            return res.status(200).json({ message: `Verification code(s) sent to ${messages.join(' and ')}.` });
         }
 
         return res.status(400).json({ error: 'Provide either email or phone to resend OTP.' });

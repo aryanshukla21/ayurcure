@@ -71,10 +71,10 @@ class PatientModel {
 
     static async getWeightTrackerLogs(patientId) {
         const query = `
-            SELECT log_date, weight 
+            SELECT DATE(created_at) AS log_date, weight 
             FROM HealthStats 
             WHERE patient_id = $1 AND weight IS NOT NULL
-            ORDER BY log_date ASC 
+            ORDER BY created_at ASC 
             LIMIT 30;
         `;
         const { rows } = await db.query(query, [patientId]);
@@ -128,6 +128,24 @@ class PatientModel {
         const { rows } = await db.query(query, [patientId]);
         return rows[0];
     }
+
+    // static async updateProfileMedical(patientId, data) {
+    //     const query = `
+    //         UPDATE PatientProfiles 
+    //         SET 
+    //             chief_complaints = COALESCE($1, chief_complaints),
+    //             health_history = COALESCE($2, health_history),
+    //             updated_at = CURRENT_TIMESTAMP
+    //         WHERE id = $3 
+    //         RETURNING chief_complaints, health_history;
+    //     `;
+    //     const { rows } = await db.query(query, [
+    //         data.chief_complaints,
+    //         data.health_history,
+    //         patientId
+    //     ]);
+    //     return rows[0];
+    // }
 
     static async updateProfilePersonal(patientId, data) {
         const query = `
@@ -354,10 +372,10 @@ class PatientModel {
 
     static async getReportVitality(patientId) {
         const query = `
-            SELECT log_date, dosha_balance 
+            SELECT DATE(created_at) AS log_date, dosha_balance 
             FROM HealthStats 
             WHERE patient_id = $1 AND dosha_balance IS NOT NULL
-            ORDER BY log_date ASC 
+            ORDER BY created_at ASC 
             LIMIT 10;
         `;
         const { rows } = await db.query(query, [patientId]);

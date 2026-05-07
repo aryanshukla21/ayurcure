@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { Timer } from 'lucide-react';
 import { authApi } from '../../api/authApi';
@@ -10,8 +10,9 @@ const VerifyAccountPage = () => {
   // Extract email/phone passed from Step 1
   const { email, phone } = location.state || {};
 
-  const [otp, setOtp] = useState(new Array(6).fill(""));
-  const inputRefs = useRef([]);
+  // Track both OTPs required by the backend
+  const [phoneOtp, setPhoneOtp] = useState(new Array(6).fill(""));
+  const [emailOtp, setEmailOtp] = useState(new Array(6).fill(""));
 
   // Timer and API States
   const [timer, setTimer] = useState(30);
@@ -19,6 +20,16 @@ const VerifyAccountPage = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [isResending, setIsResending] = useState(false);
   const [error, setError] = useState('');
+
+  // RELOAD DETECTION LOGIC
+  useEffect(() => {
+    const navEntries = window.performance.getEntriesByType('navigation');
+    const isReload = navEntries.length > 0 && navEntries[0].type === 'reload';
+
+    if (isReload || !email || !phone) {
+      navigate('/signup', { replace: true });
+    }
+  }, [email, phone, navigate]);
 
   // 30-Second Reverse Timer Logic
   useEffect(() => {
@@ -34,11 +45,17 @@ const VerifyAccountPage = () => {
     return () => clearInterval(interval);
   }, [timer]);
 
-  const handleChange = (element, index) => {
+  const handlePhoneChange = (element, index) => {
     if (isNaN(element.value)) return false;
-    setOtp([...otp.map((d, idx) => (idx === index ? element.value : d))]);
+    setPhoneOtp([...phoneOtp.map((d, idx) => (idx === index ? element.value : d))]);
+    if (element.value !== "" && element.nextSibling) {
+      element.nextSibling.focus();
+    }
+  };
 
-    // Focus next input
+  const handleEmailChange = (element, index) => {
+    if (isNaN(element.value)) return false;
+    setEmailOtp([...emailOtp.map((d, idx) => (idx === index ? element.value : d))]);
     if (element.value !== "" && element.nextSibling) {
       element.nextSibling.focus();
     }
@@ -51,15 +68,16 @@ const VerifyAccountPage = () => {
     setError('');
 
     try {
-      // Call backend to generate and send new OTP
-      await authApi.resendOtp({ phone });
+      // Call backend to generate and send new OTPs for both
+      await authApi.resendOtp({ email, phone });
 
       // Reset timer and block resend
       setTimer(30);
       setCanResend(false);
-      setOtp(new Array(6).fill(""));
+      setPhoneOtp(new Array(6).fill(""));
+      setEmailOtp(new Array(6).fill(""));
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to resend OTP. Try again.');
+      setError(err.response?.data?.error || 'Failed to resend OTPs. Try again.');
     } finally {
       setIsResending(false);
     }
@@ -67,10 +85,11 @@ const VerifyAccountPage = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    const otpValue = otp.join("");
+    const finalPhoneOtp = phoneOtp.join("");
+    const finalEmailOtp = emailOtp.join("");
 
-    if (otpValue.length < 6) {
-      setError("Please enter a valid 6-digit code.");
+    if (finalPhoneOtp.length < 6 || finalEmailOtp.length < 6) {
+      setError("Please enter valid 6-digit codes for both fields.");
       return;
     }
 
@@ -78,15 +97,18 @@ const VerifyAccountPage = () => {
     setError('');
 
     try {
-      // Verify OTP with backend
-      await authApi.verifyPhoneOtp({ phone, otp: otpValue });
+      // Pre-verify Phone OTP 
+      await authApi.verifyOtp({ phone, otp: finalPhoneOtp });
 
-      // On success, proceed to Step 3, passing the verified data
+      // Pre-verify Email OTP
+      await authApi.verifyOtp({ email, otp: finalEmailOtp });
+
+      // On success, proceed to Step 3, passing ALL verified data
       navigate('/profile-completion', {
-        state: { phone, otpValue }
+        state: { email, phone, phoneOtp: finalPhoneOtp, emailOtp: finalEmailOtp }
       });
     } catch (err) {
-      setError(err.response?.data?.message || 'Invalid code. Please try again.');
+      setError(err.response?.data?.error || 'Invalid code. Please try again.');
     } finally {
       setIsLoading(false);
     }
@@ -126,31 +148,54 @@ const VerifyAccountPage = () => {
             Step 2 of 4
           </span>
           <h1 className="text-3xl md:text-4xl font-['Noto_Serif'] italic tracking-tight text-[#5C7F63] mb-3">
-            Verify your number
+            Verify Contact Details
           </h1>
           <p className="font-medium text-sm text-[#414941] mb-6">
-            We’ve sent a 6-digit code to your mobile number
+            Enter the 6-digit codes sent to your email and phone
           </p>
 
           {error && <p className="text-red-500 text-xs font-bold mb-4">{error}</p>}
 
-          {/* OTP Input Grid */}
-          <form className="space-y-10" onSubmit={handleSubmit}>
-            <div className="flex justify-between gap-2 max-w-xs mx-auto">
-              {otp.map((data, index) => (
-                <input
-                  key={index}
-                  type="text"
-                  name="otp"
-                  maxLength="1"
-                  placeholder="•"
-                  className="w-10 h-14 text-center text-xl font-bold rounded-lg bg-white border border-[#c1c9bf]/40 focus:ring-1 focus:ring-[#5C7F63] focus:border-[#5C7F63] outline-none transition-all duration-200"
-                  value={data}
-                  onChange={e => handleChange(e.target, index)}
-                  onFocus={e => e.target.select()}
-                  disabled={isLoading}
-                />
-              ))}
+          <form className="space-y-6" onSubmit={handleSubmit}>
+
+            {/* Phone OTP Section */}
+            <div>
+              <p className="text-xs font-bold text-[#414941] text-left mb-2 uppercase tracking-widest">Phone OTP</p>
+              <div className="flex justify-between gap-2 max-w-xs mx-auto">
+                {phoneOtp.map((data, index) => (
+                  <input
+                    key={`phone-${index}`}
+                    type="text"
+                    maxLength="1"
+                    placeholder="•"
+                    className="w-10 h-12 text-center text-xl font-bold rounded-lg bg-white border border-[#c1c9bf]/40 focus:ring-1 focus:ring-[#5C7F63] focus:border-[#5C7F63] outline-none transition-all duration-200"
+                    value={data}
+                    onChange={e => handlePhoneChange(e.target, index)}
+                    onFocus={e => e.target.select()}
+                    disabled={isLoading}
+                  />
+                ))}
+              </div>
+            </div>
+
+            {/* Email OTP Section */}
+            <div className="pb-4">
+              <p className="text-xs font-bold text-[#414941] text-left mb-2 uppercase tracking-widest">Email OTP</p>
+              <div className="flex justify-between gap-2 max-w-xs mx-auto">
+                {emailOtp.map((data, index) => (
+                  <input
+                    key={`email-${index}`}
+                    type="text"
+                    maxLength="1"
+                    placeholder="•"
+                    className="w-10 h-12 text-center text-xl font-bold rounded-lg bg-white border border-[#c1c9bf]/40 focus:ring-1 focus:ring-[#5C7F63] focus:border-[#5C7F63] outline-none transition-all duration-200"
+                    value={data}
+                    onChange={e => handleEmailChange(e.target, index)}
+                    onFocus={e => e.target.select()}
+                    disabled={isLoading}
+                  />
+                ))}
+              </div>
             </div>
 
             <div className="flex flex-col gap-6">
@@ -166,7 +211,7 @@ const VerifyAccountPage = () => {
                 <Timer size={18} className="text-[#414941]" />
                 {timer > 0 ? (
                   <span className="text-sm text-[#414941] font-medium">
-                    Resend code in <span className="text-[#5C7F63] font-bold">0:{timer < 10 ? `0${timer}` : timer}</span>
+                    Resend codes in <span className="text-[#5C7F63] font-bold">0:{timer < 10 ? `0${timer}` : timer}</span>
                   </span>
                 ) : (
                   <button
@@ -175,7 +220,7 @@ const VerifyAccountPage = () => {
                     disabled={isResending || isLoading}
                     className="text-sm font-bold text-[#5C7F63] hover:underline cursor-pointer disabled:opacity-50"
                   >
-                    {isResending ? 'Sending...' : 'Resend OTP now'}
+                    {isResending ? 'Sending...' : 'Resend OTPs now'}
                   </button>
                 )}
               </div>

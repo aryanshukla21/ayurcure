@@ -60,7 +60,7 @@ class EcommerceModel {
             FROM Orders 
             WHERE patient_id = $1 
               AND order_status = 'Shipped' 
-              AND DATE(updated_at) = CURRENT_DATE;
+              AND DATE(created_at) = CURRENT_DATE;
         `;
         const { rows } = await db.query(query, [patientId]);
         return rows[0];
