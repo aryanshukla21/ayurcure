@@ -1,15 +1,41 @@
-import React, { useState, useRef } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import React, { useState, useRef, useEffect } from 'react';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { Timer } from 'lucide-react';
+import { authApi } from '../../api/authApi';
 
 const VerifyAccountPage = () => {
   const navigate = useNavigate();
+  const location = useLocation();
+
+  // Extract email/phone passed from Step 1
+  const { email, phone } = location.state || {};
+
   const [otp, setOtp] = useState(new Array(6).fill(""));
   const inputRefs = useRef([]);
 
+  // Timer and API States
+  const [timer, setTimer] = useState(30);
+  const [canResend, setCanResend] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [isResending, setIsResending] = useState(false);
+  const [error, setError] = useState('');
+
+  // 30-Second Reverse Timer Logic
+  useEffect(() => {
+    let interval;
+    if (timer > 0) {
+      interval = setInterval(() => {
+        setTimer((prev) => prev - 1);
+      }, 1000);
+    } else {
+      setCanResend(true);
+      clearInterval(interval);
+    }
+    return () => clearInterval(interval);
+  }, [timer]);
+
   const handleChange = (element, index) => {
     if (isNaN(element.value)) return false;
-
     setOtp([...otp.map((d, idx) => (idx === index ? element.value : d))]);
 
     // Focus next input
@@ -18,13 +44,52 @@ const VerifyAccountPage = () => {
     }
   };
 
-  const handleSubmit = (e) => {
+  const handleResendOtp = async () => {
+    if (!canResend) return;
+
+    setIsResending(true);
+    setError('');
+
+    try {
+      // Call backend to generate and send new OTP
+      await authApi.resendOtp({ phone });
+
+      // Reset timer and block resend
+      setTimer(30);
+      setCanResend(false);
+      setOtp(new Array(6).fill(""));
+    } catch (err) {
+      setError(err.response?.data?.message || 'Failed to resend OTP. Try again.');
+    } finally {
+      setIsResending(false);
+    }
+  };
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
     const otpValue = otp.join("");
-    console.log("Verifying OTP:", otpValue);
 
-    // TODO: Add backend verification logic here
-    // navigate('/auth/step3'); // Proceed to next step
+    if (otpValue.length < 6) {
+      setError("Please enter a valid 6-digit code.");
+      return;
+    }
+
+    setIsLoading(true);
+    setError('');
+
+    try {
+      // Verify OTP with backend
+      await authApi.verifyPhoneOtp({ phone, otp: otpValue });
+
+      // On success, proceed to Step 3, passing the verified data
+      navigate('/profile-completion', {
+        state: { phone, otpValue }
+      });
+    } catch (err) {
+      setError(err.response?.data?.message || 'Invalid code. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -63,9 +128,11 @@ const VerifyAccountPage = () => {
           <h1 className="text-3xl md:text-4xl font-['Noto_Serif'] italic tracking-tight text-[#5C7F63] mb-3">
             Verify your number
           </h1>
-          <p className="font-medium text-sm text-[#414941] mb-10">
+          <p className="font-medium text-sm text-[#414941] mb-6">
             We’ve sent a 6-digit code to your mobile number
           </p>
+
+          {error && <p className="text-red-500 text-xs font-bold mb-4">{error}</p>}
 
           {/* OTP Input Grid */}
           <form className="space-y-10" onSubmit={handleSubmit}>
@@ -81,23 +148,36 @@ const VerifyAccountPage = () => {
                   value={data}
                   onChange={e => handleChange(e.target, index)}
                   onFocus={e => e.target.select()}
+                  disabled={isLoading}
                 />
               ))}
             </div>
 
             <div className="flex flex-col gap-6">
               <button
-                className="w-full bg-[#5C7F63] text-white py-4 rounded-lg font-bold text-base hover:opacity-90 transition-all duration-300 scale-100 active:scale-95 shadow-sm"
+                className="w-full bg-[#5C7F63] text-white py-4 rounded-lg font-bold text-base hover:opacity-90 transition-all duration-300 scale-100 active:scale-95 shadow-sm disabled:opacity-50"
                 type="submit"
+                disabled={isLoading || isResending}
               >
-                Verify & Continue
+                {isLoading ? 'Verifying...' : 'Verify & Continue'}
               </button>
 
-              <div className="flex items-center justify-center gap-2 group cursor-pointer">
+              <div className="flex items-center justify-center gap-2 group">
                 <Timer size={18} className="text-[#414941]" />
-                <span className="text-sm text-[#414941] font-medium">
-                  Resend code in <span className="text-[#5C7F63] font-bold">0:30</span>
-                </span>
+                {timer > 0 ? (
+                  <span className="text-sm text-[#414941] font-medium">
+                    Resend code in <span className="text-[#5C7F63] font-bold">0:{timer < 10 ? `0${timer}` : timer}</span>
+                  </span>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={handleResendOtp}
+                    disabled={isResending || isLoading}
+                    className="text-sm font-bold text-[#5C7F63] hover:underline cursor-pointer disabled:opacity-50"
+                  >
+                    {isResending ? 'Sending...' : 'Resend OTP now'}
+                  </button>
+                )}
               </div>
             </div>
           </form>

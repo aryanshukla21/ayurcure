@@ -39,7 +39,7 @@ const ProfileCompletionPage = () => {
                 email: email,
                 phone: phone,
                 password: password,
-                emailOtp: otpValue, // Assuming UI combined OTPs
+                emailOtp: otpValue, // Combined OTP verified
                 phoneOtp: otpValue
             });
 
