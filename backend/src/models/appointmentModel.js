@@ -169,6 +169,65 @@ class AppointmentModel {
     // 3. BOOK APPOINTMENT
     // ==========================================
 
+    static async createAppointment(data) {
+        const { patientId, doctorId, slotId, reason } = data;
+
+        // Obtain a dedicated client from the pool to run a Transaction
+        const client = await db.connect();
+
+        try {
+            // Start the SQL Transaction
+            await client.query('BEGIN');
+
+            // 1. Mark the specific DoctorSlot as booked
+            const updateSlotQuery = `
+                UPDATE DoctorSlots 
+                SET is_booked = true 
+                WHERE id = $1 AND doctor_id = $2 AND is_booked = false
+                RETURNING id, start_time, end_time;
+            `;
+            const slotRes = await client.query(updateSlotQuery, [slotId, doctorId]);
+
+            // Concurrency defense: If 0 rows returned, it was already booked
+            if (slotRes.rows.length === 0) {
+                throw new Error('This specific time slot is no longer available. Please select another time.');
+            }
+
+            const finalStartTime = slotRes.rows[0].start_time;
+            const finalEndTime = slotRes.rows[0].end_time;
+
+            // 2. Insert the new Appointment into the database
+            // FIXED: Changed 'video' to 'Video' to match the PostgreSQL ENUM exactly
+            const insertQuery = `
+                INSERT INTO Appointments (patient_id, doctor_id, slot_id, start_time, end_time, mode, status, pre_consultation_symptoms)
+                VALUES ($1, $2, $3, $4, $5, 'Video', 'Scheduled', $6)
+                RETURNING id, start_time;
+            `;
+
+            const result = await client.query(insertQuery, [
+                patientId,
+                doctorId,
+                slotId,           // Good practice to store the slot_id reference too
+                finalStartTime,
+                finalEndTime,
+                reason || ''
+            ]);
+
+            // If we made it here without errors, COMMIT both queries permanently
+            await client.query('COMMIT');
+
+            return result.rows[0];
+
+        } catch (error) {
+            // If ANYTHING fails (like an ENUM error), undo the slot update
+            await client.query('ROLLBACK');
+            throw error; // Pass error back to the controller
+        } finally {
+            // Always return the client to the pool to prevent memory leaks
+            client.release();
+        }
+    }
+
     static async getAllPractitioners() {
         const query = `
             SELECT 

@@ -38,6 +38,7 @@ router.get('/appointment/:id/related-documents/download', ctrl.downloadDocument)
 // ==========================================
 // 3. BOOK APPOINTMENT 
 // ==========================================
+router.post('/appointment/create', ctrl.createAppointment);
 router.get('/book-appointment/view-all-practitioners', ctrl.getAllPractitioners);
 
 // Query params route (e.g., ?specialty=Vata)

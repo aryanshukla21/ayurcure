@@ -205,6 +205,34 @@ exports.downloadDocument = async (req, res) => {
 // 3. BOOK APPOINTMENT
 // ==========================================
 
+exports.createAppointment = async (req, res) => {
+    try {
+        const patientId = await getPatientId(req.user.id, res);
+        if (!patientId) return;
+
+        // Extract slotId instead of date/time
+        const { doctorId, slotId, reason, amount } = req.body;
+
+        if (!doctorId || !slotId) {
+            return res.status(400).json({ error: 'Doctor and a valid time slot are required to book an appointment.' });
+        }
+
+        const newAppointment = await AppointmentModel.createAppointment({
+            patientId,
+            doctorId,
+            slotId, // Passed exactly to DB
+            reason,
+            amount
+        });
+
+        res.status(201).json({ message: 'Appointment confirmed successfully!', appointment: newAppointment });
+    } catch (err) {
+        logger.error(`createAppointment Error: ${err.message}`);
+        // If slot is taken, send exactly a 409 to trigger the frontend alert
+        res.status(409).json({ error: err.message || 'Failed to confirm appointment' });
+    }
+};
+
 exports.getAllPractitioners = async (req, res) => {
     try {
         const data = await AppointmentModel.getAllPractitioners();

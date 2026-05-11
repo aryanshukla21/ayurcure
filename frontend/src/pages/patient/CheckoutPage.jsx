@@ -27,6 +27,9 @@ const CheckoutPage = () => {
     const [isLoadingProfile, setIsLoadingProfile] = useState(true);
     const [selectedPayment, setSelectedPayment] = useState('card');
 
+    // NEW: State for validation errors
+    const [formErrors, setFormErrors] = useState({});
+
     const [formData, setFormData] = useState({
         fullName: '', email: '', mobile: '', address: '', city: '', postalCode: ''
     });
@@ -60,6 +63,29 @@ const CheckoutPage = () => {
     const handleInputChange = (e) => {
         const { name, value } = e.target;
         setFormData(prev => ({ ...prev, [name]: value }));
+        // Clear specific error when user starts typing
+        if (formErrors[name]) {
+            setFormErrors(prev => ({ ...prev, [name]: null }));
+        }
+    };
+
+    // NEW: Validation Function
+    const validateForm = () => {
+        const errors = {};
+        if (!formData.fullName?.trim()) errors.fullName = "Full name is required";
+        if (!formData.email?.trim()) errors.email = "Email is required";
+        if (!formData.mobile?.trim()) errors.mobile = "Mobile number is required";
+        if (!formData.address?.trim()) errors.address = "Street address is required";
+        if (!formData.city?.trim()) errors.city = "City is required";
+        if (!formData.postalCode?.trim()) errors.postalCode = "Postal code is required";
+
+        setFormErrors(errors);
+
+        if (Object.keys(errors).length > 0) {
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+            return false;
+        }
+        return true;
     };
 
     const handlePayNow = async () => {
@@ -67,6 +93,12 @@ const CheckoutPage = () => {
             alert("Your cart is empty. Please add items to proceed.");
             return;
         }
+
+        // Trigger Validation Before Processing
+        if (!validateForm()) {
+            return; // Stops here if form is incomplete
+        }
+
         setIsSubmitting(true);
 
         const orderPayload = {
@@ -100,12 +132,11 @@ const CheckoutPage = () => {
             const options = {
                 key: import.meta.env.VITE_RAZORPAY_KEY_ID,
                 amount: orderData.amount, // amount in paise
-                currency: orderData.currency || "INR", // Dynamically use backend currency
+                currency: orderData.currency || "INR",
                 name: "AyurCure",
                 description: "Pharmacy Order Payment",
                 order_id: orderData.razorpay_order_id,
                 handler: async function (response) {
-                    // 5. Success Handler: Verify payment signature on backend
                     try {
                         await ecommerceApi.verifyPayment({
                             razorpay_payment_id: response.razorpay_payment_id,
@@ -118,7 +149,7 @@ const CheckoutPage = () => {
                     } catch (err) {
                         console.error(err);
                         alert("Payment verification failed! Please contact support if amount was deducted.");
-                        setIsSubmitting(false); // Reset UI so they can retry
+                        setIsSubmitting(false);
                     }
                 },
                 prefill: {
@@ -126,27 +157,18 @@ const CheckoutPage = () => {
                     email: formData.email,
                     contact: formData.mobile
                 },
-                theme: {
-                    color: "#52735B" // Your AyurCure theme color
-                },
-                modal: {
-                    // Handle user closing the popup manually
-                    ondismiss: function () {
-                        setIsSubmitting(false);
-                    }
-                }
+                theme: { color: "#52735B" },
+                modal: { ondismiss: function () { setIsSubmitting(false); } }
             };
 
             const paymentObject = new window.Razorpay(options);
 
-            // 6. Handle Payment Failure explicitly
             paymentObject.on('payment.failed', function (response) {
                 console.error("Payment Failed:", response.error);
                 alert(`Payment Failed: ${response.error.description}`);
                 setIsSubmitting(false);
             });
 
-            // 7. Open the modal
             paymentObject.open();
 
         } catch (error) {
@@ -169,7 +191,8 @@ const CheckoutPage = () => {
 
             <div className="flex flex-col lg:flex-row gap-10">
                 <div className="flex-1 flex flex-col gap-6">
-                    <BillingForm formData={formData} handleInputChange={handleInputChange} />
+                    {/* Pass errors to BillingForm */}
+                    <BillingForm formData={formData} handleInputChange={handleInputChange} errors={formErrors} />
                     <PaymentMethods selectedPayment={selectedPayment} setSelectedPayment={setSelectedPayment} />
                 </div>
 
