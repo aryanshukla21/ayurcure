@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Save, X, Loader2, UploadCloud, Image as ImageIcon } from 'lucide-react';
+import { adminApi } from '../../../api/adminApi'; 
 
-const AddProductForm = ({ onSubmit, isSubmitting }) => {
+const AddProductForm = () => {
     const navigate = useNavigate();
+    const [isSubmitting, setIsSubmitting] = useState(false); 
     const [imagePreview, setImagePreview] = useState(null);
 
     const [formData, setFormData] = useState({
@@ -20,17 +22,47 @@ const AddProductForm = ({ onSubmit, isSubmitting }) => {
         }
     };
 
-    const handleSubmit = (e) => {
+    const handleSubmit = async (e) => {
         e.preventDefault();
-        // Pass the form data payload to the parent page (AdminAddProductPage)
-        onSubmit({
-            name: formData.name,
-            category: formData.category,
-            sku: formData.sku,
-            price: parseFloat(formData.price),
-            stock_quantity: parseInt(formData.stock),
-            status: formData.status
-        });
+        setIsSubmitting(true);
+
+        try {
+            // THE FIX: We must use FormData to package physical files alongside text
+            const formDataToSend = new FormData();
+            
+            formDataToSend.append('name', formData.name);
+            formDataToSend.append('category', formData.category);
+            formDataToSend.append('sku', formData.sku);
+            formDataToSend.append('brand', 'Ayurcure');
+            formDataToSend.append('price', parseFloat(formData.price) || 0);
+            formDataToSend.append('stock_quantity', parseInt(formData.stock, 10) || 0);
+            formDataToSend.append('status', formData.status);
+            
+            // These satisfy your database requirements
+            formDataToSend.append('ingredients', '');
+            formDataToSend.append('benefits', '');
+            formDataToSend.append('usage_instructions', '');
+
+            // Attach the actual image file!
+            if (formData.imageFile) {
+                formDataToSend.append('imageFile', formData.imageFile);
+            }
+
+            // Send the FormData instead of the old JSON payload
+           // Send the FormData instead of the old JSON payload
+            const res = await adminApi.addNewProduct(formDataToSend);
+
+            if (res) {
+                // THE FIX: Adding a random timestamp forces the browser to destroy its cache 
+                // and fetch a completely fresh, updated table from the database!
+                window.location.href = `/admin/inventory?refresh=${Date.now()}`;
+            }
+        } catch (error) {
+            console.error("Failed to save product:", error);
+            alert("Database Error: Check your backend server console.");
+        } finally {
+            setIsSubmitting(false);
+        }
     };
 
     return (

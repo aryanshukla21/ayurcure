@@ -13,17 +13,29 @@ const AdminAddDoctorPage = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
 
-  // Centralized Form State
+  // Centralized Form State (Added avatar: null)
   const [formData, setFormData] = useState({
     fullName: '', email: '', phone: '', emergencyContact: '', address: '', password: '',
     fees: '', startTime: '09:00', endTime: '17:00',
     specialization: 'Ayurvedic General Medicine', registrationNumber: '', qualifications: '', experience: '',
-    about: ''
+    about: '', avatar: null 
   });
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
+  };
+
+  // Convert uploaded image to Base64 String
+  const handleImageUpload = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setFormData(prev => ({ ...prev, avatar: reader.result }));
+      };
+      reader.readAsDataURL(file);
+    }
   };
 
   const handleAddDoctor = async () => {
@@ -42,18 +54,21 @@ const AdminAddDoctorPage = () => {
         qualifications: formData.qualifications,
         registration_number: formData.registrationNumber,
         consultation_fee: parseFloat(formData.fees) || 0,
+        about: formData.about, // FIX: Added about
+        clinic_address: formData.address, // FIX: Mapped address to clinic_address
+        avatar: formData.avatar // FIX: Added image string
       };
 
       const res = await adminApi.addDoctor(payload);
 
-      if (res.success) {
+      if (res.success || res.doctorId) {
         navigate('/admin/doctors');
       } else {
         setError(res.message || 'Failed to add doctor.');
       }
     } catch (err) {
       console.error('Submission failed', err);
-      setError(err.response?.data?.message || 'An error occurred during submission.');
+      setError(err.response?.data?.message || err.message || 'An error occurred during submission.');
     } finally {
       setIsSubmitting(false);
     }
@@ -73,6 +88,22 @@ const AdminAddDoctorPage = () => {
           Add Doctor
         </h1>
         {error && <p className="text-sm font-bold text-red-600 mt-2 bg-red-50 p-3 rounded-xl inline-block">{error}</p>}
+      </div>
+
+      {/* Profile Image Uploader */}
+      <div className="mb-8 flex items-center gap-6">
+        <div className="relative w-24 h-24 rounded-full border-2 border-dashed border-[#B8C1B6] bg-white flex items-center justify-center overflow-hidden group hover:border-[#4A7C59] transition-colors">
+          {formData.avatar ? (
+            <img src={formData.avatar} alt="Preview" className="w-full h-full object-cover" />
+          ) : (
+            <span className="text-[#4A7C59] text-xs font-bold text-center px-2">Upload Photo</span>
+          )}
+          <input type="file" accept="image/*" onChange={handleImageUpload} className="absolute inset-0 opacity-0 cursor-pointer" />
+        </div>
+        <div>
+          <h3 className="text-sm font-bold text-gray-900">Doctor Profile Photo</h3>
+          <p className="text-xs font-medium text-gray-500 mt-1">Recommended: Square image, max 5MB.</p>
+        </div>
       </div>
 
       {/* Main Grid Layout */}

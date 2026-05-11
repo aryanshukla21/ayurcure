@@ -1,9 +1,6 @@
 const adminModel = require('../models/adminModel');
 const bcrypt = require('bcryptjs');
 
-// Optional: Assuming you have a PDF generator utility in your codebase based on standard patterns
-// const generatePdf = require('../utils/generatePdf'); 
-
 // ==========================================
 // DASHBOARD
 // ==========================================
@@ -52,14 +49,16 @@ exports.getAllDoctors = async (req, res) => {
 
 exports.addDoctor = async (req, res) => {
     try {
-        const { full_name, email, phone, password, specialization, experience_years, qualifications, registration_number, consultation_fee } = req.body;
+        // NEW: Pulled 'avatar' from the request body
+        const { full_name, email, phone, password, specialization, experience_years, qualifications, registration_number, consultation_fee, about, avatar } = req.body;
 
         const salt = await bcrypt.genSalt(10);
         const password_hash = await bcrypt.hash(password || 'Ayurcure@Doc123', salt);
 
+        // NEW: Passed 'avatar' to the transaction
         const doctorId = await adminModel.createDoctorTransaction(
             { full_name, email, phone, password_hash },
-            { specialization, experience_years, qualifications, registration_number, consultation_fee }
+            { specialization, experience_years, qualifications, registration_number, consultation_fee, about, avatar }
         );
 
         res.status(201).json({ success: true, message: "Doctor onboarded successfully", doctorId });
@@ -182,7 +181,6 @@ exports.getOrderGrowthRate = async (req, res) => {
 exports.printInvoice = async (req, res) => {
     try {
         const orderData = await adminModel.getOrderBasicDetails(req.params.id);
-        // If generatePdf is configured: const pdfBuffer = await generatePdf(orderData);
         res.setHeader('Content-disposition', `attachment; filename=Invoice_${req.params.id}.pdf`);
         res.setHeader('Content-type', 'application/pdf');
         res.status(200).send("PDF Binary Stream - Integrates with PDFKit based on " + JSON.stringify(orderData));
@@ -219,15 +217,25 @@ exports.getOrderPaymentSummary = async (req, res) => {
 // ==========================================
 exports.addNewProduct = async (req, res) => {
     try {
-        const productId = await adminModel.addNewProduct(req.body);
+        // Grab the text data
+        const productData = req.body; 
+        
+        // If multer caught a file, add its path to the data object!
+        if (req.file) {
+            productData.image_url = `/uploads/${req.file.filename}`;
+        }
+
+        const productId = await adminModel.addNewProduct(productData);
         res.status(201).json({ success: true, message: "Product added successfully", productId });
-    } catch (error) { res.status(500).json({ success: false, message: error.message }); }
+    } catch (error) { 
+        res.status(500).json({ success: false, message: error.message }); 
+    }
 };
 
 exports.getAllProductsPagination = async (req, res) => {
     try {
         const page = parseInt(req.params.page) || 1;
-        const limit = 10;
+        const limit = 100;
         const offset = (page - 1) * limit;
         res.status(200).json({ success: true, products: await adminModel.getAllProductsPagination(limit, offset) });
     } catch (error) { res.status(500).json({ success: false, message: error.message }); }
@@ -252,11 +260,29 @@ exports.getProductDetails = async (req, res) => {
 
 exports.updateProduct = async (req, res) => {
     try {
-        await adminModel.updateProduct(req.params.id, req.body);
+        const productData = req.body;
+        
+        // If the user uploaded a new image while editing, catch it!
+        if (req.file) {
+            productData.image_url = `/uploads/${req.file.filename}`;
+        }
+
+        await adminModel.updateProduct(req.params.id, productData);
         res.status(200).json({ success: true, message: "Product updated successfully" });
-    } catch (error) { res.status(500).json({ success: false, message: error.message }); }
+    } catch (error) { 
+        res.status(500).json({ success: false, message: error.message }); 
+    }
 };
 
+exports.deleteProduct = async (req, res) => {
+    try {
+        await adminModel.deleteProduct(req.params.id);
+        res.status(200).json({ success: true, message: "Product deleted successfully" });
+    } catch (error) { 
+        console.error("Error deleting product:", error);
+        res.status(500).json({ success: false, message: error.message }); 
+    }
+};
 // ==========================================
 // BLOGS
 // ==========================================

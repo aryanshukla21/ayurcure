@@ -6,6 +6,20 @@ import RecentDoctorsList from '../../components/admin/dashboard/RecentDoctorsLis
 import RecentPatientsList from '../../components/admin/dashboard/RecentPatientsList';
 import RecentOrdersTable from '../../components/admin/dashboard/RecentOrdersTable';
 
+// Magic Function 1: Formats the custom AYUP- ID
+const generateRegistryId = (id) => {
+  if (!id) return 'AYUP-000000';
+  const uniquePart = String(id).replace(/-/g, '').substring(0, 6).toUpperCase();
+  return `AYUP-${uniquePart}`;
+};
+
+// Magic Function 2: Formats the backend timestamp into a clean Date
+const formatLastVisit = (dateString) => {
+  if (!dateString) return 'New Patient';
+  const date = new Date(dateString);
+  return date.toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' });
+};
+
 const AdminDashboardPage = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [data, setData] = useState({
@@ -40,16 +54,37 @@ const AdminDashboardPage = () => {
           adminApi.getRecentOrders()
         ]);
 
+        // SAFELY EXTRACT ARRAYS (Handles both array returns and object wraps)
+        const rawDocs = Array.isArray(recentDocs) ? recentDocs : (recentDocs?.doctors || recentDocs?.data || []);
+        const rawPats = Array.isArray(recentPats) ? recentPats : (recentPats?.patients || recentPats?.data || []);
+        const rawOrds = Array.isArray(recentOrds) ? recentOrds : (recentOrds?.orders || recentOrds?.data || []);
+
+        // --- DATA INTERCEPTION & FORMATTING ---
+        
+        // 1. Format Doctors (Injects avatar fallback)
+        const processedDoctors = rawDocs.map(doctor => ({
+          ...doctor,
+          avatar: doctor.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(doctor.name || 'Doc')}&background=FDF9EE&color=3A6447`
+        }));
+
+        // 2. Format Patients (Injects AYUP ID and formats Date)
+        const processedPatients = rawPats.map(patient => ({
+          ...patient,
+          patient_display_id: generateRegistryId(patient.id || patient.user_id),
+          last_visit: formatLastVisit(patient.last_visit || patient.updated_at)
+        }));
+
         setData({
           stats: {
-            totalDoctors: docRes.count || 0,
-            totalPatients: patRes.count || 0,
-            totalOrders: ordRes.count || 0,
-            totalRevenue: revRes.revenue || 0
+            // Safe extraction for metrics
+            totalDoctors: typeof docRes === 'number' ? docRes : (docRes?.count || docRes?.data || 0),
+            totalPatients: typeof patRes === 'number' ? patRes : (patRes?.count || patRes?.data || 0),
+            totalOrders: typeof ordRes === 'number' ? ordRes : (ordRes?.count || ordRes?.data || 0),
+            totalRevenue: typeof revRes === 'number' ? revRes : (revRes?.revenue || revRes?.total || revRes?.data || 0)
           },
-          recentDoctors: recentDocs.doctors || [],
-          recentPatients: recentPats.patients || [],
-          recentOrders: recentOrds.orders || []
+          recentDoctors: processedDoctors, // Handing the clean data to the table
+          recentPatients: processedPatients, // Handing the clean data to the table
+          recentOrders: rawOrds
         });
       } catch (error) {
         console.error("Failed to load dashboard data", error);

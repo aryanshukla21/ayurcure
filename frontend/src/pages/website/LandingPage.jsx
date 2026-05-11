@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { websiteBlogs } from '../../data/websiteBlogs';
@@ -38,8 +38,28 @@ const ScrollReveal = ({ children, direction = 'up', className = "" }) => {
   );
 };
 
-const LandingPage = ({ isLoggedIn = false, userRole = 'patient', onLogout }) => {
+const LandingPage = ({ isLoggedIn: propIsLoggedIn, userRole: propUserRole, onLogout }) => {
   const navigate = useNavigate();
+
+  // NEW: Read from local storage initially so the session persists on direct navigation
+  const [isLoggedIn, setIsLoggedIn] = useState(propIsLoggedIn || !!localStorage.getItem('role'));
+  const [userRole, setUserRole] = useState(propUserRole || localStorage.getItem('role') || 'patient');
+
+  // Re-verify on mount
+  useEffect(() => {
+    const storedRole = localStorage.getItem('role');
+    if (storedRole) {
+      setIsLoggedIn(true);
+      setUserRole(storedRole);
+    }
+  }, []);
+
+  const handleLogout = () => {
+    if (onLogout) onLogout();
+    localStorage.removeItem('role');
+    setIsLoggedIn(false);
+    navigate('/');
+  };
 
   const handleDashboardClick = () => {
     if (userRole === 'admin') navigate('/admin/dashboard');
@@ -129,12 +149,13 @@ const LandingPage = ({ isLoggedIn = false, userRole = 'patient', onLogout }) => 
               <span className="text-[8px] md:text-[10px] text-[#C8A96A] font-medium tracking-wide uppercase opacity-90">First consultation at a guided fee</span>
             </div>
 
+            {/* NEW: Dynamically checks the isLoggedIn state we updated above */}
             {isLoggedIn ? (
               <div className="flex gap-2">
                 <button onClick={handleDashboardClick} className="bg-[#2F6F4E] hover:bg-[#2F6F4E]/90 text-white px-4 md:px-6 py-2 md:py-3 rounded-full font-['Noto_Serif'] text-xs md:text-sm tracking-tight shadow-sm hover:shadow-md transition-all active:scale-95 font-bold whitespace-nowrap">
                   Dashboard
                 </button>
-                <button onClick={onLogout || (() => navigate('/'))} className="bg-white border border-red-200 text-red-600 hover:bg-red-50 px-4 md:px-6 py-2 md:py-3 rounded-full font-['Noto_Serif'] text-xs md:text-sm tracking-tight shadow-sm transition-all active:scale-95 font-bold whitespace-nowrap">
+                <button onClick={handleLogout} className="bg-white border border-red-200 text-red-600 hover:bg-red-50 px-4 md:px-6 py-2 md:py-3 rounded-full font-['Noto_Serif'] text-xs md:text-sm tracking-tight shadow-sm transition-all active:scale-95 font-bold whitespace-nowrap">
                   Logout
                 </button>
               </div>
@@ -608,7 +629,6 @@ const LandingPage = ({ isLoggedIn = false, userRole = 'patient', onLogout }) => 
 
           {/* Social Icons */}
           <div className="flex justify-center gap-6 mb-10">
-            {/* Facebook Icon */}
             <a
               href="https://www.facebook.com/share/18TNZK4jCS/?mibextid=wwXIfr"
               target="_blank"
@@ -621,7 +641,6 @@ const LandingPage = ({ isLoggedIn = false, userRole = 'patient', onLogout }) => 
               </svg>
             </a>
 
-            {/* Instagram Icon */}
             <a
               href="https://www.instagram.com/ayurcare.360?igsh=Nm45MTBrbnk3ZG9z"
               target="_blank"

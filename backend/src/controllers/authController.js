@@ -14,12 +14,17 @@ const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 const tempOtpCache = new Map(); // Stores generated Email OTPs
 const verifiedPhonesCache = new Map(); // Stores successful Twilio Phone verifications (Prevents 404 Double-Dip)
 
-const setTokenCookie = (res, token) => {
+// UPDATED: Now checks the role. Admins get 10 years, everyone else gets 7 days.
+const setTokenCookie = (res, token, role) => {
+    const maxAgeMs = role === 'admin' 
+        ? 10 * 365 * 24 * 60 * 60 * 1000 // 10 Years for Admin
+        : 7 * 24 * 60 * 60 * 1000;       // 7 Days for Patient/Doctor
+
     res.cookie('token', token, {
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',
         sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
-        maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
+        maxAge: maxAgeMs 
     });
 };
 
@@ -125,7 +130,6 @@ exports.verifyAndRegister = async (req, res) => {
         if (cachedPhoneData && Date.now() <= cachedPhoneData.expiresAt) {
             isPhoneValid = true;
         } else {
-            // Fallback just in case cache expired or they skipped Step 2
             try {
                 isPhoneValid = await notificationService.verifyPhoneOTP(phone, phoneOtp);
             } catch (err) {
@@ -164,7 +168,7 @@ exports.verifyAndRegister = async (req, res) => {
         }
 
         const token = authService.generateToken(newUser);
-        setTokenCookie(res, token);
+        setTokenCookie(res, token, newUser.role); // Passed role here
 
         res.status(201).json({ message: 'Registration complete.', user: { id: newUser.id, role: newUser.role } });
     } catch (error) {
@@ -188,7 +192,7 @@ exports.login = async (req, res) => {
         }
 
         if (role && user.role !== role) {
-            return res.status(403).json({ error: `You are registered as a ${user.role}.` });
+            return res.status(403).json({ error: `You are registered as an admin.` });
         }
 
         if (user.account_status !== 'Active') {
@@ -196,7 +200,7 @@ exports.login = async (req, res) => {
         }
 
         const token = authService.generateToken(user);
-        setTokenCookie(res, token);
+        setTokenCookie(res, token, user.role); // Passed role here
 
         res.status(200).json({ user: { id: user.id, role: user.role } });
     } catch (error) {
@@ -247,7 +251,7 @@ exports.verifyEmailToken = async (req, res) => {
         await UserModel.updatePasswordAndClearOtp(user.id, user.password_hash);
 
         const jwtToken = authService.generateToken(user);
-        setTokenCookie(res, jwtToken);
+        setTokenCookie(res, jwtToken, user.role); // Passed role here
 
         res.status(200).json({ message: 'Email verified successfully.' });
     } catch (error) {
@@ -286,7 +290,6 @@ exports.verifyPhoneOTP = async (req, res) => {
     }
 };
 
-// Handle Pre-Registration (Timer) & Post-Registration Resends
 exports.resendOtp = async (req, res) => {
     try {
         let { email, phone } = req.body;
@@ -297,13 +300,11 @@ exports.resendOtp = async (req, res) => {
             const user = await UserModel.getUserByEmail(email);
 
             if (user) {
-                // Forgot password / active account flow
                 const otp = authService.generateOTP();
                 const otpHash = await authService.hashData(otp);
                 await UserModel.updateOtp(user.id, otpHash, new Date(Date.now() + 5 * 60000));
                 await notificationService.sendEmailVerification(email, otp);
             } else {
-                // Pre-registration flow
                 const emailOtp = authService.generateOTP();
                 tempOtpCache.set(email, { otp: emailOtp, expiresAt: Date.now() + 5 * 60000 });
                 await notificationService.sendEmailVerification(email, emailOtp);
@@ -366,7 +367,7 @@ exports.ssoLogin = async (req, res) => {
         }
 
         const token = authService.generateToken(user);
-        setTokenCookie(res, token);
+        setTokenCookie(res, token, user.role); // Passed role here
 
         res.status(200).json({
             user: { id: user.id, role: user.role, full_name: user.full_name },

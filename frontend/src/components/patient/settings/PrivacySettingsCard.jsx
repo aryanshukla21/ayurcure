@@ -23,7 +23,7 @@ const PrivacySettingsCard = ({ data, isEditing, onChange }) => {
             <select
               name="profile_visibility"
               value={data.profile_visibility || 'Doctors Only'}
-              onChange={(e) => onChange('privacy', e.target.name, e.target.value)}
+              onChange={(e) => onChange(e.target.name, e.target.value)}
               className="w-full bg-[#FAF7F2] border border-[#EFEBE1] rounded-xl p-3 text-sm text-gray-900 font-medium focus:outline-none focus:border-[#4A7C59] transition-colors appearance-none cursor-pointer"
             >
               <option value="Public">Public (Anyone can search)</option>
@@ -44,7 +44,8 @@ const PrivacySettingsCard = ({ data, isEditing, onChange }) => {
             <p className="text-xs text-gray-500 font-medium leading-relaxed">Allow anonymous data usage for Ayurvedic research.</p>
           </div>
           <button
-            onClick={() => isEditing && onChange('privacy', 'data_sharing', !data.data_sharing)}
+            // FIXED: Now correctly passes only 2 arguments
+            onClick={() => isEditing && onChange('data_sharing', !data.data_sharing)}
             disabled={!isEditing}
             className={`relative inline-flex h-6 w-11 shrink-0 rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${data.data_sharing ? 'bg-[#4A7C59]' : 'bg-gray-200'
               } ${!isEditing ? 'opacity-60 cursor-not-allowed' : 'cursor-pointer'}`}

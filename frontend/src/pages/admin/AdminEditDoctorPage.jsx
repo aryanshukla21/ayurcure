@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate, Link } from 'react-router-dom';
-import { ShieldCheck, Save, ChevronRight, Loader2, Edit2, X } from 'lucide-react';
+import { useNavigate, useParams, Link } from 'react-router-dom';
+import { ShieldCheck, Save, ChevronRight, Loader2, Camera } from 'lucide-react';
 import { adminApi } from '../../api/adminApi';
 
 import PersonalInfoSection from '../../components/admin/doctors/add-doctor/PersonalInfoSection';
@@ -11,52 +11,52 @@ import AboutSection from '../../components/admin/doctors/add-doctor/AboutSection
 const AdminEditDoctorPage = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+  
   const [isLoading, setIsLoading] = useState(true);
-  const [isEditing, setIsEditing] = useState(false);
-  const [isSaving, setIsSaving] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
 
   const [formData, setFormData] = useState({
     fullName: '', email: '', phone: '', emergencyContact: '', address: '', password: '',
-    fees: '', startTime: '09:00', endTime: '17:00', specialization: '', registrationNumber: '',
-    qualifications: '', experience: '', about: '', status: ''
+    fees: '', startTime: '09:00', endTime: '17:00',
+    specialization: '', registrationNumber: '', qualifications: '', experience: '',
+    about: '', avatar: null, status: 'Verified'
   });
 
-  const [originalData, setOriginalData] = useState(null);
-
   useEffect(() => {
-    const fetchDoctor = async () => {
+    const fetchDoctorData = async () => {
       try {
         const res = await adminApi.getDoctorDetails(id);
-        if (res && res.data) {
-          const mappedData = {
-            fullName: res.data.full_name || '',
-            email: res.data.email || '',
-            phone: res.data.phone || '',
-            emergencyContact: res.data.emergency_contact || '',
-            address: res.data.address || '',
-            password: '', // Blank for security
-            fees: res.data.consultation_fee || '',
-            startTime: res.data.start_time || '09:00',
-            endTime: res.data.end_time || '17:00',
-            specialization: res.data.specialization || '',
-            registrationNumber: res.data.registration_number || '',
-            qualifications: res.data.qualifications || '',
-            experience: res.data.experience_years || '',
-            about: res.data.bio || '',
-            status: res.data.verification_status || 'Verified'
-          };
-          setFormData(mappedData);
-          setOriginalData(mappedData);
+        if (res.success && res.data) {
+          const doc = res.data;
+          setFormData({
+            fullName: doc.full_name || '',
+            email: doc.email || '',
+            phone: doc.phone || '',
+            specialization: doc.specialization || '',
+            experience: doc.experience_years ? doc.experience_years.toString() : '',
+            fees: doc.consultation_fee ? doc.consultation_fee.toString() : '',
+            about: doc.bio || '', 
+            address: doc.clinic_address || '', 
+            avatar: doc.avatar || null, // Loads existing image
+            status: doc.verification_status || 'Verified',
+            qualifications: doc.qualifications || '',
+            registrationNumber: doc.registration_number || '',
+            emergencyContact: '',
+            password: '', 
+            startTime: '09:00',
+            endTime: '17:00',
+          });
         }
       } catch (err) {
-        console.error("Fetch failed", err);
-        setError("Failed to load doctor profile.");
+        console.error("Failed to fetch doctor details", err);
+        setError("Failed to load doctor data. Please try again.");
       } finally {
         setIsLoading(false);
       }
     };
-    fetchDoctor();
+
+    fetchDoctorData();
   }, [id]);
 
   const handleInputChange = (e) => {
@@ -64,88 +64,140 @@ const AdminEditDoctorPage = () => {
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
-  const handleSaveChanges = async () => {
-    setIsSaving(true);
-    setError('');
-    try {
-      const payload = {
-        specialization: formData.specialization,
-        experience_years: parseInt(formData.experience) || 0,
-        consultation_fee: parseFloat(formData.fees) || 0,
-        verification_status: formData.status
-        // Backend handles these fields in updateDoctorDetails
+  const handleImageUpload = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setFormData(prev => ({ ...prev, avatar: reader.result }));
       };
-
-      await adminApi.updateDoctorDetails(id, payload);
-      setIsEditing(false);
-      setOriginalData(formData); // Update original to new saved state
-    } catch (err) {
-      setError(err.response?.data?.message || 'Failed to save changes.');
-    } finally {
-      setIsSaving(false);
+      reader.readAsDataURL(file);
     }
   };
 
-  const handleDiscardChanges = () => {
-    setFormData(originalData); // Reset
-    setIsEditing(false);
+  const handleUpdateDoctor = async () => {
+    setIsSubmitting(true);
     setError('');
+
+    try {
+      const payload = {
+        full_name: formData.fullName, // Sends the name
+        password: formData.password,  // Sends the new password (if they typed one)
+        specialization: formData.specialization,
+        experience_years: parseInt(formData.experience) || 0,
+        consultation_fee: parseFloat(formData.fees) || 0,
+        verification_status: formData.status,
+        about: formData.about, 
+        clinic_address: formData.address, 
+        avatar: formData.avatar
+      };
+
+      const res = await adminApi.updateDoctorDetails(id, payload);
+
+      if (res.success) {
+        navigate('/admin/doctors');
+      } else {
+        setError(res.message || 'Failed to update doctor.');
+      }
+    } catch (err) {
+      console.error('Update failed', err);
+      setError(err.response?.data?.message || err.message || 'An error occurred during the update.');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   if (isLoading) {
-    return <div className="flex items-center justify-center h-full min-h-[60vh]"><Loader2 className="w-12 h-12 text-[#3A6447] animate-spin" /></div>;
+    return (
+      <div className="flex items-center justify-center h-full min-h-[60vh]">
+        <Loader2 className="w-10 h-10 text-[#4A7C59] animate-spin" />
+      </div>
+    );
   }
 
   return (
     <div className="p-8 md:p-10 max-w-[1600px] mx-auto flex flex-col h-full animate-in fade-in duration-300">
+
+      {/* Header & Breadcrumbs */}
       <div className="mb-10">
         <div className="flex items-center text-gray-500 text-[10px] font-bold uppercase tracking-widest mb-3">
           <Link to="/admin/doctors" className="hover:text-[#4A7C59] transition-colors">Doctors</Link>
           <ChevronRight size={14} className="mx-2" />
-          <span className="text-gray-900">Doctor Profile</span>
+          <span className="text-gray-900">Edit Profile</span>
         </div>
-
-        <div className="flex flex-col xl:flex-row justify-between items-start xl:items-end gap-6">
-          <div className="flex items-center gap-4">
-            <h1 className="text-3xl md:text-[32px] font-extrabold text-green-700 tracking-tight leading-none mb-1">
-              {formData.fullName}
-            </h1>
-            <span className="bg-[#E7F3EB] text-[#3A6447] text-[10px] font-extrabold px-3 py-1.5 rounded-full uppercase tracking-widest mt-1">
-              ID: #{id}
-            </span>
-          </div>
-
-          <div className="flex items-center gap-4 w-full xl:w-auto">
-            {!isEditing ? (
-              <button onClick={() => setIsEditing(true)} className="flex-1 xl:flex-none px-6 py-3 bg-[#3A6447] hover:bg-[#2C4D36] text-white text-sm font-bold rounded-full flex items-center justify-center gap-2 transition-colors shadow-sm cursor-pointer">
-                <Edit2 size={16} /> Edit Profile
-              </button>
-            ) : (
-              <>
-                <button onClick={handleDiscardChanges} disabled={isSaving} className="flex-1 xl:flex-none px-6 py-3 bg-white border border-[#EFEBE1] hover:bg-gray-50 disabled:opacity-50 text-gray-700 text-sm font-bold rounded-full flex items-center justify-center gap-2 transition-colors shadow-sm cursor-pointer">
-                  <X size={16} /> Discard Changes
-                </button>
-                <button onClick={handleSaveChanges} disabled={isSaving} className="flex-1 xl:flex-none px-6 py-3 bg-[#3A6447] hover:bg-[#2C4D36] disabled:bg-[#3A6447]/70 text-white text-sm font-bold rounded-full flex items-center justify-center gap-2 transition-colors shadow-sm cursor-pointer">
-                  {isSaving ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
-                  {isSaving ? 'Saving...' : 'Save Changes'}
-                </button>
-              </>
-            )}
-          </div>
-        </div>
-        {error && <p className="text-sm font-bold text-red-600 mt-4 bg-red-50 p-3 rounded-xl inline-block">{error}</p>}
+        <h1 className="text-3xl md:text-[32px] font-extrabold text-gray-900 tracking-tight leading-none mb-2">
+          Edit Doctor
+        </h1>
+        {error && <p className="text-sm font-bold text-red-600 mt-2 bg-red-50 p-3 rounded-xl inline-block">{error}</p>}
       </div>
 
+      {/* Profile Image Uploader - UPDATED UI */}
+      <div className="mb-8 flex items-center gap-6">
+        <div className="relative w-24 h-24 rounded-full border border-[#EFEBE1] shadow-sm bg-white flex items-center justify-center overflow-hidden group hover:border-[#4A7C59] transition-colors cursor-pointer">
+          
+          {/* Always shows image OR initials */}
+          <img 
+            src={formData.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(formData.fullName || 'Doc')}&background=FDF9EE&color=3A6447&size=128`} 
+            alt="Doctor Avatar" 
+            className="w-full h-full object-cover group-hover:opacity-40 transition-opacity duration-300" 
+          />
+          
+          {/* Hover Overlay */}
+          <div className="absolute inset-0 flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none">
+             <Camera size={20} className="text-gray-900 mb-1" />
+             <span className="text-gray-900 text-[10px] font-extrabold uppercase tracking-wider">Change</span>
+          </div>
+
+          <input type="file" accept="image/*" onChange={handleImageUpload} className="absolute inset-0 opacity-0 cursor-pointer" />
+        </div>
+        <div>
+          <h3 className="text-sm font-bold text-gray-900">Doctor Profile Photo</h3>
+          <p className="text-xs font-medium text-gray-500 mt-1">Click the image to upload a new photo.</p>
+        </div>
+      </div>
+
+      {/* Main Grid Layout */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-x-12 gap-y-10 flex-1 mb-8">
         <div className="lg:col-span-2 flex flex-col gap-12">
-          <PersonalInfoSection formData={formData} onChange={handleInputChange} isEditing={isEditing} />
-          <ProfessionalSection formData={formData} onChange={handleInputChange} isEditing={isEditing} />
+          <PersonalInfoSection formData={formData} onChange={handleInputChange} />
+          <ProfessionalSection formData={formData} onChange={handleInputChange} />
         </div>
         <div className="lg:col-span-1 flex flex-col gap-12">
-          <ConsultationSection formData={formData} onChange={handleInputChange} isEditing={isEditing} />
-          <AboutSection formData={formData} onChange={handleInputChange} isEditing={isEditing} />
+          <ConsultationSection formData={formData} onChange={handleInputChange} />
+          <AboutSection formData={formData} onChange={handleInputChange} />
         </div>
       </div>
+
+      {/* Bottom Action Footer */}
+      <div className="flex flex-col md:flex-row justify-between items-center pt-8 border-t border-[#EFEBE1] gap-6">
+        <div className="flex items-center gap-3 text-gray-500">
+          <div className="w-8 h-8 rounded-full bg-[#E7F3EB] flex items-center justify-center text-[#3A6447]">
+            <ShieldCheck size={16} />
+          </div>
+          <p className="text-xs font-bold">Changes are tracked and securely encrypted.</p>
+        </div>
+        <div className="flex items-center gap-4 w-full md:w-auto">
+          <button
+            disabled={isSubmitting}
+            onClick={() => navigate('/admin/doctors')}
+            className="flex-1 md:flex-none px-8 py-3.5 bg-white border border-[#EFEBE1] hover:bg-gray-50 disabled:opacity-50 text-gray-700 text-sm font-bold rounded-full transition-colors shadow-sm"
+          >
+            Cancel
+          </button>
+          <button
+            disabled={isSubmitting}
+            onClick={handleUpdateDoctor}
+            className="flex-1 md:flex-none px-8 py-3.5 bg-[#3A6447] hover:bg-[#2C4D36] disabled:bg-[#3A6447]/70 disabled:cursor-not-allowed text-white text-sm font-bold rounded-full flex items-center justify-center gap-2 transition-colors shadow-sm"
+          >
+            {isSubmitting ? (
+              <span className="flex items-center gap-2">Saving...</span>
+            ) : (
+              <><Save size={18} /> Save Changes</>
+            )}
+          </button>
+        </div>
+      </div>
+
     </div>
   );
 };

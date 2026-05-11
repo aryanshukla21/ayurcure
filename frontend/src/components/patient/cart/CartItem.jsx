@@ -22,7 +22,9 @@ const CartItem = ({ item, updateQuantity, removeItem, isLoading }) => {
 
     const safeItem = item || {};
     const imageSrc = safeItem.image || safeItem.image_url || 'https://via.placeholder.com/150';
-    const price = parseFloat(safeItem.price || 0).toFixed(2);
+    const price = parseFloat(safeItem.price || safeItem.price_at_purchase || 0).toFixed(2);
+    const productId = safeItem.id || safeItem._id;
+    const currentQuantity = safeItem.quantity || 1;
 
     return (
         <div className="flex flex-col sm:flex-row gap-6 py-6 border-b border-[#E8E3D8] last:border-0 hover:bg-[#FDF9EE]/50 transition-colors rounded-2xl px-2">
@@ -32,7 +34,7 @@ const CartItem = ({ item, updateQuantity, removeItem, isLoading }) => {
 
             <div className="flex-1 flex flex-col sm:flex-row justify-between">
                 <div className="mb-4 sm:mb-0 pr-4">
-                    <h3 className="text-lg font-bold text-gray-900 mb-1">{safeItem.name}</h3>
+                    <h3 className="text-lg font-bold text-gray-900 mb-1">{safeItem.name || 'Unknown Product'}</h3>
                     <p className="text-sm font-medium text-gray-500">{safeItem.description || safeItem.category || 'Wellness Product'}</p>
                 </div>
 
@@ -42,23 +44,23 @@ const CartItem = ({ item, updateQuantity, removeItem, isLoading }) => {
                     <div className="flex items-center gap-4">
                         <div className="flex items-center bg-white border border-[#E8E3D8] rounded-full p-1 shadow-sm">
                             <button
-                                onClick={() => updateQuantity(safeItem.id || safeItem._id, Math.max(1, (safeItem.quantity || 1) - 1))}
+                                onClick={() => updateQuantity(productId, Math.max(1, currentQuantity - 1))}
                                 className="w-8 h-8 flex items-center justify-center text-gray-500 hover:text-gray-900 hover:bg-gray-50 rounded-full transition-colors"
                             >
                                 <Minus size={14} />
                             </button>
                             <span className="w-8 text-center text-sm font-bold text-gray-900">
-                                {safeItem.quantity || 1}
+                                {currentQuantity}
                             </span>
                             <button
-                                onClick={() => updateQuantity(safeItem.id || safeItem._id, (safeItem.quantity || 1) + 1)}
+                                onClick={() => updateQuantity(productId, currentQuantity + 1)}
                                 className="w-8 h-8 flex items-center justify-center text-gray-500 hover:text-gray-900 hover:bg-gray-50 rounded-full transition-colors"
                             >
                                 <Plus size={14} />
                             </button>
                         </div>
                         <button
-                            onClick={() => removeItem(safeItem.id || safeItem._id)}
+                            onClick={() => removeItem(productId)}
                             className="w-10 h-10 flex items-center justify-center bg-red-50 text-red-500 hover:bg-red-100 hover:text-red-600 rounded-full transition-colors shadow-sm border border-red-100"
                             title="Remove Item"
                         >

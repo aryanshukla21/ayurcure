@@ -1,13 +1,21 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { MoreVertical, Search, Filter } from 'lucide-react';
+import { Search, Filter } from 'lucide-react'; // Removed MoreVertical
 
 const PatientsTable = ({ patients = [] }) => {
   const [searchTerm, setSearchTerm] = useState('');
 
+  // Magic Function: Converts any DB ID into 'AYUP-XXXXXX'
+  const generateRegistryId = (id) => {
+    if (!id) return 'AYUP-000000';
+    const uniquePart = String(id).replace(/-/g, '').substring(0, 6).toUpperCase();
+    return `AYUP-${uniquePart}`;
+  };
+
   const filteredPatients = patients.filter(patient =>
     (patient.name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (patient.patient_display_id || '').toLowerCase().includes(searchTerm.toLowerCase())
+    // Updated search to filter by the new AYUP- ID format!
+    generateRegistryId(patient.id).toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   return (
@@ -56,7 +64,12 @@ const PatientsTable = ({ patients = [] }) => {
                       <span className="font-bold text-gray-900 text-sm">{patient.name}</span>
                     </div>
                   </td>
-                  <td className="px-6 py-4 text-sm font-bold text-gray-500">{patient.patient_display_id}</td>
+                  
+                  {/* NEW AYUP- ID Format Applied Here! */}
+                  <td className="px-6 py-4 text-sm font-bold text-gray-500">
+                    {generateRegistryId(patient.id)}
+                  </td>
+                  
                   <td className="px-6 py-4 text-sm font-medium text-gray-600">{patient.age} / {patient.gender}</td>
                   <td className="px-6 py-4 text-sm font-medium text-gray-600">{patient.phone || 'N/A'}</td>
                   <td className="px-6 py-4">
@@ -67,11 +80,10 @@ const PatientsTable = ({ patients = [] }) => {
                   </td>
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-3">
-                      {/* Using your exact link format */}
+                      {/* Using your exact link format, no three-dots! */}
                       <Link to={`/admin/patients/${patient.id}`} className="text-[#4A7C59] hover:text-[#3A6447] text-xs font-bold px-3 py-1.5 bg-[#4A7C59]/10 rounded-full transition-colors">
                         View Profile
                       </Link>
-                      <button className="text-gray-400 hover:text-gray-900 transition-colors"><MoreVertical size={16} /></button>
                     </div>
                   </td>
                 </tr>
@@ -83,4 +95,5 @@ const PatientsTable = ({ patients = [] }) => {
     </div>
   );
 };
+
 export default PatientsTable;

@@ -10,9 +10,8 @@ const ConditionsSymptomsPage = () => {
     const [isLoading, setIsLoading] = useState(false);
 
     const commonSymptoms = [
-        "Sleep Issues", "Anxiety & Stress", "Digestion/Gut Health",
-        "Hair Fall", "Skin Issues", "Joint Pain",
-        "Weight Management", "Low Immunity"
+        "Skin Issue", "Sleep Issue", "Anxiety", "Diabetes", "Pain", "Digestion Issue", "PCOD/PCOS",
+        "Hypertension", "High Cholesterol", "Obesity", "Hairfall", "Asthama"
     ];
 
     const toggleSymptom = (symptom) => {

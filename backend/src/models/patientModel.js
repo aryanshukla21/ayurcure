@@ -44,7 +44,8 @@ class PatientModel {
         const query = `
             SELECT 
                 u.full_name, p.age, p.gender, p.blood_group, 
-                p.height_cm, p.weight_kg, p.bmi, p.prakriti_type
+                p.height_cm, p.weight_kg, p.bmi, p.prakriti_type,
+                p.settings->>'avatar' AS avatar
             FROM PatientProfiles p 
             JOIN Users u ON p.user_id = u.id 
             WHERE p.id = $1;
@@ -120,7 +121,8 @@ class PatientModel {
         const query = `
             SELECT 
                 u.full_name, p.dob, p.age, p.gender, 
-                p.blood_group, p.height_cm, p.weight_kg, p.bmi
+                p.blood_group, p.height_cm, p.weight_kg, p.bmi,
+                p.settings->>'avatar' AS avatar
             FROM PatientProfiles p 
             JOIN Users u ON p.user_id = u.id 
             WHERE p.id = $1;
@@ -158,13 +160,17 @@ class PatientModel {
                 height_cm = COALESCE($5, height_cm), 
                 weight_kg = COALESCE($6, weight_kg), 
                 bmi = COALESCE($7, bmi),
+                settings = CASE 
+                    WHEN $8::text IS NOT NULL THEN jsonb_set(COALESCE(settings, '{}'::jsonb), '{avatar}', to_jsonb($8::text))
+                    ELSE settings 
+                END,
                 updated_at = CURRENT_TIMESTAMP
-            WHERE id = $8 
-            RETURNING dob, age, gender, blood_group, height_cm, weight_kg, bmi;
+            WHERE id = $9 
+            RETURNING dob, age, gender, blood_group, height_cm, weight_kg, bmi, settings->>'avatar' AS avatar;
         `;
         const { rows } = await db.query(query, [
             data.dob, data.age, data.gender, data.blood_group,
-            data.height_cm, data.weight_kg, data.bmi, patientId
+            data.height_cm, data.weight_kg, data.bmi, data.avatar, patientId
         ]);
         return rows[0];
     }
@@ -193,8 +199,6 @@ class PatientModel {
     }
 
     static async updateProfileContact(patientId, data) {
-        // Typically, email and phone are strictly managed in Account Settings due to OTP verification,
-        // so this method strictly updates the physical address in the Profile.
         const query = `
             UPDATE PatientProfiles 
             SET address = COALESCE($1, address), updated_at = CURRENT_TIMESTAMP
@@ -269,14 +273,12 @@ class PatientModel {
     }
 
     static async getSettingsJsonField(patientId, field) {
-        // Extracts exactly the specified key (e.g., 'notifications' or 'privacy') from the JSONB column
         const query = `SELECT settings->$1 AS data FROM PatientProfiles WHERE id = $2;`;
         const { rows } = await db.query(query, [field, patientId]);
         return rows[0]?.data || {};
     }
 
     static async updateSettingsFull(patientId, data) {
-        // Deep merges the incoming JSON data with the existing settings JSONB object
         const query = `
             UPDATE PatientProfiles 
             SET settings = settings || $1::jsonb 
@@ -323,7 +325,6 @@ class PatientModel {
     }
 
     static async filterReports(patientId, reportName, doctorName, date) {
-        // Dynamic search utilizing ILIKE for partial matching on names
         let query = `
             SELECT pd.id, pd.document_name, pd.document_type, pd.uploaded_at 
             FROM PatientDocuments pd
@@ -337,10 +338,6 @@ class PatientModel {
             params.push(`%${reportName}%`);
         }
 
-        // Note: Filtering by doctorName requires joining with Appointments/Prescriptions 
-        // if documents are strictly tied to them. Assuming documents are uploaded generally here, 
-        // this is kept loose, but you can expand the JOIN if reports are linked to doctors.
-
         if (date && date !== 'undefined') {
             query += ` AND DATE(pd.uploaded_at) = $${pIndex++}`;
             params.push(date);
@@ -352,7 +349,6 @@ class PatientModel {
     }
 
     static async getReportInsights(patientId) {
-        // Aggregating actual data from the past 30 days to generate insights
         const query = `
             SELECT 
                 ROUND(AVG(sleep_hours), 1) AS average_sleep,
@@ -366,7 +362,7 @@ class PatientModel {
         return {
             average_sleep: data.average_sleep || 0,
             hydration_status: data.average_hydration > 2 ? 'Optimal' : 'Needs Improvement',
-            stress_trend: 'Stable' // Can be expanded with slope calculations
+            stress_trend: 'Stable'
         };
     }
 
@@ -383,7 +379,6 @@ class PatientModel {
     }
 
     static async getReportGoals(patientId) {
-        // Retrieve dynamic goals based on current WellnessPlan or defaults
         const query = `SELECT prakriti_type FROM PatientProfiles WHERE id = $1;`;
         const { rows } = await db.query(query, [patientId]);
         const prakriti = rows[0]?.prakriti_type;

@@ -43,19 +43,30 @@ const AdminDoctorsPage = () => {
   }, []);
 
   // Instantly updates UI upon successful deletion
-  const handleDeleteDoctor = async (id) => {
-    if (!window.confirm("Are you sure you want to delete this doctor?")) return;
+const handleDeleteDoctor = async (doctorId) => {
+    console.log("STEP 1: Function triggered for Doctor ID:", doctorId); 
 
     try {
-      await adminApi.deleteDoctor(id);
-      setData(prev => ({
-        ...prev,
-        doctors: prev.doctors.filter(d => d.id !== id),
-        metrics: { ...prev.metrics, total: prev.metrics.total - 1 }
-      }));
+      console.log("STEP 2: Attempting to call adminApi.deleteDoctor..."); 
+      
+      const res = await adminApi.deleteDoctor(doctorId);
+      
+      console.log("STEP 3: Backend responded with:", res); 
+      
+      if (res.success) {
+        setData(prevData => ({
+          ...prevData,
+          doctors: prevData.doctors.filter(doc => doc.id !== doctorId),
+          metrics: { 
+            ...prevData.metrics, 
+            total: Math.max(0, prevData.metrics.total - 1) 
+          }
+        }));
+        console.log("STEP 4: UI Successfully Updated!"); 
+      }
     } catch (error) {
-      console.error("Failed to delete doctor", error);
-      alert("Failed to delete doctor.");
+      console.error("FAILED AT STEP 3: Backend threw an error:", error);
+      alert(error.response?.data?.message || "Failed to delete doctor.");
     }
   };
 

@@ -1,7 +1,10 @@
 import React, { useState } from 'react';
 import { Search, Plus, Edit2, Trash2 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom'; 
+import { adminApi } from '../../../api/adminApi'; // <-- Added API import
 
 const InventoryTable = ({ products = [], categories = [] }) => {
+    const navigate = useNavigate(); 
     const [searchTerm, setSearchTerm] = useState('');
     const [catFilter, setCatFilter] = useState('All');
 
@@ -15,6 +18,21 @@ const InventoryTable = ({ products = [], categories = [] }) => {
         if (status === 'In Stock') return 'bg-green-50 text-green-700';
         if (status === 'Low Stock') return 'bg-amber-50 text-amber-700';
         return 'bg-red-50 text-red-700';
+    };
+
+    // THE FIX: Added Delete Functionality
+    const handleDelete = async (productId) => {
+        // Native browser pop-up to confirm deletion
+        if (window.confirm("Are you sure you want to delete this product?")) {
+            try {
+                await adminApi.deleteProduct(productId);
+                // Hard reload to instantly remove it from the table
+                window.location.reload(); 
+            } catch (error) {
+                console.error("Failed to delete product:", error);
+                alert("Failed to delete. Check your backend console.");
+            }
+        }
     };
 
     return (
@@ -37,7 +55,11 @@ const InventoryTable = ({ products = [], categories = [] }) => {
                         {categories.map((cat, i) => <option key={i} value={cat}>{cat}</option>)}
                     </select>
                 </div>
-                <button className="bg-[#3A6447] text-white px-5 py-2.5 rounded-2xl text-sm font-bold flex items-center gap-2 hover:bg-[#2C4D36] transition-colors">
+                
+                <button 
+                    onClick={() => navigate('/admin/inventory/add')} 
+                    className="bg-[#3A6447] text-white px-5 py-2.5 rounded-2xl text-sm font-bold flex items-center gap-2 hover:bg-[#2C4D36] transition-colors"
+                >
                     <Plus size={16} /> Add Product
                 </button>
             </div>
@@ -67,8 +89,20 @@ const InventoryTable = ({ products = [], categories = [] }) => {
                                     </span>
                                 </td>
                                 <td className="px-6 py-4 text-right">
-                                    <button className="text-blue-500 hover:bg-blue-50 p-2 rounded-lg transition-colors mr-2"><Edit2 size={16} /></button>
-                                    <button className="text-red-500 hover:bg-red-50 p-2 rounded-lg transition-colors"><Trash2 size={16} /></button>
+                                    {/* THE FIX: Added Navigation to Edit Page */}
+                                    <button 
+                                        onClick={() => navigate(`/admin/inventory/edit/${product.id}`)}
+                                        className="text-blue-500 hover:bg-blue-50 p-2 rounded-lg transition-colors mr-2"
+                                    >
+                                        <Edit2 size={16} />
+                                    </button>
+                                    {/* THE FIX: Added Delete function execution */}
+                                    <button 
+                                        onClick={() => handleDelete(product.id)}
+                                        className="text-red-500 hover:bg-red-50 p-2 rounded-lg transition-colors"
+                                    >
+                                        <Trash2 size={16} />
+                                    </button>
                                 </td>
                             </tr>
                         ))}
@@ -78,4 +112,5 @@ const InventoryTable = ({ products = [], categories = [] }) => {
         </div>
     );
 };
+
 export default InventoryTable;

@@ -2,8 +2,12 @@ import React from 'react';
 import { ShieldAlert } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
-const ExpertConsultationCard = () => {
+const ExpertConsultationCard = ({ data }) => {
   const navigate = useNavigate();
+
+  // Safely extract the dynamically recommended doctor's name based on condition.
+  // Fallback to a generic title if the data is still loading or unavailable.
+  const doctorName = data?.recommendedDoctor || data?.doctorName || data?.doctor_name || 'an Ayurvedic specialist';
 
   return (
     <div className="bg-[#3A6447] rounded-[24px] p-8 text-white h-full flex flex-col justify-center shadow-sm">
@@ -13,7 +17,7 @@ const ExpertConsultationCard = () => {
 
       <h3 className="text-lg font-bold mb-2">Expert Consultation</h3>
       <p className="text-sm text-white/80 font-medium leading-relaxed mb-6">
-        Book a quick follow-up with Dr. Sharma about your current dosage.
+        Book a quick follow-up with {doctorName} to discuss your current health condition and progress.
       </p>
 
       <button

@@ -10,7 +10,14 @@ const adminModel = {
     },
 
     getTotalPatients: async () => {
-        const { rows } = await db.query(`SELECT COUNT(*) as count FROM PatientProfiles`);
+        // FIX: Now it strictly checks the Users table to ensure they are still a patient!
+        const query = `
+            SELECT COUNT(p.id) as count 
+            FROM PatientProfiles p
+            JOIN Users u ON p.user_id = u.id
+            WHERE u.role = 'patient'
+        `;
+        const { rows } = await db.query(query);
         return parseInt(rows[0].count);
     },
 
@@ -31,8 +38,9 @@ const adminModel = {
     // DASHBOARD RECENT LISTS
     // ==========================================
     getRecentDoctors: async () => {
+        // FIX: Added 'd.avatar' to the SELECT statement!
         const query = `
-            SELECT d.id, u.full_name as name, d.specialization, d.verification_status as status, u.created_at 
+            SELECT d.id, u.full_name as name, d.specialization, d.verification_status as status, u.created_at, d.avatar 
             FROM DoctorProfiles d 
             JOIN Users u ON d.user_id = u.id 
             ORDER BY u.created_at DESC LIMIT 5
@@ -45,6 +53,7 @@ const adminModel = {
             SELECT p.id, u.full_name as name, p.patient_display_id, p.clinical_status as status, p.updated_at as last_visit 
             FROM PatientProfiles p 
             JOIN Users u ON p.user_id = u.id 
+            WHERE u.role = 'patient' -- FIX: Added to keep admins off the dashboard!
             ORDER BY u.created_at DESC LIMIT 5
         `;
         return (await db.query(query)).rows;
@@ -66,7 +75,7 @@ const adminModel = {
     // ==========================================
     getAllDoctors: async () => {
         const query = `
-            SELECT d.id, u.full_name as name, u.email, u.phone, d.specialization, d.verification_status as status, d.average_rating as rating, d.experience_years as experience
+            SELECT d.id, u.full_name as name, u.email, u.phone, d.specialization, d.verification_status as status, d.average_rating as rating, d.experience_years as experience, d.consultation_fee, d.avatar
             FROM DoctorProfiles d 
             JOIN Users u ON d.user_id = u.id
             ORDER BY u.created_at DESC
@@ -90,12 +99,19 @@ const adminModel = {
 
             const profileQuery = `
                 INSERT INTO DoctorProfiles 
-                (user_id, specialization, experience_years, qualifications, registration_number, consultation_fee, verification_status) 
-                VALUES ($1, $2, $3, $4, $5, $6, 'Verified') RETURNING id
+                (user_id, specialization, experience_years, qualifications, registration_number, consultation_fee, bio, avatar, clinic_address, verification_status) 
+                VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'Verified') RETURNING id
             `;
             const profileRes = await client.query(profileQuery, [
-                newUserId, profileData.specialization, profileData.experience_years,
-                profileData.qualifications, profileData.registration_number, profileData.consultation_fee
+                newUserId, 
+                profileData.specialization, 
+                profileData.experience_years,
+                profileData.qualifications, 
+                profileData.registration_number, 
+                profileData.consultation_fee, 
+                profileData.about, 
+                profileData.avatar,
+                profileData.clinic_address
             ]);
 
             await client.query('COMMIT');
@@ -122,7 +138,6 @@ const adminModel = {
     },
 
     getAverageResponseTime: async () => {
-        // Calculates average lead time between appt booking & starting
         const { rows } = await db.query(`
             SELECT COALESCE(ROUND(AVG(EXTRACT(EPOCH FROM (start_time - created_at))/3600), 1), 0) as avg_hours 
             FROM Appointments WHERE status != 'Cancelled'
@@ -131,8 +146,37 @@ const adminModel = {
     },
 
     deleteDoctor: async (doctorId) => {
-        const { rows } = await db.query(`DELETE FROM DoctorProfiles WHERE id = $1 RETURNING id`, [doctorId]);
-        return rows[0];
+        const client = await db.connect();
+        try {
+            await client.query('BEGIN');
+
+            const { rows } = await client.query(`SELECT user_id FROM DoctorProfiles WHERE id = $1`, [doctorId]);
+            
+            if (rows.length > 0) {
+                const userId = rows[0].user_id;
+                
+                await client.query(`
+                    DELETE FROM AppointmentReviews 
+                    WHERE appointment_id IN (SELECT id FROM Appointments WHERE doctor_id = $1)
+                `, [doctorId]);
+
+                await client.query(`DELETE FROM Appointments WHERE doctor_id = $1`, [doctorId]);
+
+                await client.query(`UPDATE Blogs SET author_id = NULL WHERE author_id = $1`, [userId]);
+
+                await client.query(`DELETE FROM DoctorProfiles WHERE id = $1`, [doctorId]);
+                
+                await client.query(`DELETE FROM Users WHERE id = $1`, [userId]);
+            }
+
+            await client.query('COMMIT');
+            return true;
+        } catch (e) {
+            await client.query('ROLLBACK');
+            throw e; 
+        } finally {
+            client.release();
+        }
     },
 
     getDoctorDetails: async (doctorId) => {
@@ -146,18 +190,67 @@ const adminModel = {
     },
 
     updateDoctorDetails: async (doctorId, data) => {
-        const query = `
-            UPDATE DoctorProfiles 
-            SET specialization = COALESCE($1, specialization), 
-                experience_years = COALESCE($2, experience_years), 
-                consultation_fee = COALESCE($3, consultation_fee),
-                verification_status = COALESCE($4, verification_status)
-            WHERE id = $5 RETURNING id
-        `;
-        const { rows } = await db.query(query, [
-            data.specialization, data.experience_years, data.consultation_fee, data.verification_status, doctorId
-        ]);
-        return rows[0];
+        const client = await db.connect();
+        try {
+            await client.query('BEGIN');
+
+            const { rows } = await client.query(`SELECT user_id FROM DoctorProfiles WHERE id = $1`, [doctorId]);
+            
+            if (rows.length > 0) {
+                const userId = rows[0].user_id;
+
+                let userUpdateQuery = `UPDATE Users SET full_name = COALESCE($1, full_name)`;
+                let userValues = [data.full_name];
+
+                if (data.password && data.password.trim() !== '') {
+                    const bcrypt = require('bcryptjs');
+                    const salt = await bcrypt.genSalt(10);
+                    const hashedPw = await bcrypt.hash(data.password, salt);
+                    
+                    userUpdateQuery += `, password_hash = $2 WHERE id = $3`;
+                    userValues.push(hashedPw, userId);
+                } else {
+                    userUpdateQuery += ` WHERE id = $2`;
+                    userValues.push(userId);
+                }
+
+                await client.query(userUpdateQuery, userValues);
+            }
+
+            const aboutText = data.about || data.bio;
+            const addressText = data.clinical_address || data.clinic_address || data.address;
+
+            const profileQuery = `
+                UPDATE DoctorProfiles 
+                SET specialization = COALESCE($1, specialization), 
+                    experience_years = COALESCE($2, experience_years), 
+                    consultation_fee = COALESCE($3, consultation_fee),
+                    verification_status = COALESCE($4, verification_status),
+                    bio = COALESCE($5, bio),
+                    clinic_address = COALESCE($6, clinic_address),
+                    avatar = COALESCE($7, avatar)
+                WHERE id = $8 RETURNING id
+            `;
+            
+            await client.query(profileQuery, [
+                data.specialization, 
+                data.experience_years, 
+                data.consultation_fee, 
+                data.verification_status, 
+                aboutText, 
+                addressText,
+                data.avatar, 
+                doctorId
+            ]);
+
+            await client.query('COMMIT');
+            return doctorId;
+        } catch (e) {
+            await client.query('ROLLBACK');
+            throw e;
+        } finally {
+            client.release();
+        }
     },
 
     // ==========================================
@@ -168,6 +261,7 @@ const adminModel = {
             SELECT p.id, p.patient_display_id, u.full_name as name, p.age, p.gender, u.phone, p.clinical_status, p.updated_at as last_visit
             FROM PatientProfiles p 
             JOIN Users u ON p.user_id = u.id
+            WHERE u.role = 'patient' -- FIX: Added to keep admins out of the main patient table!
             ORDER BY u.created_at DESC
         `;
         return (await db.query(query)).rows;
@@ -259,7 +353,6 @@ const adminModel = {
     },
 
     getOrderGrowthRate: async () => {
-        // Advanced SQL: Compares Current Month Orders vs Last Month Orders to find % growth
         const query = `
             SELECT 
                 COALESCE(
@@ -348,12 +441,19 @@ const adminModel = {
     // ==========================================
     addNewProduct: async (data) => {
         const query = `
-            INSERT INTO Products (name, category, brand, price, stock_quantity, ingredients, benefits, usage_instructions) 
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id
+            INSERT INTO Products (name, category, brand, price, stock_quantity, ingredients, benefits, usage_instructions, image_url, created_at) 
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, NOW()) RETURNING id
         `;
         const { rows } = await db.query(query, [
-            data.name, data.category, data.brand || 'Ayurcure', data.price,
-            data.stock_quantity, data.ingredients, data.benefits, data.usage_instructions
+            data.name, 
+            data.category, 
+            data.brand || 'Ayurcure', 
+            data.price || 0,
+            data.stock_quantity || 0, 
+            data.ingredients || null, 
+            data.benefits || null, 
+            data.usage_instructions || null,
+            data.image_url || null 
         ]);
         return rows[0].id;
     },
@@ -363,7 +463,7 @@ const adminModel = {
             SELECT id, name, category, stock_quantity as stock, price, 
             CASE WHEN stock_quantity > 10 THEN 'In Stock' WHEN stock_quantity > 0 THEN 'Low Stock' ELSE 'Out of Stock' END as status 
             FROM Products 
-            ORDER BY created_at DESC 
+            ORDER BY created_at DESC NULLS LAST 
             LIMIT $1 OFFSET $2
         `;
         return (await db.query(query, [limit, offset])).rows;
@@ -415,6 +515,12 @@ const adminModel = {
             WHERE id = $5 RETURNING id
         `;
         const { rows } = await db.query(query, [data.name, data.category, data.price, data.stock_quantity, productId]);
+        return rows[0];
+    },
+
+     deleteProduct: async (productId) => {
+        const query = `DELETE FROM Products WHERE id = $1 RETURNING id`;
+        const { rows } = await db.query(query, [productId]);
         return rows[0];
     },
 
@@ -488,7 +594,7 @@ const adminModel = {
             SELECT 
                 (SELECT COUNT(*) FROM Orders) as total_orders,
                 (SELECT COALESCE(SUM(total_amount), 0) FROM Orders WHERE payment_status = 'Paid') as total_revenue,
-                (SELECT COUNT(*) FROM PatientProfiles) as total_patients,
+                (SELECT COUNT(p.id) FROM PatientProfiles p JOIN Users u ON p.user_id = u.id WHERE u.role = 'patient') as total_patients,
                 (SELECT COUNT(*) FROM DoctorProfiles) as total_doctors
         `;
         return (await db.query(query)).rows[0];
@@ -499,7 +605,7 @@ const adminModel = {
             SELECT 
                 (SELECT COUNT(*) FROM Orders WHERE created_at >= NOW() - INTERVAL '30 days') as total_orders,
                 (SELECT COALESCE(SUM(total_amount), 0) FROM Orders WHERE payment_status = 'Paid' AND created_at >= NOW() - INTERVAL '30 days') as total_revenue,
-                (SELECT COUNT(*) FROM PatientProfiles WHERE updated_at >= NOW() - INTERVAL '30 days') as total_patients,
+                (SELECT COUNT(p.id) FROM PatientProfiles p JOIN Users u ON p.user_id = u.id WHERE u.role = 'patient' AND p.updated_at >= NOW() - INTERVAL '30 days') as total_patients,
                 (SELECT COUNT(*) FROM Appointments WHERE start_time >= NOW() - INTERVAL '30 days' AND status = 'Completed') as total_consultations
         `;
         return (await db.query(query)).rows[0];
@@ -582,11 +688,21 @@ const adminModel = {
 
     addAdmin: async (data) => {
         const query = `
-            INSERT INTO Users (role, full_name, email, phone, password_hash, account_status) 
-            VALUES ('admin', $1, $2, $3, $4, 'Active') RETURNING id
+            INSERT INTO Users (role, full_name, email, phone, password_hash, account_status, created_at) 
+            VALUES ('admin', $1, $2, $3, $4, 'Active', NOW()) RETURNING id
         `;
         const { rows } = await db.query(query, [data.full_name, data.email, data.phone, data.password_hash]);
         return rows[0].id;
+    },
+
+    getAllAdmins: async () => {
+        const query = `
+            SELECT id, full_name as name, role, email, account_status as status, created_at 
+            FROM Users 
+            WHERE role = 'admin' OR role = 'super_admin'
+            ORDER BY created_at DESC NULLS LAST
+        `;
+        return (await db.query(query)).rows;
     },
 
     updateAdminDetails: async (adminId, data) => {
@@ -602,20 +718,10 @@ const adminModel = {
         return rows[0];
     },
 
-    getAllAdmins: async () => {
-        const query = `
-            SELECT id, full_name as name, role, email, account_status as status, created_at 
-            FROM Users 
-            WHERE role = 'admin' OR role = 'super_admin'
-            ORDER BY created_at DESC
-        `;
-        return (await db.query(query)).rows;
-    },
-
     getAdminDetails: async (adminId) => {
         const query = `SELECT id, full_name, email, phone, role, account_status FROM Users WHERE id = $1`;
         return (await db.query(query, [adminId])).rows[0];
-    },
+    }
 };
 
 module.exports = adminModel;

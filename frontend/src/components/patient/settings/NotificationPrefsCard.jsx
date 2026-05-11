@@ -11,7 +11,8 @@ const NotificationPrefsCard = ({ data, isEditing, onChange }) => {
         <p className="text-xs text-gray-500 font-medium leading-relaxed">{description}</p>
       </div>
       <button
-        onClick={() => isEditing && onChange('notifications', field, !value)}
+        // FIXED: Now correctly passes only 2 arguments: field and the new boolean value
+        onClick={() => isEditing && onChange(field, !value)}
         disabled={!isEditing}
         className={`relative inline-flex h-6 w-11 shrink-0 rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${value ? 'bg-[#4A7C59]' : 'bg-gray-200'
           } ${!isEditing ? 'opacity-60 cursor-not-allowed' : 'cursor-pointer'}`}

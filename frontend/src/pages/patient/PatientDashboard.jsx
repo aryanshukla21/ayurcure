@@ -10,6 +10,7 @@ import QuickMetrics from '../../components/patient/dashboard/QuickMetrics';
 const PatientDashboard = () => {
   // Granular Data States
   const [profile, setProfile] = useState(null);
+  const [location, setLocation] = useState(null); // NEW: State for location
   const [upcoming, setUpcoming] = useState(null);
   const [weightData, setWeightData] = useState(null);
   const [activity, setActivity] = useState(null);
@@ -21,6 +22,22 @@ const PatientDashboard = () => {
     patientApi.getDashPatientDetails()
       .then(data => setProfile(data))
       .catch(err => console.error("Profile fetch failed", err));
+
+    // NEW: Fetch contact info to extract the city for the dashboard
+    patientApi.getProfileContact()
+      .then(data => {
+        if (data && data.address) {
+          // The address is saved as "Street, City, State - Pincode"
+          // We split by comma and grab the second item (index 1) which is the City
+          const parts = data.address.split(',');
+          if (parts.length > 1) {
+            setLocation(parts[1].trim());
+          } else {
+            setLocation(data.address);
+          }
+        }
+      })
+      .catch(err => console.error("Contact fetch failed", err));
 
     patientApi.getDashUpcomingSession()
       .then(data => setUpcoming(data))
@@ -48,8 +65,8 @@ const PatientDashboard = () => {
       {/* Top Row: Profile & Appointment */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-10">
         <div className="lg:col-span-2">
-          {/* Passing null initially allows the child component to show its own skeleton/loading state */}
-          <PatientProfileSummary profile={profile || {}} isLoading={!profile} />
+          {/* Passed the extracted location down as a prop */}
+          <PatientProfileSummary profile={profile || {}} location={location} isLoading={!profile} />
         </div>
         <div className="lg:col-span-1">
           <UpcomingAppointmentCard appointment={upcoming} isLoading={upcoming === null} />
@@ -58,7 +75,11 @@ const PatientDashboard = () => {
 
       {/* Middle Row: Charts */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-10">
-        <WeightTracker weightData={weightData || { labels: [] }} isLoading={!weightData} />
+        <WeightTracker 
+            weightData={weightData || []} 
+            profileWeight={profile?.weight_kg} 
+            isLoading={!weightData && !profile} 
+        />
         <WellnessActivity activityData={activity || []} isLoading={!activity} />
       </div>
 

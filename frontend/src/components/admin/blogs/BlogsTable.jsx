@@ -1,14 +1,29 @@
 import React, { useState } from 'react';
 import { Search, Plus, Edit, Trash2 } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom'; // <-- Added useNavigate
+import { adminApi } from '../../../api/adminApi'; // <-- Make sure this path is correct for your folder structure!
 
 const BlogsTable = ({ blogs = [] }) => {
+  const navigate = useNavigate(); // <-- Initialize navigate
   const [searchTerm, setSearchTerm] = useState('');
 
   const filteredBlogs = blogs.filter(b =>
     (b.title || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
     (b.author || '').toLowerCase().includes(searchTerm.toLowerCase())
   );
+
+  // THE FIX: Added Delete Functionality
+  const handleDelete = async (blogId) => {
+      if (window.confirm("Are you sure you want to delete this article?")) {
+          try {
+              await adminApi.deleteBlog(blogId);
+              window.location.reload(); // Hard reload to clear the table
+          } catch (error) {
+              console.error("Failed to delete blog:", error);
+              alert("Failed to delete. Check your backend console.");
+          }
+      }
+  };
 
   return (
     <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden flex flex-col h-full">
@@ -54,8 +69,19 @@ const BlogsTable = ({ blogs = [] }) => {
                     </span>
                   </td>
                   <td className="px-6 py-4 text-right">
-                    <button className="text-blue-500 hover:bg-blue-50 p-2 rounded-lg transition-colors mr-2"><Edit size={16} /></button>
-                    <button className="text-red-500 hover:bg-red-50 p-2 rounded-lg transition-colors"><Trash2 size={16} /></button>
+                    {/* THE FIX: Added onClick to navigate to Edit, and onClick to trigger Delete */}
+                    <button 
+                        onClick={() => navigate(`/admin/blogs/edit/${blog.id}`)}
+                        className="text-blue-500 hover:bg-blue-50 p-2 rounded-lg transition-colors mr-2"
+                    >
+                        <Edit size={16} />
+                    </button>
+                    <button 
+                        onClick={() => handleDelete(blog.id)}
+                        className="text-red-500 hover:bg-red-50 p-2 rounded-lg transition-colors"
+                    >
+                        <Trash2 size={16} />
+                    </button>
                   </td>
                 </tr>
               ))
@@ -66,4 +92,5 @@ const BlogsTable = ({ blogs = [] }) => {
     </div>
   );
 };
+
 export default BlogsTable;

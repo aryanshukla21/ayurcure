@@ -53,6 +53,7 @@ export const adminApi = {
     getAllCategories: async () => (await axiosInstance.get('/admin/inventory/all-category')).data,
     getProductDetails: async (id) => (await axiosInstance.get(`/admin/inventory/${id}/get-product-details`)).data,
     updateProduct: async (id, data) => (await axiosInstance.put(`/admin/inventory/${id}/update-product`, data)).data,
+    deleteProduct: async (id) => (await axiosInstance.delete(`/admin/inventory/${id}/delete-product`)).data,
 
     // BLOGS
     getAllBlogs: async () => (await axiosInstance.get('/admin/blogs/get-all-blogs')).data,

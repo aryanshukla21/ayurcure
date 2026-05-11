@@ -4,6 +4,7 @@ import { authApi } from '../../api/authApi';
 
 const LoginPage = () => {
     const navigate = useNavigate();
+    // Only showing Patient and Doctor to the public
     const [loginRole, setLoginRole] = useState('patient');
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState('');
@@ -15,8 +16,6 @@ const LoginPage = () => {
 
         const identifier = e.target.identifier.value;
         const password = e.target.password.value;
-
-        // Determine if the input is an email or phone number
         const isEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(identifier);
 
         const payload = {
@@ -26,6 +25,7 @@ const LoginPage = () => {
         };
 
         try {
+            // First attempt: Try logging in as whatever tab is selected
             const response = await authApi.login(payload);
 
             if (response.user.role === 'doctor') {
@@ -34,7 +34,23 @@ const LoginPage = () => {
                 navigate('/patient/dashboard');
             }
         } catch (err) {
-            setError(err.response?.data?.error || 'Invalid credentials. Please try again.');
+            const errorMsg = err.response?.data?.error || '';
+
+            // THE TRICK: If the backend throws an error mentioning "admin", 
+            // we catch it and silently log them in as an admin!
+            if (errorMsg.toLowerCase().includes('admin')) {
+                try {
+                    const adminPayload = { ...payload, role: 'admin' };
+                    await authApi.login(adminPayload);
+                    navigate('/admin/dashboard'); // Success! Send to admin panel.
+                    return; 
+                } catch (adminErr) {
+                    setError('Invalid admin credentials.');
+                }
+            } else {
+                // If it's a normal error (wrong password, doesn't exist), show it normally
+                setError(errorMsg || 'Invalid credentials. Please try again.');
+            }
         } finally {
             setIsLoading(false);
         }
@@ -59,6 +75,7 @@ const LoginPage = () => {
                             <p className="text-gray-500 font-medium text-sm">Continue your journey to better health</p>
                         </header>
 
+                        {/* Back to just two beautiful buttons */}
                         <div className="flex p-1 bg-[#FAF7F2] rounded-xl mb-8 border border-[#EFEBE1]">
                             <button
                                 type="button"
@@ -117,7 +134,7 @@ const LoginPage = () => {
                                 type="submit"
                                 disabled={isLoading}
                             >
-                                {isLoading ? 'Logging in...' : `Login as ${loginRole === 'patient' ? 'Patient' : 'Doctor'}`}
+                                {isLoading ? 'Logging in...' : `Login as ${loginRole.charAt(0).toUpperCase() + loginRole.slice(1)}`}
                             </button>
                         </form>
 

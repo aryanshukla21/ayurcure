@@ -1,25 +1,20 @@
 import React, { useState, useEffect } from 'react';
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
-import { Bell, Search, ShoppingCart, ChevronLeft } from 'lucide-react';
+import { Search, ShoppingCart, ChevronLeft } from 'lucide-react';
 import PatientSidebar from './PatientSidebar';
 import { useCart } from '../../../context/CartContext';
-import { patientApi } from '../../../api/patientApi'; // <-- Imported API
+import { patientApi } from '../../../api/patientApi'; 
 
 const PatientLayout = () => {
   const location = useLocation();
   const navigate = useNavigate();
 
-  // Access dynamic cart count
   const { cartCount } = useCart();
-
-  // State to hold the search query
   const [globalSearchQuery, setGlobalSearchQuery] = useState('');
-
-  // Profile state for dynamic fetching
+  
   const [profile, setProfile] = useState(null);
   const [isLoadingProfile, setIsLoadingProfile] = useState(true);
 
-  // Fetch the global profile on layout mount
   useEffect(() => {
     const fetchGlobalProfile = async () => {
       try {
@@ -32,9 +27,18 @@ const PatientLayout = () => {
       }
     };
     fetchGlobalProfile();
+
+    // Listen for live updates from the profile page
+    const handleUpdate = (e) => {
+      if (e.detail) {
+        setProfile(prev => ({ ...prev, avatar: e.detail }));
+      }
+    };
+    window.addEventListener('avatarUpdated', handleUpdate);
+    
+    return () => window.removeEventListener('avatarUpdated', handleUpdate);
   }, []);
 
-  // Helper to get the current page title for the header
   const getPageTitle = () => {
     const path = location.pathname;
     if (path.includes('dashboard')) return 'Patient Dashboard';
@@ -50,7 +54,6 @@ const PatientLayout = () => {
     return 'Patient Portal';
   };
 
-  // Helper to dynamically set the search placeholder based on the page
   const getSearchPlaceholder = () => {
     const path = location.pathname;
     if (path.includes('pharmacy-store')) return 'Search medicines, supplements, or Ayurvedic products...';
@@ -61,26 +64,19 @@ const PatientLayout = () => {
     return 'Search medical history, doctors...';
   };
 
-  // Check if we are on a specific product detail page
   const isProductDetailsPage = location.pathname.includes('/pharmacy-store/') && location.pathname !== '/patient/pharmacy-store';
 
-  // Handle Search Input changes
   const handleSearchChange = (e) => {
     setGlobalSearchQuery(e.target.value);
   };
 
   return (
     <div className="flex h-screen bg-[#FDF9EE] font-sans">
-
-      {/* Sidebar Component */}
       <PatientSidebar />
 
-      {/* Main Content Area */}
       <main className="flex-1 flex flex-col overflow-hidden">
-        {/* Top Header */}
         <header className="h-24 px-10 flex items-center justify-between border-b border-gray-200 shrink-0 shadow-sm z-10">
 
-          {/* Search Bar / Back Button */}
           <div className="relative w-[480px]">
             {isProductDetailsPage ? (
               <button
@@ -104,18 +100,15 @@ const PatientLayout = () => {
             )}
           </div>
 
-          {/* Right Header Controls */}
           <div className="flex items-center gap-6">
             <span className="text-sm font-bold text-gray-900">{getPageTitle()}</span>
 
-            {/* Notification and Cart Icons */}
             <div className="flex items-center gap-4">
               <button
                 onClick={() => navigate('/patient/cart')}
                 className="text-gray-600 hover:text-[#4A7C59] transition-colors relative cursor-pointer"
               >
                 <ShoppingCart size={20} />
-                {/* Dynamically render badge only if cart has items */}
                 {cartCount > 0 && (
                   <span className="absolute -top-2 -right-2 bg-[#4A7C59] text-white text-[10px] font-bold w-4 h-4 flex items-center justify-center rounded-full border border-white">
                     {cartCount}
@@ -124,7 +117,6 @@ const PatientLayout = () => {
               </button>
             </div>
 
-            {/* Profile Photo (Dynamic with Skeleton) */}
             {isLoadingProfile ? (
               <div className="w-9 h-9 rounded-full bg-gray-200 animate-pulse border border-gray-200 shadow-sm shrink-0"></div>
             ) : profile?.avatar ? (
@@ -145,9 +137,7 @@ const PatientLayout = () => {
           </div>
         </header>
 
-        {/* Page Content */}
         <div className="flex-1 overflow-y-auto custom-scrollbar">
-          {/* Passed search query context down to child routes */}
           <Outlet context={{ globalSearchQuery }} />
         </div>
       </main>

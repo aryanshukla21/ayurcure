@@ -118,59 +118,67 @@ const DoctorsTable = ({ doctors = [], onDelete }) => {
         {displayedDoctors.length === 0 ? (
           <div className="text-center py-10 text-sm font-bold text-gray-400">No doctors match your search.</div>
         ) : (
-          displayedDoctors.map((doc) => (
-            <div key={doc.id} className="flex items-center py-4 border-b border-transparent hover:border-[#EFEBE1] hover:bg-[#FDF9EE]/50 rounded-2xl transition-colors px-2 -mx-2">
+          displayedDoctors.map((doc) => {
+            // FIX: Safely detects whichever fee property the backend returns
+            const finalFee = doc.consultation_fee || doc.consultation_fees || doc.fees || doc.fee;
+            
+            return (
+              <div key={doc.id} className="flex items-center py-4 border-b border-transparent hover:border-[#EFEBE1] hover:bg-[#FDF9EE]/50 rounded-2xl transition-colors px-2 -mx-2">
 
-              <div className="w-12 shrink-0">
-                <input
-                  type="checkbox"
-                  className="w-4 h-4 rounded border-gray-300 text-[#3A6447] focus:ring-[#3A6447] cursor-pointer"
-                  checked={selectedIds.includes(doc.id)}
-                  onChange={(e) => handleSelectOne(e, doc.id)}
-                />
-              </div>
-
-              <div className="w-[25%] flex items-center gap-3 cursor-pointer" onClick={() => navigate(`/admin/doctors/edit/${doc.id}`)}>
-                {/* Dynamically generates initials avatar based on API name */}
-                <img
-                  src={`https://ui-avatars.com/api/?name=${encodeURIComponent(doc.name || 'Doc')}&background=FDF9EE&color=3A6447`}
-                  alt={doc.name}
-                  className="w-10 h-10 rounded-full border border-[#EFEBE1] shadow-sm"
-                />
-                <div>
-                  <p className="text-sm font-bold text-gray-900 hover:text-[#3A6447] transition-colors">{doc.name}</p>
-                  <p className="text-[11px] font-medium text-gray-500">{doc.email}</p>
+                <div className="w-12 shrink-0">
+                  <input
+                    type="checkbox"
+                    className="w-4 h-4 rounded border-gray-300 text-[#3A6447] focus:ring-[#3A6447] cursor-pointer"
+                    checked={selectedIds.includes(doc.id)}
+                    onChange={(e) => handleSelectOne(e, doc.id)}
+                  />
                 </div>
-              </div>
 
-              <div className="w-[25%] text-sm font-medium text-gray-600">{doc.specialization || 'N/A'}</div>
-              <div className="w-[15%] text-sm font-medium text-gray-600">{doc.experience ? `${doc.experience} Years` : 'N/A'}</div>
-              <div className="w-[15%] text-sm font-bold text-gray-900">{doc.consultation_fee ? `$${doc.consultation_fee}` : 'N/A'}</div>
-
-              <div className="w-[15%]">
-                <span className={`px-3 py-1.5 rounded-full text-[9px] font-extrabold uppercase tracking-widest ${doc.status === 'Verified' ? 'bg-[#E7F3EB] text-[#3A6447]' : 'bg-[#FDF1E8] text-[#D9774B]'}`}>
-                  {doc.status === 'Verified' ? 'ACTIVE' : 'PENDING'}
-                </span>
-              </div>
-
-              <div className="w-[10%] text-right pr-4 flex justify-end">
-                <div className="relative group">
-                  <button
-                    onClick={() => navigate(`/admin/doctors/edit/${doc.id}`)}
-                    className="text-gray-400 hover:text-[#3A6447] transition-colors p-2 rounded-full hover:bg-gray-100 cursor-pointer outline-none"
-                  >
-                    <Edit2 size={16} />
-                  </button>
-
-                  <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2.5 py-1.5 bg-gray-900 text-white text-[10px] font-bold rounded-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none z-10 shadow-sm">
-                    Edit Doctor
-                    <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-gray-900"></div>
+                <div className="w-[25%] flex items-center gap-3 cursor-pointer" onClick={() => navigate(`/admin/doctors/edit/${doc.id}`)}>
+                  {/* FIX: Displays Database Avatar if exists, otherwise uses UI initials */}
+                  <img
+    // If doc.avatar exists, use it! Otherwise (||) fallback to the UI initials
+    src={doc.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(doc.name || 'Doc')}&background=FDF9EE&color=3A6447`}
+    alt={doc.name}
+    className="w-10 h-10 rounded-full border border-[#EFEBE1] shadow-sm object-cover"
+/>
+                  <div>
+                    <p className="text-sm font-bold text-gray-900 hover:text-[#3A6447] transition-colors">{doc.name}</p>
+                    <p className="text-[11px] font-medium text-gray-500">{doc.email}</p>
                   </div>
                 </div>
-              </div>
 
-            </div>
-          ))
+                <div className="w-[25%] text-sm font-medium text-gray-600">{doc.specialization || 'N/A'}</div>
+                <div className="w-[15%] text-sm font-medium text-gray-600">{doc.experience ? `${doc.experience} Years` : 'N/A'}</div>
+                
+                {/* FIX: Renders the dynamically mapped fee */}
+                <div className="w-[15%] text-sm font-bold text-gray-900">{finalFee ? `₹${finalFee}` : 'N/A'}</div>
+
+                <div className="w-[15%]">
+                  <span className={`px-3 py-1.5 rounded-full text-[9px] font-extrabold uppercase tracking-widest ${doc.status === 'Verified' ? 'bg-[#E7F3EB] text-[#3A6447]' : 'bg-[#FDF1E8] text-[#D9774B]'}`}>
+                    {doc.status === 'Verified' ? 'ACTIVE' : 'PENDING'}
+                  </span>
+                </div>
+
+                <div className="w-[10%] text-right pr-4 flex justify-end">
+                  <div className="relative group">
+                    <button
+                      onClick={() => navigate(`/admin/doctors/edit/${doc.id}`)}
+                      className="text-gray-400 hover:text-[#3A6447] transition-colors p-2 rounded-full hover:bg-gray-100 cursor-pointer outline-none"
+                    >
+                      <Edit2 size={16} />
+                    </button>
+
+                    <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2.5 py-1.5 bg-gray-900 text-white text-[10px] font-bold rounded-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none z-10 shadow-sm">
+                      Edit Doctor
+                      <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-gray-900"></div>
+                    </div>
+                  </div>
+                </div>
+
+              </div>
+            );
+          })
         )}
       </div>
 

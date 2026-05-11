@@ -5,9 +5,11 @@ import OrderSummaryPanel from '../../components/patient/cart/OrderSummaryPanel';
 import { useCart } from '../../context/CartContext';
 
 const CartSummary = () => {
+    // Pulling strictly dynamic data from the Context Provider
     const { cartItems, updateQuantity, removeFromCart, cartTotal } = useCart();
 
-    const taxes = cartItems.length > 0 ? 4.50 : 0;
+    // Dynamic tax calculation (e.g., 5% of the total, or 0 if cart is empty)
+    const taxes = cartItems.length > 0 ? (cartTotal * 0.05) : 0;
     const total = cartTotal + taxes;
 
     return (
@@ -21,11 +23,11 @@ const CartSummary = () => {
 
             <div className="flex flex-col lg:flex-row gap-10">
                 <div className="flex-1">
-                    {cartItems.length > 0 ? (
+                    {cartItems && cartItems.length > 0 ? (
                         <div className="bg-[#fdf7e7] rounded-3xl p-6 md:p-8 shadow-sm border border-gray-100 mb-6">
                             {cartItems.map(item => (
                                 <CartItem
-                                    key={item.id}
+                                    key={item.id || item._id}
                                     item={item}
                                     updateQuantity={updateQuantity}
                                     removeItem={removeFromCart}
@@ -42,7 +44,7 @@ const CartSummary = () => {
                             </div>
                         </div>
                     ) : (
-                        <div className="bg-white rounded-3xl p-12 text-center shadow-sm border border-gray-100">
+                        <div className="bg-white rounded-3xl p-12 text-center shadow-sm border border-gray-100 h-full flex flex-col justify-center items-center">
                             <h2 className="text-xl font-bold text-gray-900 mb-2">Your cart is empty</h2>
                             <p className="text-gray-500">Add some holistic products from the Pharmacy to begin your wellness journey.</p>
                         </div>

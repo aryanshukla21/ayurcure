@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { ChevronDown, ArrowRight } from 'lucide-react';
+import { ChevronDown, ArrowRight, Eye, EyeOff } from 'lucide-react';
 import { authApi } from '../../api/authApi';
 import { patientApi } from '../../api/patientApi';
 
@@ -13,8 +13,8 @@ const ProfileCompletionPage = () => {
 
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState('');
+    const [showPassword, setShowPassword] = useState(false);
 
-    // --- RELOAD DETECTION LOGIC ---
     useEffect(() => {
         const navEntries = window.performance.getEntriesByType('navigation');
         const isReload = navEntries.length > 0 && navEntries[0].type === 'reload';
@@ -25,7 +25,6 @@ const ProfileCompletionPage = () => {
     }, [email, phone, emailOtp, phoneOtp, navigate]);
 
     useEffect(() => {
-        // Ensure we have all required data before rendering, otherwise kick back to start
         if (!email || !phone || !emailOtp || !phoneOtp) {
             navigate('/signup');
         }
@@ -40,31 +39,37 @@ const ProfileCompletionPage = () => {
         const password = e.target.password.value;
         const gender = e.target.gender.value;
         const age = e.target.age.value;
-        const fullAddress = `${e.target.address.value}, ${e.target.state.value} - ${e.target.pincode.value}`;
+        const bloodGroup = e.target.bloodGroup.value;
+        const weight = e.target.weight.value;
+        const height = e.target.height.value;
+        const city = e.target.city.value;
+        
+        const fullAddress = `${e.target.address.value}, ${city}, ${e.target.state.value} - ${e.target.pincode.value}`;
 
         try {
-            // 1. Create the Account & Log the user in (Backend sets Cookie)
             await authApi.verifyAndRegister({
                 role: 'patient',
                 full_name: fullName,
                 email: email,
                 phone: phone,
                 password: password,
-                // Pass the correctly separated OTP variables here
                 emailOtp: emailOtp,
                 phoneOtp: phoneOtp
             });
 
-            // 2. Update Personal Info (Age & Gender)
-            await patientApi.updateProfilePersonal({ age, gender });
+            // Added height_cm to map precisely to the backend column
+            await patientApi.updateProfilePersonal({ 
+                age: age, 
+                gender: gender, 
+                blood_group: bloodGroup, 
+                weight_kg: weight,
+                height_cm: height
+            });
 
-            // 3. Update Contact Info (Address)
             await patientApi.updateProfileContact({ address: fullAddress });
 
-            // Proceed to Step 4
             navigate('/symptoms');
         } catch (err) {
-            // Uses the customMessage from the new Axios interceptor, or falls back safely
             setError(err.customMessage || err.response?.data?.error || 'Registration failed. Check your details or OTPs.');
         } finally {
             setIsLoading(false);
@@ -74,7 +79,7 @@ const ProfileCompletionPage = () => {
     return (
         <div className="bg-[#FAF7F2] text-gray-900 min-h-screen font-sans">
             <header className="flex flex-col items-center justify-center w-full py-8 px-4">
-                <div className="text-2xl font-extrabold text-[#3A6447] tracking-tight">AyurCare360</div>
+                <div className="text-2xl font-extrabold text-[#3A6447] tracking-tight">AyurCure360</div>
             </header>
 
             <main className="min-h-[calc(100vh-180px)] flex items-center justify-center px-6 py-12">
@@ -102,9 +107,25 @@ const ProfileCompletionPage = () => {
                                     <input value={email || ''} readOnly className="w-full h-12 bg-gray-50 border border-[#EFEBE1] rounded-xl px-4 text-sm font-medium text-gray-500 outline-none" type="email" />
                                 </div>
 
+                                {/* Password field with visibility toggle */}
                                 <div className="space-y-2">
                                     <label className="text-[10px] font-bold uppercase tracking-widest text-gray-400 ml-1">Password</label>
-                                    <input id="password" className="w-full h-12 bg-white border border-[#EFEBE1] rounded-xl px-4 text-sm font-medium text-gray-900 focus:border-[#3A6447] outline-none" placeholder="••••••••" type="password" required />
+                                    <div className="relative">
+                                        <input 
+                                            id="password" 
+                                            className="w-full h-12 bg-white border border-[#EFEBE1] rounded-xl px-4 pr-12 text-sm font-medium text-gray-900 focus:border-[#3A6447] outline-none" 
+                                            placeholder="••••••••" 
+                                            type={showPassword ? "text" : "password"} 
+                                            required 
+                                        />
+                                        <button 
+                                            type="button" 
+                                            onClick={() => setShowPassword(!showPassword)}
+                                            className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-[#3A6447] transition-colors focus:outline-none"
+                                        >
+                                            {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                                        </button>
+                                    </div>
                                 </div>
 
                                 <div className="space-y-2">
@@ -127,9 +148,45 @@ const ProfileCompletionPage = () => {
                                     <input id="age" className="w-full h-12 bg-white border border-[#EFEBE1] rounded-xl px-4 text-sm font-medium text-gray-900 focus:border-[#3A6447] outline-none" placeholder="28" type="number" required />
                                 </div>
 
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-bold uppercase tracking-widest text-gray-400 ml-1">Blood Group</label>
+                                    <div className="relative">
+                                        <select id="bloodGroup" defaultValue="" className="w-full h-12 bg-white border border-[#EFEBE1] rounded-xl px-4 text-sm font-medium text-gray-900 appearance-none focus:border-[#3A6447] outline-none" required>
+                                            <option disabled value="">Select</option>
+                                            <option value="A+">A+</option>
+                                            <option value="A-">A-</option>
+                                            <option value="B+">B+</option>
+                                            <option value="B-">B-</option>
+                                            <option value="AB+">AB+</option>
+                                            <option value="AB-">AB-</option>
+                                            <option value="O+">O+</option>
+                                            <option value="O-">O-</option>
+                                        </select>
+                                        <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-gray-400">
+                                            <ChevronDown size={18} />
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-bold uppercase tracking-widest text-gray-400 ml-1">Weight (kg)</label>
+                                    <input id="weight" className="w-full h-12 bg-white border border-[#EFEBE1] rounded-xl px-4 text-sm font-medium text-gray-900 focus:border-[#3A6447] outline-none" placeholder="70" type="number" step="0.1" required />
+                                </div>
+
+                                {/* New Height Field */}
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-bold uppercase tracking-widest text-gray-400 ml-1">Height (cm)</label>
+                                    <input id="height" className="w-full h-12 bg-white border border-[#EFEBE1] rounded-xl px-4 text-sm font-medium text-gray-900 focus:border-[#3A6447] outline-none" placeholder="175" type="number" step="0.1" required />
+                                </div>
+
                                 <div className="space-y-2 col-span-full">
                                     <label className="text-[10px] font-bold uppercase tracking-widest text-gray-400 ml-1">Address</label>
                                     <input id="address" className="w-full h-12 bg-white border border-[#EFEBE1] rounded-xl px-4 text-sm font-medium text-gray-900 focus:border-[#3A6447] outline-none" placeholder="123 Wellness Lane, Green Park" type="text" required />
+                                </div>
+
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-bold uppercase tracking-widest text-gray-400 ml-1">City</label>
+                                    <input id="city" className="w-full h-12 bg-white border border-[#EFEBE1] rounded-xl px-4 text-sm font-medium text-gray-900 focus:border-[#3A6447] outline-none" placeholder="Mumbai" type="text" required />
                                 </div>
 
                                 <div className="space-y-2">

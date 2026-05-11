@@ -51,26 +51,35 @@ const EditProductForm = ({ productId }) => {
         }
     };
 
-    const handleSubmit = async (e) => {
+const handleSubmit = async (e) => {
         e.preventDefault();
-        setIsSaving(true);
-        setError('');
+        setIsSubmitting(true);
 
         try {
-            const payload = {
-                name: formData.name,
-                category: formData.category,
-                price: parseFloat(formData.price),
-                stock_quantity: parseInt(formData.stock),
-                // sku, imageFile, and status mappings would be handled here
-            };
+            // --- THE FIX: We must use FormData to send physical files ---
+            const formDataToSend = new FormData();
+            
+            formDataToSend.append('name', formData.name);
+            formDataToSend.append('category', formData.category);
+            formDataToSend.append('sku', formData.sku);
+            formDataToSend.append('price', parseFloat(formData.price) || 0);
+            formDataToSend.append('stock_quantity', parseInt(formData.stock, 10) || 0);
+            formDataToSend.append('status', formData.status);
+            
+            // If the user selected an image, attach the actual file!
+            if (formData.imageFile) {
+                formDataToSend.append('imageFile', formData.imageFile);
+            }
 
-            await adminApi.updateProduct(productId, payload); // Ensure updateProduct(id, payload) is in adminApi.js
-            navigate('/admin/inventory');
-        } catch (err) {
-            setError(err.response?.data?.message || 'Failed to update product.');
+            // Send the FormData instead of the JSON payload
+            await adminApi.addNewProduct(formDataToSend); // (Use updateProduct in the Edit form)
+
+            window.location.href = '/admin/inventory';
+        } catch (error) {
+            console.error("Failed to save product:", error);
+            alert("Database Error. Check console.");
         } finally {
-            setIsSaving(false);
+            setIsSubmitting(false);
         }
     };
 

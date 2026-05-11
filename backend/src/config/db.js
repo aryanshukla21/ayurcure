@@ -37,6 +37,9 @@ module.exports = {
     // Standard query method (automatically returns connections to the pool)
     query: (text, params) => pool.query(text, params),
 
-    // Use this when you need transaction support (BEGIN, COMMIT, ROLLBACK)
-    getClient: () => pool.connect()
+    // Your friend's original name (keep this so you don't break their other code)
+    getClient: () => pool.connect(),
+
+    // The name the Admin controller is looking for (add this!)
+    connect: () => pool.connect()
 };

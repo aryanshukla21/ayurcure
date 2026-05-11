@@ -14,11 +14,12 @@ const AdminSettingsPage = () => {
   useEffect(() => {
     const fetchSettingsData = async () => {
       try {
+        // THE FIX: Adding .catch() to each call prevents one broken route from crashing the whole page
         const [revRes, scoreRes, sessionRes, adminsRes] = await Promise.all([
-          adminApi.getSettingsTotalRevenue(),
-          adminApi.getSecurityScore(),
-          adminApi.getActiveSessions(),
-          adminApi.getAllAdmins() // Fetching the dynamic admin list
+          adminApi.getSettingsTotalRevenue().catch(err => { console.error("Revenue error"); return { revenue: 0 }; }),
+          adminApi.getSecurityScore().catch(err => { console.error("Score error"); return { score: "0/100" }; }),
+          adminApi.getActiveSessions().catch(err => { console.error("Session error"); return { sessions: 0 }; }),
+          adminApi.getAllAdmins().catch(err => { console.error("Admins error", err); return { admins: [] }; }) 
         ]);
 
         setData({
@@ -30,7 +31,7 @@ const AdminSettingsPage = () => {
           admins: adminsRes.admins || []
         });
       } catch (error) {
-        console.error("Failed to fetch settings data", error);
+        console.error("Critical failure fetching settings data", error);
       } finally {
         setIsLoading(false);
       }

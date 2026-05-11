@@ -8,12 +8,51 @@ import PharmacyHelpCard from '../../components/patient/pharmacy-orders/PharmacyH
 const PharmacyOrdersPage = () => {
   const [orders, setOrders] = useState([]);
   const [metrics, setMetrics] = useState({ inProgress: 0, shippedToday: 0, totalSpent: 0 });
+  const [refillData, setRefillData] = useState(null);
+  const [isLoadingOrders, setIsLoadingOrders] = useState(true);
 
   useEffect(() => {
     // Fetch History Table
     ecommerceApi.getOrderHistory()
-      .then(data => setOrders(data.orders || data))
-      .catch(console.error);
+      .then(data => {
+        const fetchedOrders = data.orders || data || [];
+        setOrders(fetchedOrders);
+
+        // --- DYNAMIC REFILL LOGIC ---
+        if (fetchedOrders.length > 0) {
+          // Sort orders to find the most recent one
+          const sortedOrders = [...fetchedOrders].sort((a, b) => 
+            new Date(b.created_at || b.order_date) - new Date(a.created_at || a.order_date)
+          );
+          const latestOrder = sortedOrders[0];
+
+          // Ensure the order has items to recommend a refill for
+          if (latestOrder && latestOrder.items && latestOrder.items.length > 0) {
+            const item = latestOrder.items[0]; // Track the first item in the latest order
+            const orderDate = new Date(latestOrder.created_at || latestOrder.order_date || new Date());
+            const today = new Date();
+            
+            // Calculate days passed since order
+            const diffTime = Math.abs(today - orderDate);
+            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+            
+            // Assume a standard medicine supply lasts 30 days
+            const assumedSupply = 30; 
+            let daysLeft = assumedSupply - diffDays;
+            
+            // If negative, they are already out. Fix it to 0.
+            if (daysLeft < 0) daysLeft = 0;
+
+            setRefillData({
+              productName: item.name || item.product_name || 'Wellness Supplement',
+              orderId: latestOrder.id || latestOrder.order_id || latestOrder._id || 'Recent',
+              daysLeft: daysLeft
+            });
+          }
+        }
+      })
+      .catch(console.error)
+      .finally(() => setIsLoadingOrders(false));
 
     // Fetch Metrics Aggregations
     Promise.all([
@@ -42,7 +81,8 @@ const PharmacyOrdersPage = () => {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <RefillReminderCard />
+        {/* Pass the calculated data and loading state */}
+        <RefillReminderCard data={refillData} isLoading={isLoadingOrders} />
         <PharmacyHelpCard />
       </div>
     </div>
