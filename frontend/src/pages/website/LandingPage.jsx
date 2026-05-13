@@ -38,25 +38,61 @@ const ScrollReveal = ({ children, direction = 'up', className = "" }) => {
   );
 };
 
+// --- HELPER: ROBUST AUTH CHECKER ---
+const checkAuthStatus = () => {
+  const token = localStorage.getItem('token');
+  const role = localStorage.getItem('role');
+  const userStr = localStorage.getItem('user');
+
+  let parsedRole = role;
+  let loggedIn = !!token || !!role || !!userStr;
+
+  if (userStr) {
+    try {
+      const userObj = JSON.parse(userStr);
+      if (userObj && userObj.role) parsedRole = userObj.role;
+    } catch (e) {
+      console.error("Failed to parse user from local storage");
+    }
+  }
+
+  return { loggedIn, role: parsedRole || 'patient' };
+};
+
 const LandingPage = ({ isLoggedIn: propIsLoggedIn, userRole: propUserRole, onLogout }) => {
   const navigate = useNavigate();
 
-  // NEW: Read from local storage initially so the session persists on direct navigation
-  const [isLoggedIn, setIsLoggedIn] = useState(propIsLoggedIn || !!localStorage.getItem('role'));
-  const [userRole, setUserRole] = useState(propUserRole || localStorage.getItem('role') || 'patient');
+  // Initialize with our robust auth checker
+  const [isLoggedIn, setIsLoggedIn] = useState(() => propIsLoggedIn || checkAuthStatus().loggedIn);
+  const [userRole, setUserRole] = useState(() => propUserRole || checkAuthStatus().role);
 
-  // Re-verify on mount
+  // Dynamic Event Listeners to prevent Stale State
   useEffect(() => {
-    const storedRole = localStorage.getItem('role');
-    if (storedRole) {
-      setIsLoggedIn(true);
-      setUserRole(storedRole);
-    }
+    const updateAuth = () => {
+      const { loggedIn, role } = checkAuthStatus();
+      setIsLoggedIn(loggedIn);
+      setUserRole(role);
+    };
+
+    updateAuth(); // Run immediately on mount
+
+    // Listen for storage changes across tabs or fast routing
+    window.addEventListener('storage', updateAuth);
+    // Listen for window focus to refresh state if they navigated back
+    window.addEventListener('focus', updateAuth);
+
+    return () => {
+      window.removeEventListener('storage', updateAuth);
+      window.removeEventListener('focus', updateAuth);
+    };
   }, []);
 
   const handleLogout = () => {
     if (onLogout) onLogout();
+    // Clear all possible auth storage keys
     localStorage.removeItem('role');
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
     setIsLoggedIn(false);
     navigate('/');
   };
@@ -67,9 +103,15 @@ const LandingPage = ({ isLoggedIn: propIsLoggedIn, userRole: propUserRole, onLog
     else navigate('/patient/dashboard');
   };
 
-  const handleProtectedAction = (path) => {
-    if (isLoggedIn) navigate(path);
-    else navigate('/login');
+  // Smart Routing for all CTA Buttons
+  const handleHeroAction = () => {
+    if (isLoggedIn) {
+      if (userRole === 'admin') navigate('/admin/dashboard');
+      else if (userRole === 'doctor') navigate('/doctor/dashboard');
+      else navigate('/patient/book-appointment');
+    } else {
+      navigate('/login');
+    }
   };
 
   return (
@@ -149,7 +191,6 @@ const LandingPage = ({ isLoggedIn: propIsLoggedIn, userRole: propUserRole, onLog
               <span className="text-[8px] md:text-[10px] text-[#C8A96A] font-medium tracking-wide uppercase opacity-90">First consultation at a guided fee</span>
             </div>
 
-            {/* NEW: Dynamically checks the isLoggedIn state we updated above */}
             {isLoggedIn ? (
               <div className="flex gap-2">
                 <button onClick={handleDashboardClick} className="bg-[#2F6F4E] hover:bg-[#2F6F4E]/90 text-white px-4 md:px-6 py-2 md:py-3 rounded-full font-['Noto_Serif'] text-xs md:text-sm tracking-tight shadow-sm hover:shadow-md transition-all active:scale-95 font-bold whitespace-nowrap">
@@ -232,8 +273,8 @@ const LandingPage = ({ isLoggedIn: propIsLoggedIn, userRole: propUserRole, onLog
             </ScrollReveal>
           </div>
           <ScrollReveal>
-            <button onClick={() => handleProtectedAction('/patient/book-appointment')} className="bg-[#2F6F4E] text-white px-8 md:px-12 py-4 md:py-5 rounded-full font-['Noto_Serif'] text-lg shadow-lg hover:shadow-xl transition-all active:scale-95 font-bold">
-              Book Your Consultation
+            <button onClick={handleHeroAction} className="bg-[#2F6F4E] text-white px-8 md:px-12 py-4 md:py-5 rounded-full font-['Noto_Serif'] text-lg shadow-lg hover:shadow-xl transition-all active:scale-95 font-bold">
+              {isLoggedIn ? (userRole === 'patient' ? 'Book Your Consultation' : 'Go to Dashboard') : 'Book Your Consultation'}
             </button>
           </ScrollReveal>
         </div>
@@ -386,8 +427,8 @@ const LandingPage = ({ isLoggedIn: propIsLoggedIn, userRole: propUserRole, onLog
                     <h4 className="font-['Noto_Serif'] text-2xl md:text-3xl mb-4 font-bold">1:1 Expert Consultation</h4>
                     <p className="font-['Inter'] text-lg mb-8 opacity-90 font-medium">Speak with certified practitioners who listen to your story, not just your symptoms.</p>
                   </div>
-                  <button onClick={() => handleProtectedAction('/patient/book-appointment')} className="bg-[#F5F3EA] text-[#2F6F4E] self-start px-8 py-3 rounded-full font-bold hover:bg-white transition-all flex items-center gap-2">
-                    Book Now <span className="material-symbols-outlined text-sm">arrow_forward</span>
+                  <button onClick={handleHeroAction} className="bg-[#F5F3EA] text-[#2F6F4E] self-start px-8 py-3 rounded-full font-bold hover:bg-white transition-all flex items-center gap-2">
+                    {isLoggedIn && userRole !== 'patient' ? 'Go to Dashboard' : 'Book Now'} <span className="material-symbols-outlined text-sm">arrow_forward</span>
                   </button>
                 </div>
               </ScrollReveal>
@@ -439,8 +480,8 @@ const LandingPage = ({ isLoggedIn: propIsLoggedIn, userRole: propUserRole, onLog
               <Link to="/about" className="inline-flex items-center gap-2 text-[#2F6F4E] font-bold text-lg md:text-xl hover:underline underline-offset-4">
                 View all conditions <span className="material-symbols-outlined">arrow_forward</span>
               </Link>
-              <button onClick={() => handleProtectedAction('/patient/book-appointment')} className="bg-[#2F6F4E] text-white px-8 py-4 rounded-xl font-['Noto_Serif'] font-bold text-xl shadow-lg hover:scale-105 transition-transform">
-                Start Healing for Your Condition
+              <button onClick={handleHeroAction} className="bg-[#2F6F4E] text-white px-8 py-4 rounded-xl font-['Noto_Serif'] font-bold text-xl shadow-lg hover:scale-105 transition-transform">
+                {isLoggedIn && userRole !== 'patient' ? 'Go to Dashboard' : 'Start Healing for Your Condition'}
               </button>
             </div>
           </ScrollReveal>
@@ -466,8 +507,8 @@ const LandingPage = ({ isLoggedIn: propIsLoggedIn, userRole: propUserRole, onLog
                     <span className="text-[10px] md:text-xs font-bold uppercase tracking-widest text-[#1E1E1E]">Lives Healed</span>
                   </div>
                 </div>
-                <button onClick={() => handleProtectedAction('/patient/book-appointment')} className="inline-flex items-center gap-2 text-[#2F6F4E] font-bold text-lg md:text-xl hover:underline underline-offset-4">
-                  Meet all doctors <span className="material-symbols-outlined">arrow_forward</span>
+                <button onClick={handleHeroAction} className="inline-flex items-center gap-2 text-[#2F6F4E] font-bold text-lg md:text-xl hover:underline underline-offset-4">
+                  {isLoggedIn && userRole !== 'patient' ? 'Return to Dashboard' : 'Meet all doctors'} <span className="material-symbols-outlined">arrow_forward</span>
                 </button>
               </div>
             </ScrollReveal>
@@ -575,7 +616,7 @@ const LandingPage = ({ isLoggedIn: propIsLoggedIn, userRole: propUserRole, onLog
         </div>
       </section>
 
-      {/* --- FINAL CTA SECTION (Reduced padding) --- */}
+      {/* --- FINAL CTA SECTION --- */}
       <section className="py-12 md:py-16 bg-[#2F6F4E] text-white relative overflow-hidden px-6">
         <div className="absolute inset-0 opacity-20 pointer-events-none">
           <div className="absolute -top-24 -left-24 w-[300px] h-[300px] md:w-[600px] md:h-[600px] bg-white/10 rounded-full blur-[60px] md:blur-[120px]"></div>
@@ -586,8 +627,8 @@ const LandingPage = ({ isLoggedIn: propIsLoggedIn, userRole: propUserRole, onLog
             <h2 className="font-['Noto_Serif'] text-3xl md:text-5xl lg:text-6xl mb-4 md:mb-6 max-w-4xl leading-tight font-bold">Start with one conversation.<br /><span className="italic font-normal opacity-90">It might change everything.</span></h2>
             <p className="font-['Inter'] text-base md:text-xl mb-6 md:mb-8 text-white font-bold max-w-2xl">Talk to a doctor who understands your body — not just your symptoms.</p>
             <div className="flex flex-col items-center gap-4 mb-8 md:mb-10 w-full">
-              <button onClick={() => handleProtectedAction('/patient/book-appointment')} className="bg-[#F5F3EA] text-[#1E1E1E] hover:bg-white w-full sm:w-auto px-8 md:px-12 py-4 md:py-5 rounded-xl font-['Noto_Serif'] text-lg md:text-2xl shadow-2xl transition-all transform hover:-translate-y-1 active:scale-95 font-bold border-2 border-transparent">
-                Book My Consultation
+              <button onClick={handleHeroAction} className="bg-[#F5F3EA] text-[#1E1E1E] hover:bg-white w-full sm:w-auto px-8 md:px-12 py-4 md:py-5 rounded-xl font-['Noto_Serif'] text-lg md:text-2xl shadow-2xl transition-all transform hover:-translate-y-1 active:scale-95 font-bold border-2 border-transparent">
+                {isLoggedIn ? (userRole === 'patient' ? 'Book My Consultation' : 'Go to Dashboard') : 'Book My Consultation'}
               </button>
               <p className="text-[10px] md:text-xs font-bold uppercase tracking-widest text-white/80">Limited consultation slots available</p>
             </div>
@@ -629,25 +670,13 @@ const LandingPage = ({ isLoggedIn: propIsLoggedIn, userRole: propUserRole, onLog
 
           {/* Social Icons */}
           <div className="flex justify-center gap-6 mb-10">
-            <a
-              href="https://www.facebook.com/share/18TNZK4jCS/?mibextid=wwXIfr"
-              target="_blank"
-              rel="noopener noreferrer"
-              aria-label="Facebook"
-              className="text-[#376645] hover:opacity-70 transition-opacity"
-            >
+            <a href="https://www.facebook.com/share/18TNZK4jCS/?mibextid=wwXIfr" target="_blank" rel="noopener noreferrer" aria-label="Facebook" className="text-[#376645] hover:opacity-70 transition-opacity">
               <svg className="w-6 h-6 fill-current" viewBox="0 0 24 24">
                 <path fillRule="evenodd" d="M22 12c0-5.523-4.477-10-10-10S2 6.477 2 12c0 4.991 3.657 9.128 8.438 9.878v-6.987h-2.54V12h2.54V9.797c0-2.506 1.492-3.89 3.777-3.89 1.094 0 2.238.195 2.238.195v2.46h-1.26c-1.243 0-1.63.771-1.63 1.562V12h2.773l-.443 2.89h-2.33v6.988C18.343 21.128 22 16.991 22 12z" clipRule="evenodd" />
               </svg>
             </a>
 
-            <a
-              href="https://www.instagram.com/ayurcare.360?igsh=Nm45MTBrbnk3ZG9z"
-              target="_blank"
-              rel="noopener noreferrer"
-              aria-label="Instagram"
-              className="text-[#376645] hover:opacity-70 transition-opacity"
-            >
+            <a href="https://www.instagram.com/ayurcare.360?igsh=Nm45MTBrbnk3ZG9z" target="_blank" rel="noopener noreferrer" aria-label="Instagram" className="text-[#376645] hover:opacity-70 transition-opacity">
               <svg className="w-6 h-6 fill-current" viewBox="0 0 24 24">
                 <path fillRule="evenodd" d="M12.315 2c2.43 0 2.784.013 3.808.06 1.064.049 1.791.218 2.427.465a4.902 4.902 0 011.772 1.153 4.902 4.902 0 011.153 1.772c.247.636.416 1.363.465 2.427.048 1.067.06 1.407.06 4.123v.08c0 2.643-.012 2.987-.06 4.043-.049 1.064-.218 1.791-.465 2.427a4.902 4.902 0 01-1.153 1.772 4.902 4.902 0 01-1.772 1.153c-.636.247-1.363.416-2.427.465-1.067.048-1.407.06-4.123.06h-.08c-2.643 0-2.987-.012-4.043-.06-1.064-.049-1.791-.218-2.427-.465a4.902 4.902 0 01-1.772-1.153 4.902 4.902 0 01-1.153-1.772c-.247-.636-.416-1.363-.465-2.427-.047-1.024-.06-1.379-.06-3.808v-.63c0-2.43.013-2.784.06-3.808.049-1.064.218-1.791.465-2.427a4.902 4.902 0 011.153-1.772A4.902 4.902 0 015.45 2.525c.636-.247 1.363-.416 2.427-.465C8.901 2.013 9.256 2 11.685 2h.63zm-.081 1.802h-.468c-2.456 0-2.784.011-3.807.058-.975.045-1.504.207-1.857.344-.467.182-.8.398-1.15.748-.35.35-.566.683-.748 1.15-.137.353-.3.882-.344 1.857-.047 1.023-.058 1.351-.058 3.807v.468c0 2.456.011 2.784.058 3.807.045.975.207 1.504.344 1.857.182.466.399.8.748 1.15.35.35.683.566 1.15.748.353.137.882.3 1.857.344 1.054.048 1.37.058 4.041.058h.08c2.597 0 2.917-.01 3.96-.058.976-.045 1.505-.207 1.858-.344.466-.182.8-.398 1.15-.748.35-.35.566-.683.748-1.15.137-.353.3-.882.344-1.857.048-1.055.058-1.37.058-4.041v-.08c0-2.597-.01-2.917-.058-3.96-.045-.976-.207-1.505-.344-1.858a3.097 3.097 0 00-.748-1.15 3.098 3.098 0 00-1.15-.748c-.353-.137-.882-.3-1.857-.344-1.023-.047-1.351-.058-3.807-.058zM12 6.865a5.135 5.135 0 110 10.27 5.135 5.135 0 010-10.27zm0 1.802a3.333 3.333 0 100 6.666 3.333 3.333 0 000-6.666zm5.338-3.205a1.2 1.2 0 110 2.4 1.2 1.2 0 010-2.4z" clipRule="evenodd" />
               </svg>

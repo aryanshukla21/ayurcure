@@ -131,8 +131,16 @@ exports.updateProfilePersonal = async (req, res) => {
         const patientId = await getPatientId(req.user.id, res);
         if (!patientId) return;
 
-        const data = await PatientModel.updateProfilePersonal(patientId, req.body);
-        res.status(200).json({ message: 'Personal profile updated successfully', data });
+        // Catch the body fields
+        const data = { ...req.body };
+
+        // 🚨 Catch the AWS S3 URL!
+        if (req.file) {
+            data.avatar = req.file.s3Url || `/uploads/${req.file.filename}`;
+        }
+
+        const updatedData = await PatientModel.updateProfilePersonal(patientId, data);
+        res.status(200).json({ message: 'Personal profile updated successfully', data: updatedData });
     } catch (err) {
         logger.error(`updateProfilePersonal Error: ${err.message}`);
         res.status(500).json({ error: 'Failed to update personal info' });

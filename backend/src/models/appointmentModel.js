@@ -10,6 +10,15 @@ class AppointmentModel {
         return rows[0];
     }
 
+    static async getById(appointmentId) {
+        const query = `
+            SELECT id, patient_id, doctor_id, status 
+            FROM Appointments 
+            WHERE id = $1;
+        `;
+        const { rows } = await db.query(query, [appointmentId]);
+        return rows[0];
+    }
     // ==========================================
     // 1. APPOINTMENT LISTS
     // ==========================================
@@ -34,10 +43,21 @@ class AppointmentModel {
         `;
     }
 
-    static async getAll(patientId) {
-        const query = `${this.baseListQuery} ORDER BY a.start_time DESC;`;
-        const { rows } = await db.query(query, [patientId]);
-        return rows;
+    static async getAll(patientId, limit = 10, offset = 0) {
+        // First, get the total count of appointments for pagination math
+        const countQuery = `SELECT COUNT(*) FROM Appointments WHERE patient_id = $1`;
+        const countRes = await db.query(countQuery, [patientId]);
+        const total = parseInt(countRes.rows[0].count, 10);
+
+        // Then, get only the specific page of data
+        const query = `
+            ${this.baseListQuery} 
+            ORDER BY a.start_time DESC 
+            LIMIT $2 OFFSET $3;
+        `;
+        const { rows } = await db.query(query, [patientId, limit, offset]);
+
+        return { total, data: rows };
     }
 
     static async getUpcoming(patientId) {
@@ -136,7 +156,7 @@ class AppointmentModel {
         return rows[0];
     }
 
-   static async getPractitionerInfo(appointmentId, patientId) {
+    static async getPractitionerInfo(appointmentId, patientId) {
         // 1. THE DIAGNOSTIC: Look at the raw appointment before any joins
         const debugQuery = `SELECT id, patient_id, doctor_id FROM Appointments WHERE id = $1`;
         const debugRes = await db.query(debugQuery, [appointmentId]);
@@ -154,13 +174,13 @@ class AppointmentModel {
             LEFT JOIN Users u ON (d.user_id = u.id OR a.doctor_id = u.id)
             WHERE a.id = $1; 
         `;
-        
+
         const { rows } = await db.query(query, [appointmentId]);
         console.log("🚨 FINAL JOINED RESULT:", rows[0]);
-        
+
         return rows[0];
     }
-    
+
     static async getDocuments(appointmentId, patientId) {
         // Assuming documents uploaded recently near the appointment time
         const query = `
@@ -194,9 +214,9 @@ class AppointmentModel {
             WHERE doctor_id = $1 AND start_time = $2::timestamp AND status != 'Cancelled';
         `;
         const checkRes = await db.query(checkQuery, [data.doctorId, data.startTime]);
-        
+
         if (checkRes.rows.length > 0) {
-            throw new Error("This exact time is already booked. Please select another slot."); 
+            throw new Error("This exact time is already booked. Please select another slot.");
         }
 
         // 2. Safely insert the new appointment directly!
@@ -207,12 +227,12 @@ class AppointmentModel {
             RETURNING id;
         `;
         const { rows } = await db.query(insertQuery, [
-            data.patientId, 
-            data.doctorId, 
-            data.startTime, 
+            data.patientId,
+            data.doctorId,
+            data.startTime,
             data.reason
         ]);
-        
+
         return rows[0].id;
     }
 

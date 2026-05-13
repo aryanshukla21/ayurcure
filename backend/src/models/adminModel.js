@@ -73,9 +73,19 @@ const adminModel = {
     // ==========================================
     getAllDoctors: async () => {
         const query = `
-            SELECT d.id, u.full_name as name, u.email, u.phone, d.specialization, d.verification_status as status, d.average_rating as rating, d.experience_years as experience, d.consultation_fee, d.avatar
+            SELECT 
+                d.id, 
+                u.full_name as name, 
+                u.email, 
+                u.phone, 
+                d.specialization, 
+                d.verification_status as status, 
+                d.average_rating as rating, 
+                d.experience_years as experience, 
+                d.consultation_fee, 
+                d.avatar
             FROM DoctorProfiles d 
-            JOIN Users u ON d.user_id = u.id
+            INNER JOIN Users u ON d.user_id = u.id
             ORDER BY u.created_at DESC
         `;
         return (await db.query(query)).rows;
@@ -101,17 +111,17 @@ const adminModel = {
                 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'Verified') RETURNING id
             `;
             const profileRes = await client.query(profileQuery, [
-                newUserId, 
-                profileData.specialization, 
+                newUserId,
+                profileData.specialization,
                 profileData.experience_years,
-                profileData.qualifications, 
-                profileData.registration_number, 
-                profileData.consultation_fee, 
-                profileData.about, 
+                profileData.qualifications,
+                profileData.registration_number,
+                profileData.consultation_fee,
+                profileData.about,
                 profileData.avatar,
                 profileData.clinic_address
             ]);
-            
+
             const newDoctorId = profileRes.rows[0].id;
 
             // FIX: DYNAMIC 30-MINUTE SLOT GENERATOR (TIMEZONE SAFE)
@@ -119,7 +129,7 @@ const adminModel = {
                 INSERT INTO DoctorSlots (doctor_id, start_time, end_time, is_booked)
                 VALUES ($1, $2, $3, false)
             `;
-            
+
             const startStr = profileData.startTime || '09:00';
             const endStr = profileData.endTime || '17:00';
 
@@ -188,15 +198,15 @@ const adminModel = {
             await client.query('BEGIN');
 
             const { rows } = await client.query(`SELECT user_id FROM DoctorProfiles WHERE id = $1`, [doctorId]);
-            
+
             if (rows.length > 0) {
                 const userId = rows[0].user_id;
-                
+
                 await client.query(`
                     DELETE FROM AppointmentReviews 
                     WHERE appointment_id IN (SELECT id FROM Appointments WHERE doctor_id = $1)
                 `, [doctorId]);
-                
+
                 // Delete the slots tied to this doctor to maintain referential integrity
                 await client.query(`DELETE FROM DoctorSlots WHERE doctor_id = $1`, [doctorId]);
 
@@ -205,7 +215,7 @@ const adminModel = {
                 await client.query(`UPDATE Blogs SET author_id = NULL WHERE author_id = $1`, [userId]);
 
                 await client.query(`DELETE FROM DoctorProfiles WHERE id = $1`, [doctorId]);
-                
+
                 await client.query(`DELETE FROM Users WHERE id = $1`, [userId]);
             }
 
@@ -213,7 +223,7 @@ const adminModel = {
             return true;
         } catch (e) {
             await client.query('ROLLBACK');
-            throw e; 
+            throw e;
         } finally {
             client.release();
         }
@@ -235,7 +245,7 @@ const adminModel = {
             await client.query('BEGIN');
 
             const { rows } = await client.query(`SELECT user_id FROM DoctorProfiles WHERE id = $1`, [doctorId]);
-            
+
             if (rows.length > 0) {
                 const userId = rows[0].user_id;
 
@@ -246,7 +256,7 @@ const adminModel = {
                     const bcrypt = require('bcryptjs');
                     const salt = await bcrypt.genSalt(10);
                     const hashedPw = await bcrypt.hash(data.password, salt);
-                    
+
                     userUpdateQuery += `, password_hash = $2 WHERE id = $3`;
                     userValues.push(hashedPw, userId);
                 } else {
@@ -271,15 +281,15 @@ const adminModel = {
                     avatar = COALESCE($7, avatar)
                 WHERE id = $8 RETURNING id
             `;
-            
+
             await client.query(profileQuery, [
-                data.specialization, 
-                data.experience_years, 
-                data.consultation_fee, 
-                data.verification_status, 
-                aboutText, 
+                data.specialization,
+                data.experience_years,
+                data.consultation_fee,
+                data.verification_status,
+                aboutText,
                 addressText,
-                data.avatar, 
+                data.avatar,
                 doctorId
             ]);
 
@@ -346,7 +356,7 @@ const adminModel = {
             SELECT a.id, u.full_name as doctor_name, d.specialization, a.start_time as date, a.mode as type, a.status 
             FROM Appointments a 
             JOIN DoctorProfiles d ON a.doctor_id = d.id 
-            JOIN Users u ON p.user_id = u.id 
+            JOIN Users u ON d.user_id = u.id 
             WHERE a.patient_id = $1 
             ORDER BY a.start_time DESC
         `;
@@ -480,23 +490,23 @@ const adminModel = {
     // INVENTORY DYNAMIC FILTERING
     // ==========================================
     addNewProduct: async (data) => {
-    // THE FIX: Removed created_at and NOW() from the query
-    const query = `
+        // THE FIX: Removed created_at and NOW() from the query
+        const query = `
         INSERT INTO Products (name, category, brand, price, stock_quantity, ingredients, benefits, usage_instructions, image_url) 
         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING id
     `;
-    const { rows } = await db.query(query, [
-        data.name, 
-        data.category, 
-        data.brand || 'Ayurcure', 
-        data.price || 0,
-        data.stock_quantity || 0, 
-        data.ingredients || null, 
-        data.benefits || null, 
-        data.usage_instructions || null,
-        data.image_url || null 
-    ]);
-    return rows[0].id;
+        const { rows } = await db.query(query, [
+            data.name,
+            data.category,
+            data.brand || 'Ayurcure',
+            data.price || 0,
+            data.stock_quantity || 0,
+            data.ingredients || null,
+            data.benefits || null,
+            data.usage_instructions || null,
+            data.image_url || null
+        ]);
+        return rows[0].id;
     },
 
     getAllProductsPagination: async (limit, offset) => {
@@ -566,7 +576,7 @@ const adminModel = {
         return rows[0];
     },
 
-     deleteProduct: async (productId) => {
+    deleteProduct: async (productId) => {
         const query = `DELETE FROM Products WHERE id = $1 RETURNING id`;
         const { rows } = await db.query(query, [productId]);
         return rows[0];
@@ -747,7 +757,7 @@ const adminModel = {
         const query = `
             SELECT id, full_name as name, role, email, account_status as status, created_at 
             FROM Users 
-            WHERE role = 'admin' OR role = 'super_admin'
+            WHERE role = 'admin' 
             ORDER BY created_at DESC NULLS LAST
         `;
         return (await db.query(query)).rows;

@@ -11,7 +11,7 @@ import AboutSection from '../../components/admin/doctors/add-doctor/AboutSection
 const AdminEditDoctorPage = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  
+
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
@@ -36,14 +36,14 @@ const AdminEditDoctorPage = () => {
             specialization: doc.specialization || '',
             experience: doc.experience_years ? doc.experience_years.toString() : '',
             fees: doc.consultation_fee ? doc.consultation_fee.toString() : '',
-            about: doc.bio || '', 
-            address: doc.clinic_address || '', 
+            about: doc.bio || '',
+            address: doc.clinic_address || '',
             avatar: doc.avatar || null, // Loads existing image
             status: doc.verification_status || 'Verified',
             qualifications: doc.qualifications || '',
             registrationNumber: doc.registration_number || '',
             emergencyContact: '',
-            password: '', 
+            password: '',
             startTime: '09:00',
             endTime: '17:00',
           });
@@ -67,11 +67,11 @@ const AdminEditDoctorPage = () => {
   const handleImageUpload = (e) => {
     const file = e.target.files[0];
     if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setFormData(prev => ({ ...prev, avatar: reader.result }));
-      };
-      reader.readAsDataURL(file);
+      setFormData(prev => ({
+        ...prev,
+        avatarFile: file,
+        avatarPreview: URL.createObjectURL(file)
+      }));
     }
   };
 
@@ -80,28 +80,25 @@ const AdminEditDoctorPage = () => {
     setError('');
 
     try {
-      const payload = {
-        full_name: formData.fullName, // Sends the name
-        password: formData.password,  // Sends the new password (if they typed one)
-        specialization: formData.specialization,
-        experience_years: parseInt(formData.experience) || 0,
-        consultation_fee: parseFloat(formData.fees) || 0,
-        verification_status: formData.status,
-        about: formData.about, 
-        clinic_address: formData.address, 
-        avatar: formData.avatar
-      };
+      const payload = new FormData();
+      if (formData.fullName) payload.append('full_name', formData.fullName);
+      if (formData.password) payload.append('password', formData.password);
+      payload.append('specialization', formData.specialization);
+      payload.append('experience_years', parseInt(formData.experience) || 0);
+      payload.append('consultation_fee', parseFloat(formData.fees) || 0);
+      payload.append('verification_status', formData.status);
+      payload.append('about', formData.about);
+      payload.append('clinic_address', formData.address);
+
+      if (formData.avatarFile) {
+        payload.append('avatar', formData.avatarFile);
+      }
 
       const res = await adminApi.updateDoctorDetails(id, payload);
-
-      if (res.success) {
-        navigate('/admin/doctors');
-      } else {
-        setError(res.message || 'Failed to update doctor.');
-      }
+      if (res.success) navigate('/admin/doctors');
+      else setError(res.message || 'Failed to update doctor.');
     } catch (err) {
-      console.error('Update failed', err);
-      setError(err.response?.data?.message || err.message || 'An error occurred during the update.');
+      setError(err.response?.data?.message || err.message);
     } finally {
       setIsSubmitting(false);
     }
@@ -134,18 +131,18 @@ const AdminEditDoctorPage = () => {
       {/* Profile Image Uploader - UPDATED UI */}
       <div className="mb-8 flex items-center gap-6">
         <div className="relative w-24 h-24 rounded-full border border-[#EFEBE1] shadow-sm bg-white flex items-center justify-center overflow-hidden group hover:border-[#4A7C59] transition-colors cursor-pointer">
-          
+
           {/* Always shows image OR initials */}
-          <img 
-            src={formData.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(formData.fullName || 'Doc')}&background=FDF9EE&color=3A6447&size=128`} 
-            alt="Doctor Avatar" 
-            className="w-full h-full object-cover group-hover:opacity-40 transition-opacity duration-300" 
+          <img
+            src={formData.avatarPreview || formData.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(formData.fullName || 'Doc')}&background=FDF9EE&color=3A6447&size=128`}
+            alt="Doctor Avatar"
+            className="w-full h-full object-cover group-hover:opacity-40 transition-opacity duration-300"
           />
-          
+
           {/* Hover Overlay */}
           <div className="absolute inset-0 flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none">
-             <Camera size={20} className="text-gray-900 mb-1" />
-             <span className="text-gray-900 text-[10px] font-extrabold uppercase tracking-wider">Change</span>
+            <Camera size={20} className="text-gray-900 mb-1" />
+            <span className="text-gray-900 text-[10px] font-extrabold uppercase tracking-wider">Change</span>
           </div>
 
           <input type="file" accept="image/*" onChange={handleImageUpload} className="absolute inset-0 opacity-0 cursor-pointer" />

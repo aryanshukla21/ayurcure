@@ -11,7 +11,7 @@ export const patientApi = {
 
     // --- PROFILE ---
     getProfilePersonal: async () => (await axiosInstance.get('/patient/profile/personal-information')).data,
-    updateProfilePersonal: async (data) => (await axiosInstance.put('/patient/profile/personal-information/update', data)).data,
+    updateProfilePersonal: async (data) => (await axiosInstance.put('/patient/profile/personal-information/update', data, { headers: { 'Content-Type': 'multipart/form-data' } })).data,
     downloadProfilePersonal: async () => (await axiosInstance.get('/patient/profile/personal-information/download', { responseType: 'blob' })).data,
     getProfileMedical: async () => (await axiosInstance.get('/patient/profile/medical-information')).data,
     getProfileContact: async () => (await axiosInstance.get('/patient/profile/contact-information')).data,

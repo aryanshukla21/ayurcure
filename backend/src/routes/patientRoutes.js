@@ -27,8 +27,10 @@ router.get('/dashboard/next-meditation-hydration-goal-sleep-quality', ctrl.getDa
 // ==========================================
 // 2. PROFILE
 // ==========================================
+router.get('/profile/medical-information', ctrl.getProfileMedical);
+router.put('/profile/medical-information/update', ctrl.updateProfileMedical); // <-- ADD THIS
 router.get('/profile/personal-information', ctrl.getProfilePersonal);
-router.put('/profile/personal-information/update', ctrl.updateProfilePersonal);
+router.put('/profile/personal-information/update', upload.single('avatar'), uploadToS3, ctrl.updateProfilePersonal);
 router.get('/profile/personal-information/download', ctrl.downloadProfilePersonal);
 
 router.get('/profile/medical-information', ctrl.getProfileMedical);

@@ -31,15 +31,32 @@ const getPatientId = async (userId, res) => {
 // 1. APPOINTMENT LISTS
 // ==========================================
 
+// --- UPDATE THIS FUNCTION ---
 exports.getAll = async (req, res) => {
     try {
         const patientId = await getPatientId(req.user.id, res);
         if (!patientId) return;
-        const data = await AppointmentModel.getAll(patientId);
-        res.status(200).json(data);
+
+        // Capture pagination params from URL query (default to page 1, 10 items)
+        const page = parseInt(req.query.page, 10) || 1;
+        const limit = parseInt(req.query.limit, 10) || 10;
+        const offset = (page - 1) * limit;
+
+        const result = await AppointmentModel.getAll(patientId, limit, offset);
+
+        res.status(200).json({
+            success: true,
+            appointments: result.data,
+            pagination: {
+                total: result.total,
+                currentPage: page,
+                totalPages: Math.ceil(result.total / limit),
+                limit: limit
+            }
+        });
     } catch (err) {
-        logger.error(`getAll Appointments Error: ${err.message}`);
-        res.status(500).json({ error: 'Failed to fetch all appointments' });
+        logger.error(`getAllAppointments Error: ${err.message}`);
+        res.status(500).json({ error: 'Failed to fetch appointments' });
     }
 };
 
@@ -163,12 +180,12 @@ exports.getPractitionerInfo = async (req, res) => {
         console.log("🚨 FULL REQ.USER OBJECT:", req.user);
 
         // Try to grab the ID from a few common places just in case!
-        const patientId = req.user?.id || req.user?.userId || req.user?._id || null; 
+        const patientId = req.user?.id || req.user?.userId || req.user?._id || null;
         console.log("🚨 CHECKING PATIENT ID:", patientId);
 
         // Fetch the data
         const info = await AppointmentModel.getPractitionerInfo(req.params.id, patientId);
-        
+
         // 2. THE SAFETY NET: If the database finds nothing, stop here so we don't crash!
         if (!info) {
             console.log("🚨 DB ERROR: Found 0 rows. The appointment ID or patientId is wrong!");
@@ -184,7 +201,7 @@ exports.getPractitionerInfo = async (req, res) => {
             experience_years: info.experience_years,
             qualifications: info.qualifications,
             bio: info.bio,
-            avatar: info.avatar 
+            avatar: info.avatar
         });
     } catch (err) {
         console.error(`getPractitionerInfo Error: ${err.message}`);
@@ -236,14 +253,14 @@ exports.createAppointment = async (req, res) => {
         if (!patientId) return;
 
         const { doctorId, date, time, reason } = req.body;
-        
+
         // Safely parse "10:30 AM" into 24-hour format
         const [timePart, modifier] = time.split(' ');
         let [hours, minutes] = timePart.split(':');
         if (modifier === 'PM' && hours !== '12') hours = parseInt(hours, 10) + 12;
         if (modifier === 'AM' && hours === '12') hours = '00';
         hours = hours.toString().padStart(2, '0');
-        
+
         // Format exactly as PostgreSQL Timestamp: "2026-05-12 10:30:00"
         const exactTimestamp = `${date} ${hours}:${minutes}:00`;
 
@@ -317,7 +334,7 @@ exports.getAvailableSlots = async (req, res) => {
 
         // 1. Get booked appointments for that date
         const bookedTimes = await AppointmentModel.getBookedAppointments(docId, date);
-        
+
         // Convert booked times to simple "HH:MM" strings for easier comparison
         const bookedStrings = bookedTimes.map(t => {
             const d = new Date(t);
@@ -410,10 +427,10 @@ exports.cancelAppointment = async (req, res) => {
     try {
         const { id } = req.params;
         const db = require('../config/db'); // Make sure this path matches your db config file
-        
+
         // Update the status to 'Cancelled' in PostgreSQL
         await db.query(`UPDATE Appointments SET status = 'Cancelled' WHERE id = $1`, [id]);
-        
+
         res.status(200).json({ success: true, message: 'Appointment cancelled successfully' });
     } catch (err) {
         console.error("Cancel Error:", err);

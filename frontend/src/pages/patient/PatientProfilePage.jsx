@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
-import { patientApi } from '../../api/patientApi'; 
+import { patientApi } from '../../api/patientApi';
 
 import ProfileOverviewCard from '../../components/patient/profile/ProfileOverviewCard';
 import MedicalInfoCard from '../../components/patient/profile/MedicalInfoCard';
@@ -43,31 +43,43 @@ const PatientProfilePage = () => {
     }
   };
 
-const handleEditToggle = async () => {
+  const handleEditToggle = async () => {
     if (isEditing) {
       try {
+        const formDataToSend = new FormData();
+
         let formattedPersonal = { ...personalInfo };
-        
+
         // 1. Format the date safely
         if (formattedPersonal.dob) {
-            const d = new Date(formattedPersonal.dob);
-            if (!isNaN(d.getTime())) {
-                formattedPersonal.dob = d.toISOString().split('T')[0];
-            } else {
-                delete formattedPersonal.dob; 
-            }
+          const d = new Date(formattedPersonal.dob);
+          if (!isNaN(d.getTime())) {
+            formattedPersonal.dob = d.toISOString().split('T')[0];
+          } else {
+            delete formattedPersonal.dob;
+          }
         }
 
-        // 2. NEW: Convert empty strings to null so Postgres doesn't crash on numbers
+        // 2. Convert empty strings to null so Postgres doesn't crash on numbers, and append text data
         Object.keys(formattedPersonal).forEach(key => {
-            if (formattedPersonal[key] === '') formattedPersonal[key] = null;
+          if (key !== 'avatarFile' && key !== 'avatarPreview' && key !== 'avatar') {
+            const val = formattedPersonal[key] === '' ? '' : formattedPersonal[key];
+            if (val !== null && val !== undefined) formDataToSend.append(key, val);
+          }
         });
 
+        // 3. Append the physical image file for AWS upload
+        if (personalInfo.avatarFile) {
+          formDataToSend.append('avatar', personalInfo.avatarFile);
+        }
+
         await Promise.all([
-          patientApi.updateProfilePersonal(formattedPersonal),
+          patientApi.updateProfilePersonal(formDataToSend),
           patientApi.updateProfileContact(contactInfo),
           patientApi.updateProfileEmergency(emergencyInfo)
         ]);
+
+        // Refresh to get the live AWS S3 URL from DB
         fetchProfileData();
       } catch (error) {
         console.error("Failed to save profile data:", error);
@@ -76,20 +88,18 @@ const handleEditToggle = async () => {
     }
     setIsEditing(!isEditing);
   };
+
   const handlePersonalChange = (e) => setPersonalInfo(prev => ({ ...prev, [e.target.name]: e.target.value }));
   const handleContactChange = (e) => setContactInfo(prev => ({ ...prev, [e.target.name]: e.target.value }));
   const handleEmergencyChange = (e) => setEmergencyInfo(prev => ({ ...prev, [e.target.name]: e.target.value }));
 
+  // Replaced Base64 with URL.createObjectURL + storing actual File
   const handleImageUpload = (e) => {
     const file = e.target.files[0];
     if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        const base64String = reader.result;
-        setPersonalInfo(prev => ({ ...prev, avatar: base64String }));
-        window.dispatchEvent(new CustomEvent('avatarUpdated', { detail: base64String }));
-      };
-      reader.readAsDataURL(file);
+      const previewUrl = URL.createObjectURL(file);
+      setPersonalInfo(prev => ({ ...prev, avatarPreview: previewUrl, avatarFile: file }));
+      window.dispatchEvent(new CustomEvent('avatarUpdated', { detail: previewUrl }));
     }
   };
 
@@ -195,8 +205,9 @@ const handleEditToggle = async () => {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+        {/* Pass the avatarPreview down so the UI updates instantly before saving */}
         <ProfileOverviewCard
-          profile={overviewProfile}
+          profile={{ ...overviewProfile, avatar: personalInfo.avatarPreview || overviewProfile.avatar }}
           isEditing={isEditing}
           onEditToggle={handleEditToggle}
           onChange={handlePersonalChange}

@@ -28,6 +28,17 @@ const AdminAddBlogPage = () => {
     setFormData(prev => ({ ...prev, [name]: value }));
   };
 
+  const handleImageUpload = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      setFormData(prev => ({
+        ...prev,
+        imageFile: file,
+        imagePreview: URL.createObjectURL(file)
+      }));
+    }
+  };
+
   const submitBlog = async (statusOverride) => {
     setIsSubmitting(true);
     setError('');
@@ -35,12 +46,18 @@ const AdminAddBlogPage = () => {
     const finalStatus = statusOverride || formData.status;
 
     try {
-      const payload = {
-        title: formData.title,
-        content: formData.content,
-        category: formData.category,
-        status: finalStatus
-      };
+      const payload = new FormData();
+      payload.append('title', formData.title);
+      payload.append('content', formData.content);
+      payload.append('category', formData.category);
+      payload.append('status', finalStatus);
+      payload.append('audience', formData.audience);
+      payload.append('shortDescription', formData.shortDescription);
+
+      // Append physical image file
+      if (formData.imageFile) {
+        payload.append('image', formData.imageFile); // Caught by upload.single('image')
+      }
 
       const res = await adminApi.addNewBlog(payload);
 

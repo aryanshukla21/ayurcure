@@ -2,7 +2,11 @@ import axiosInstance from './axiosConfig';
 
 export const appointmentApi = {
     // --- APPOINTMENT LISTS ---
-    getAll: async () => (await axiosInstance.get('/appointment/all-appointment')).data,
+    // --- UPDATE THIS LINE ---
+    getAll: async (page = 1, limit = 10) => {
+        const response = await axiosInstance.get(`/appointment/all-appointment?page=${page}&limit=${limit}`);
+        return response.data;
+    },
     getUpcoming: async () => (await axiosInstance.get('/appointment/upcoming-appointment')).data,
     getCompleted: async () => (await axiosInstance.get('/appointment/completed-appointment')).data,
     getCancelled: async () => (await axiosInstance.get('/appointment/cancelled-appointment')).data,
@@ -18,7 +22,7 @@ export const appointmentApi = {
     getDocuments: async (id) => (await axiosInstance.get(`/appointment/${id}/related-documents`)).data,
     downloadDocument: async (id) => (await axiosInstance.get(`/appointment/${id}/related-documents/download`, { responseType: 'blob' })).data,
     cancelAppointment: async (id) => (await axiosInstance.put(`/appointment/${id}/cancel`)).data,
-    
+
     // --- BOOK APPOINTMENT ---
     createAppointment: async (data) => (await axiosInstance.post('/book-appointment/create', data)).data, // <-- ADD THIS LINE
     getAllPractitioners: async () => (await axiosInstance.get('/book-appointment/view-all-practitioners')).data,

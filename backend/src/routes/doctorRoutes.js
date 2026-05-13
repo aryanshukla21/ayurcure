@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const doctorController = require('../controllers/doctorController');
 const { requireAuth, requireRole } = require('../middlewares/authMiddleware');
+const { upload, uploadToS3 } = require('../middlewares/uploadMiddleware');
 
 router.use(requireAuth);
 router.use(requireRole('doctor'));
@@ -43,7 +44,7 @@ router.get('/profile/get-philosophy', doctorController.getPhilosophy);
 
 // Settings
 router.get('/settings/get-personal-information', doctorController.getSettingsPersonalInfo);
-router.put('/settings/update-personal-information', doctorController.updateSettingsPersonalInfo);
+router.put('/settings/update-personal-information', upload.single('avatar'), uploadToS3, doctorController.updateSettingsPersonalInfo);
 router.get('/settings/get-preferences', doctorController.getPreferences);
 router.put('/settings/update-preferences', doctorController.updatePreferences);
 router.get('/settings/get-professional-credentials', doctorController.getProfessionalCredentials);

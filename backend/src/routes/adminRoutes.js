@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const adminController = require('../controllers/adminController');
 const { requireAuth, requireRole } = require('../middlewares/authMiddleware');
+const { upload, uploadToS3 } = require('../middlewares/uploadMiddleware');
 
 // Ensure all routes require admin role
 router.use(requireAuth);
@@ -18,13 +19,13 @@ router.get('/dashboard/get-recent-orders', adminController.getRecentOrders);
 
 // DOCTORS
 router.get('/doctors/get-all-doctors', adminController.getAllDoctors);
-router.post('/doctors/add-doctor', adminController.addDoctor); // Alias for /add-doctor/submit-details
-router.post('/add-doctor/submit-details', adminController.addDoctor);
+router.post('/doctors/add-doctor', upload.single('avatar'), uploadToS3, adminController.addDoctor);
+router.post('/add-doctor/submit-details', upload.single('avatar'), uploadToS3, adminController.addDoctor);
 router.delete('/doctors/delete-doctor/:id', adminController.deleteDoctor);
 router.get('/doctors/verification-rate', adminController.getVerificationRate);
 router.get('/doctors/average-response-time', adminController.getAverageResponseTime);
 router.get('/doctors/pending-approvals', adminController.getPendingApprovals);
-router.put('/doctors/:id/update-doctor-details', adminController.updateDoctorDetails);
+router.put('/doctors/:id/update-doctor-details', upload.single('avatar'), uploadToS3, adminController.updateDoctorDetails);
 router.get('/doctors/:id/get-doctor-details', adminController.getDoctorDetails);
 
 // PATIENTS
@@ -54,18 +55,18 @@ router.get('/order-details/:id/order-timeline', adminController.getOrderTimeline
 router.get('/order-details/:id/payment-summary', adminController.getOrderPaymentSummary);
 
 // INVENTORY
-router.post('/inventory/add-new-product', adminController.addNewProduct);
+router.post('/inventory/add-new-product', upload.single('image'), uploadToS3, adminController.addNewProduct);
 router.get('/inventory/get-all-product-by-pagination/:page', adminController.getAllProductsPagination);
 router.post('/inventory/filter', adminController.filterInventory);
 router.get('/inventory/all-category', adminController.getAllCategories);
 router.get('/inventory/:id/get-product-details', adminController.getProductDetails);
-router.put('/inventory/:id/update-product', adminController.updateProduct);
+router.put('/inventory/:id/update-product', upload.single('image'), uploadToS3, adminController.updateProduct);
+router.delete('/inventory/:id/delete-product', adminController.deleteProduct);
 
 // BLOGS
 router.get('/blogs/get-all-blogs', adminController.getAllBlogs);
-router.post('/blogs/add-new-blog', adminController.addNewBlog);
-router.put('/blogs/update-blog/:id', adminController.updateBlog);
-router.put('/blogs/:id/update-blog', adminController.updateBlog); // Alias
+router.post('/blogs/add-new-blog', upload.single('image'), uploadToS3, adminController.addNewBlog);
+router.put('/blogs/:id/update-blog', upload.single('image'), uploadToS3, adminController.updateBlog);
 router.delete('/blogs/delete-blog/:id', adminController.deleteBlog);
 router.get('/blogs/trending-category', adminController.getTrendingCategory);
 router.get('/blogs/review-required', adminController.getBlogsReviewRequired);

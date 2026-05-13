@@ -1,11 +1,11 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Save, X, Loader2, UploadCloud, Image as ImageIcon } from 'lucide-react';
-import { adminApi } from '../../../api/adminApi'; 
+import { adminApi } from '../../../api/adminApi';
 
 const AddProductForm = () => {
     const navigate = useNavigate();
-    const [isSubmitting, setIsSubmitting] = useState(false); 
+    const [isSubmitting, setIsSubmitting] = useState(false);
     const [imagePreview, setImagePreview] = useState(null);
 
     const [formData, setFormData] = useState({
@@ -27,9 +27,9 @@ const AddProductForm = () => {
         setIsSubmitting(true);
 
         try {
-            // THE FIX: We must use FormData to package physical files alongside text
+            // We must use FormData to package physical files alongside text
             const formDataToSend = new FormData();
-            
+
             formDataToSend.append('name', formData.name);
             formDataToSend.append('category', formData.category);
             formDataToSend.append('sku', formData.sku);
@@ -37,22 +37,22 @@ const AddProductForm = () => {
             formDataToSend.append('price', parseFloat(formData.price) || 0);
             formDataToSend.append('stock_quantity', parseInt(formData.stock, 10) || 0);
             formDataToSend.append('status', formData.status);
-            
+
             // These satisfy your database requirements
             formDataToSend.append('ingredients', '');
             formDataToSend.append('benefits', '');
             formDataToSend.append('usage_instructions', '');
 
-            // Attach the actual image file!
+            // 🚨 THE FIX: The key MUST be 'image' to match upload.single('image') in backend
             if (formData.imageFile) {
-                formDataToSend.append('imageFile', formData.imageFile);
+                formDataToSend.append('image', formData.imageFile);
             }
 
-           // Send the FormData instead of the old JSON payload
+            // Send the FormData instead of the old JSON payload
             const res = await adminApi.addNewProduct(formDataToSend);
 
             if (res) {
-                // THE FIX: Adding a random timestamp forces the browser to destroy its cache 
+                // Adding a random timestamp forces the browser to destroy its cache 
                 // and fetch a completely fresh, updated table from the database!
                 window.location.href = `/admin/inventory?refresh=${Date.now()}`;
             }

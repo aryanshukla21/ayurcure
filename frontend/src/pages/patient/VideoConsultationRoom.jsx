@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import AgoraRTC from 'agora-rtc-sdk-ng';
 import { Mic, MicOff, Video, VideoOff, PhoneOff, Loader2 } from 'lucide-react';
@@ -15,20 +15,31 @@ const VideoConsultationRoom = () => {
     const [isJoined, setIsJoined] = useState(false);
     const [hasError, setHasError] = useState('');
 
+    // 🚨 Connection lock to prevent double-joining during React StrictMode remounts
+    const isJoining = useRef(false);
+
     // UI states
     const [micOn, setMicOn] = useState(true);
     const [videoOn, setVideoOn] = useState(true);
 
     useEffect(() => {
         let isUnmounted = false;
+        let mountedTracks = [];
 
         const initAgora = async () => {
+            // Check connection state and local lock
+            if (isJoining.current || client.connectionState !== 'DISCONNECTED') {
+                return;
+            }
+
+            isJoining.current = true;
+
             try {
-                // 1. Fetch Token from your Backend (controller provides token, appId, channel)
+                // 1. Fetch secure RTC token from backend
                 const response = await consultationApi.getCallToken(appointmentId);
                 const { rtcToken, channelName, rtcUid, appId } = response.data || response;
 
-                // 2. Setup Event Listeners for remote users joining/leaving
+                // 2. Setup Remote Event Listeners
                 client.on("user-published", async (user, mediaType) => {
                     await client.subscribe(user, mediaType);
                     if (mediaType === "video") {
@@ -49,21 +60,44 @@ const VideoConsultationRoom = () => {
                     }
                 });
 
-                // 3. Join the Channel
+                // 3. Join the Agora Channel
                 await client.join(appId, channelName, rtcToken, rtcUid);
 
-                // 4. Create Local Tracks (Camera & Mic)
-                const [audioTrack, videoTrack] = await AgoraRTC.createMicrophoneAndCameraTracks();
+                // 4. Create Local Tracks with Graceful Degradation
+                let audioTrack = null;
+                let videoTrack = null;
 
+                try {
+                    // Attempt Camera + Mic
+                    const [aTrack, vTrack] = await AgoraRTC.createMicrophoneAndCameraTracks();
+                    audioTrack = aTrack;
+                    videoTrack = vTrack;
+                    mountedTracks = [audioTrack, videoTrack];
+                } catch (deviceError) {
+                    console.warn("Camera/Mic combo failed. Attempting Audio-only fallback...", deviceError);
+                    try {
+                        // Fallback: Audio Only
+                        audioTrack = await AgoraRTC.createMicrophoneAudioTrack();
+                        mountedTracks = [audioTrack];
+                        if (!isUnmounted) setVideoOn(false);
+                    } catch (audioError) {
+                        console.error("Critical: No hardware found.", audioError);
+                        if (!isUnmounted) setHasError('No camera or microphone detected. Please check permissions.');
+                        return;
+                    }
+                }
+
+                // 5. Finalize and Publish
                 if (!isUnmounted) {
                     setLocalTracks({ audioTrack, videoTrack });
-                    await client.publish([audioTrack, videoTrack]);
+                    await client.publish(mountedTracks.filter(track => track !== null));
                     setIsJoined(true);
                 }
 
             } catch (error) {
-                console.error("Agora Init Failed", error);
-                if (!isUnmounted) setHasError('Failed to join the consultation room.');
+                console.error("Agora Initialization Failed:", error);
+                if (!isUnmounted) setHasError('Failed to connect to the secure consultation room.');
+                isJoining.current = false;
             }
         };
 
@@ -71,27 +105,37 @@ const VideoConsultationRoom = () => {
 
         return () => {
             isUnmounted = true;
-            // Cleanup on unmount
-            if (localTracks.audioTrack) {
-                localTracks.audioTrack.stop();
-                localTracks.audioTrack.close();
+            isJoining.current = false;
+
+            // Stop local hardware tracks
+            mountedTracks.forEach(track => {
+                if (track) {
+                    track.stop();
+                    track.close();
+                }
+            });
+
+            // Cleanup client connection
+            if (client.connectionState === 'CONNECTED' || client.connectionState === 'CONNECTING') {
+                client.leave();
             }
-            if (localTracks.videoTrack) {
-                localTracks.videoTrack.stop();
-                localTracks.videoTrack.close();
-            }
-            client.leave();
+
+            // Remove listeners to prevent memory leaks on remount
+            client.removeAllListeners();
         };
     }, [appointmentId]);
 
-    // Handle Local Video DOM attachment
+    // Attachment of Local Video to DOM
     useEffect(() => {
         if (localTracks.videoTrack) {
             localTracks.videoTrack.play('local-player');
         }
+        return () => {
+            if (localTracks.videoTrack) localTracks.videoTrack.stop();
+        };
     }, [localTracks.videoTrack]);
 
-    // Handle Remote Video DOM attachments
+    // Attachment of Remote Video to DOM
     useEffect(() => {
         Object.values(remoteUsers).forEach(user => {
             if (user.videoTrack) {
@@ -100,7 +144,7 @@ const VideoConsultationRoom = () => {
         });
     }, [remoteUsers]);
 
-    // Controls
+    // Media Controls
     const toggleMic = async () => {
         if (localTracks.audioTrack) {
             await localTracks.audioTrack.setMuted(micOn);
@@ -116,6 +160,12 @@ const VideoConsultationRoom = () => {
     };
 
     const handleEndCall = async () => {
+        mountedTracksCleanup();
+        await client.leave();
+        navigate('/patient/appointments');
+    };
+
+    const mountedTracksCleanup = () => {
         if (localTracks.audioTrack) {
             localTracks.audioTrack.stop();
             localTracks.audioTrack.close();
@@ -124,12 +174,24 @@ const VideoConsultationRoom = () => {
             localTracks.videoTrack.stop();
             localTracks.videoTrack.close();
         }
-        await client.leave();
-        navigate('/patient/appointments');
     };
 
     if (hasError) {
-        return <div className="h-screen flex items-center justify-center bg-gray-900 text-white font-sans">{hasError}</div>;
+        return (
+            <div className="h-screen flex flex-col items-center justify-center bg-gray-900 text-white font-sans p-6 text-center">
+                <div className="w-16 h-16 bg-red-500/20 rounded-full flex items-center justify-center mb-4">
+                    <VideoOff className="w-8 h-8 text-red-500" />
+                </div>
+                <h2 className="text-xl font-bold mb-2">Connection Error</h2>
+                <p className="text-gray-400 max-w-md">{hasError}</p>
+                <button
+                    onClick={() => navigate('/patient/appointments')}
+                    className="mt-8 px-6 py-2 bg-[#52735B] hover:bg-[#3f5a46] transition-colors rounded-full font-bold text-sm"
+                >
+                    Return to Dashboard
+                </button>
+            </div>
+        );
     }
 
     if (!isJoined) {
@@ -143,8 +205,6 @@ const VideoConsultationRoom = () => {
 
     return (
         <div className="h-screen bg-gray-950 flex flex-col relative font-sans overflow-hidden">
-
-            {/* Header */}
             <div className="absolute top-0 left-0 w-full p-6 z-20 flex justify-between items-center bg-gradient-to-b from-black/60 to-transparent">
                 <h1 className="text-white text-xl font-bold tracking-wide">Clinical Consultation</h1>
                 <div className="bg-red-500/20 text-red-400 px-3 py-1 rounded-full text-xs font-extrabold tracking-widest border border-red-500/30 flex items-center gap-2">
@@ -152,9 +212,7 @@ const VideoConsultationRoom = () => {
                 </div>
             </div>
 
-            {/* Video Grid */}
             <div className="flex-1 relative flex items-center justify-center p-4">
-                {/* Remote User (Doctor) */}
                 {Object.keys(remoteUsers).length === 0 ? (
                     <div className="text-center text-gray-500">
                         <div className="w-24 h-24 bg-gray-800 rounded-full mx-auto mb-4 flex items-center justify-center text-gray-600 font-bold text-2xl">Doc</div>
@@ -162,18 +220,22 @@ const VideoConsultationRoom = () => {
                     </div>
                 ) : (
                     Object.values(remoteUsers).map(user => (
-                        <div key={user.uid} id={`remote-player-${user.uid}`} className="w-full h-full rounded-3xl overflow-hidden object-cover border border-gray-800 shadow-2xl"></div>
+                        <div key={user.uid} id={`remote-player-${user.uid}`} className="w-full h-full rounded-3xl overflow-hidden bg-black border border-gray-800 shadow-2xl"></div>
                     ))
                 )}
 
-                {/* Local User (Patient) - Picture in Picture */}
                 <div
                     id="local-player"
-                    className="absolute bottom-24 right-8 w-32 h-48 md:w-48 md:h-72 bg-gray-800 rounded-2xl overflow-hidden border-2 border-gray-700 shadow-2xl object-cover"
-                ></div>
+                    className="absolute bottom-24 right-8 w-32 h-48 md:w-48 md:h-72 bg-gray-800 rounded-2xl overflow-hidden border-2 border-gray-700 shadow-2xl"
+                >
+                    {!videoOn && (
+                        <div className="w-full h-full flex items-center justify-center bg-gray-900 text-gray-500">
+                            <VideoOff size={32} />
+                        </div>
+                    )}
+                </div>
             </div>
 
-            {/* Bottom Control Bar */}
             <div className="absolute bottom-0 left-0 w-full p-6 pb-8 z-20 flex justify-center items-center gap-6 bg-gradient-to-t from-black/80 to-transparent">
                 <button
                     onClick={toggleMic}

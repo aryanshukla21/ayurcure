@@ -18,7 +18,7 @@ const AdminAddDoctorPage = () => {
     fullName: '', email: '', phone: '', emergencyContact: '', address: '', password: '',
     fees: '', startTime: '09:00', endTime: '17:00',
     specialization: 'Ayurvedic General Medicine', registrationNumber: '', qualifications: '', experience: '',
-    about: '', avatar: null 
+    about: '', avatar: null
   });
 
   const handleInputChange = (e) => {
@@ -30,11 +30,11 @@ const AdminAddDoctorPage = () => {
   const handleImageUpload = (e) => {
     const file = e.target.files[0];
     if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setFormData(prev => ({ ...prev, avatar: reader.result }));
-      };
-      reader.readAsDataURL(file);
+      setFormData(prev => ({
+        ...prev,
+        avatarFile: file, // Store the physical file for AWS
+        avatarPreview: URL.createObjectURL(file) // Store a temporary URL for UI preview
+      }));
     }
   };
 
@@ -43,42 +43,36 @@ const AdminAddDoctorPage = () => {
     setError('');
 
     try {
-      // Map frontend state to backend expected payload
-      const payload = {
-        full_name: formData.fullName,
-        email: formData.email,
-        phone: formData.phone,
-        password: formData.password,
-        specialization: formData.specialization,
-        experience_years: parseInt(formData.experience) || 0,
-        qualifications: formData.qualifications,
-        registration_number: formData.registrationNumber,
-        consultation_fee: parseFloat(formData.fees) || 0,
-        about: formData.about, // FIX: Added about
-        clinic_address: formData.address, // FIX: Mapped address to clinic_address
-        avatar: formData.avatar // FIX: Added image string
-      };
+      const payload = new FormData();
+      payload.append('full_name', formData.fullName);
+      payload.append('email', formData.email);
+      payload.append('phone', formData.phone);
+      payload.append('password', formData.password);
+      payload.append('specialization', formData.specialization);
+      payload.append('experience_years', parseInt(formData.experience) || 0);
+      payload.append('qualifications', formData.qualifications);
+      payload.append('registration_number', formData.registrationNumber);
+      payload.append('consultation_fee', parseFloat(formData.fees) || 0);
+      payload.append('about', formData.about);
+      payload.append('clinic_address', formData.address);
+
+      // Append the actual physical file!
+      if (formData.avatarFile) {
+        payload.append('avatar', formData.avatarFile);
+      }
 
       const res = await adminApi.addDoctor(payload);
-
-      if (res.success || res.doctorId) {
-        navigate('/admin/doctors');
-      } else {
-        setError(res.message || 'Failed to add doctor.');
-      }
+      if (res.success || res.doctorId) navigate('/admin/doctors');
+      else setError(res.message || 'Failed to add doctor.');
     } catch (error) {
-            console.error("Submission failed", error);
-            
-            // THE FIX: Catch the specific 409 Conflict Error!
-            if (error.response && error.response.status === 409) {
-                // This displays the exact message we wrote in the backend controller!
-                alert(`⚠️ ERROR: ${error.response.data.message || "This Email, Phone, or Registration Number is already registered to another doctor!"}`);
-            } else {
-                alert("Database Error: Failed to add doctor. Check your inputs and try again.");
-            }
-        } finally {
-            setIsSubmitting(false);
-        }
+      if (error.response?.status === 409) {
+        alert(`⚠️ ERROR: ${error.response.data.message}`);
+      } else {
+        alert("Database Error: Failed to add doctor.");
+      }
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -100,8 +94,8 @@ const AdminAddDoctorPage = () => {
       {/* Profile Image Uploader */}
       <div className="mb-8 flex items-center gap-6">
         <div className="relative w-24 h-24 rounded-full border-2 border-dashed border-[#B8C1B6] bg-white flex items-center justify-center overflow-hidden group hover:border-[#4A7C59] transition-colors">
-          {formData.avatar ? (
-            <img src={formData.avatar} alt="Preview" className="w-full h-full object-cover" />
+          {(formData.avatarPreview || formData.avatar) ? (
+            <img src={formData.avatarPreview || formData.avatar} alt="Preview" className="w-full h-full object-cover" />
           ) : (
             <span className="text-[#4A7C59] text-xs font-bold text-center px-2">Upload Photo</span>
           )}

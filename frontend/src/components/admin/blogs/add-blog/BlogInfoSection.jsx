@@ -1,10 +1,43 @@
 import React from 'react';
+import { UploadCloud, Image as ImageIcon } from 'lucide-react';
 
-const BlogInfoSection = ({ formData, onChange }) => {
+const BlogInfoSection = ({ formData, onChange, onImageUpload }) => {
   return (
     <div className="bg-white rounded-[32px] p-8 border border-[#EFEBE1] shadow-sm">
       <h2 className="text-xl font-extrabold text-gray-900 mb-6">Basic Information</h2>
       <div className="space-y-6">
+
+        {/* ADDED IMAGE UPLOADER SECTION */}
+        <div className="mb-6">
+          <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-3">Cover Image</label>
+          <div className="flex items-center gap-6">
+            <div className="w-32 h-24 rounded-2xl border border-[#EFEBE1] overflow-hidden bg-gray-50 flex items-center justify-center shadow-inner">
+              {formData.imagePreview ? (
+                <img src={formData.imagePreview} alt="Cover Preview" className="w-full h-full object-cover" />
+              ) : (
+                <ImageIcon className="text-gray-400" size={32} />
+              )}
+            </div>
+            <div>
+              <input
+                type="file"
+                id="blogImage"
+                className="hidden"
+                accept="image/*"
+                onChange={onImageUpload}
+              />
+              <label
+                htmlFor="blogImage"
+                className="inline-flex items-center gap-2 px-5 py-2.5 bg-white border border-[#EFEBE1] hover:bg-gray-50 text-gray-700 text-sm font-bold rounded-full transition-colors cursor-pointer shadow-sm"
+              >
+                <UploadCloud size={16} /> Choose Image
+              </label>
+              <p className="text-xs font-medium text-gray-400 mt-2">PNG, JPG, or WEBP. Max size 2MB.</p>
+            </div>
+          </div>
+        </div>
+
+        {/* Existing Title Input */}
         <div>
           <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-2">Blog Title</label>
           <input
@@ -16,6 +49,8 @@ const BlogInfoSection = ({ formData, onChange }) => {
             placeholder="Enter blog title"
           />
         </div>
+
+        {/* Category and Audience */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div>
             <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-2">Category</label>
@@ -45,6 +80,8 @@ const BlogInfoSection = ({ formData, onChange }) => {
             </select>
           </div>
         </div>
+
+        {/* Short Description */}
         <div>
           <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-2">Short Description</label>
           <textarea
@@ -56,8 +93,10 @@ const BlogInfoSection = ({ formData, onChange }) => {
             placeholder="Brief summary of the article..."
           />
         </div>
+
       </div>
     </div>
   );
 };
+
 export default BlogInfoSection;

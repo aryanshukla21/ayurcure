@@ -51,7 +51,7 @@ export const doctorApi = {
     // SETTINGS
     // ==========================================
     getSettingsPersonalInfo: async () => (await axiosInstance.get('/doctors/settings/get-personal-information')).data,
-    updateSettingsPersonalInfo: async (data) => (await axiosInstance.put('/doctors/settings/update-personal-information', data)).data,
+    updateSettingsPersonalInfo: async (data) => (await axiosInstance.put('/doctors/settings/update-personal-information', data, { headers: { 'Content-Type': 'multipart/form-data' } })).data,
     getPreferences: async () => (await axiosInstance.get('/doctors/settings/get-preferences')).data,
     updatePreferences: async (data) => (await axiosInstance.put('/doctors/settings/update-preferences', data)).data,
     getProfessionalCredentials: async () => (await axiosInstance.get('/doctors/settings/get-professional-credentials')).data,

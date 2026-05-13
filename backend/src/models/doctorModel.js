@@ -1,7 +1,6 @@
 const db = require('../config/db');
 
 const doctorModel = {
-
     createProfile: async (data) => {
         const query = `
             INSERT INTO DoctorProfiles (user_id, verification_status) 
@@ -31,7 +30,7 @@ const doctorModel = {
             SELECT COUNT(*) AS "appointmentsToday" 
             FROM Appointments 
             WHERE doctor_id = $1 
-              AND DATE(appointment_date) = CURRENT_DATE 
+              AND DATE(start_time) = CURRENT_DATE 
               AND status NOT IN ('Cancelled', 'Completed')
         `;
         const { rows } = await db.query(query, [doctorId]);
@@ -43,7 +42,7 @@ const doctorModel = {
             SELECT COUNT(*) AS "upcomingConsultations" 
             FROM Appointments 
             WHERE doctor_id = $1 
-              AND appointment_date >= CURRENT_DATE 
+              AND start_time >= CURRENT_TIMESTAMP 
               AND status = 'Scheduled'
         `;
         const { rows } = await db.query(query, [doctorId]);
@@ -54,17 +53,18 @@ const doctorModel = {
         const query = `
             SELECT 
                 a.id, 
-                p.name AS patient_name, 
-                a.appointment_date, 
-                a.appointment_time, 
+                u.full_name AS patient_name, 
+                a.start_time AS appointment_date, 
+                a.start_time AS appointment_time, 
                 a.status,
-                a.consultation_type 
+                a.mode AS consultation_type 
             FROM Appointments a 
-            JOIN Patients p ON a.patient_id = p.id 
+            JOIN PatientProfiles p ON a.patient_id = p.id 
+            JOIN Users u ON p.user_id = u.id
             WHERE a.doctor_id = $1 
-              AND a.appointment_date >= CURRENT_DATE 
+              AND a.start_time >= CURRENT_TIMESTAMP 
               AND a.status = 'Scheduled'
-            ORDER BY a.appointment_date ASC, a.appointment_time ASC 
+            ORDER BY a.start_time ASC 
             LIMIT 5
         `;
         const { rows } = await db.query(query, [doctorId]);
@@ -74,10 +74,11 @@ const doctorModel = {
     getEarningSummary: async (doctorId) => {
         const query = `
             SELECT 
-                COALESCE(SUM(amount), 0) AS total_earnings, 
-                COALESCE(SUM(CASE WHEN EXTRACT(MONTH FROM payment_date) = EXTRACT(MONTH FROM CURRENT_DATE) THEN amount ELSE 0 END), 0) AS monthly_earnings 
-            FROM Payments 
-            WHERE doctor_id = $1 AND status = 'Completed'
+                COALESCE(SUM(d.consultation_fee), 0) AS total_earnings, 
+                COALESCE(SUM(CASE WHEN EXTRACT(MONTH FROM a.start_time) = EXTRACT(MONTH FROM CURRENT_DATE) THEN d.consultation_fee ELSE 0 END), 0) AS monthly_earnings 
+            FROM Appointments a
+            JOIN DoctorProfiles d ON a.doctor_id = d.id
+            WHERE a.doctor_id = $1 AND a.status = 'Completed'
         `;
         const { rows } = await db.query(query, [doctorId]);
         return {
@@ -96,10 +97,10 @@ const doctorModel = {
 
         switch (filterType) {
             case 'Today':
-                dateFilter = 'AND DATE(a.appointment_date) = CURRENT_DATE';
+                dateFilter = 'AND DATE(a.start_time) = CURRENT_DATE';
                 break;
             case 'Upcoming':
-                dateFilter = 'AND a.appointment_date >= CURRENT_DATE';
+                dateFilter = 'AND a.start_time >= CURRENT_TIMESTAMP';
                 statusFilter = "AND a.status = 'Scheduled'";
                 break;
             case 'Completed':
@@ -110,26 +111,26 @@ const doctorModel = {
                 break;
             case 'All':
             default:
-                // No filters, get all
                 break;
         }
 
         const query = `
             SELECT 
                 a.id, 
-                p.name AS patient_name, 
+                u.full_name AS patient_name, 
                 p.gender,
                 p.age,
-                a.appointment_date, 
-                a.appointment_time, 
+                a.start_time AS appointment_date, 
+                a.start_time AS appointment_time, 
                 a.status, 
-                a.consultation_type 
+                a.mode AS consultation_type 
             FROM Appointments a 
-            JOIN Patients p ON a.patient_id = p.id 
+            JOIN PatientProfiles p ON a.patient_id = p.id 
+            JOIN Users u ON p.user_id = u.id
             WHERE a.doctor_id = $1 
             ${dateFilter} 
             ${statusFilter}
-            ORDER BY a.appointment_date DESC, a.appointment_time DESC
+            ORDER BY a.start_time DESC
         `;
         const { rows } = await db.query(query, [doctorId]);
         return rows;
@@ -144,18 +145,19 @@ const doctorModel = {
             SELECT 
                 a.id, 
                 p.id AS patient_id, 
-                p.name AS patient_name, 
+                u.full_name AS patient_name, 
                 p.age, 
                 p.gender, 
                 p.blood_group, 
-                p.contact_number,
-                a.appointment_date, 
-                a.appointment_time, 
+                u.phone AS contact_number,
+                a.start_time AS appointment_date, 
+                a.start_time AS appointment_time, 
                 a.status, 
-                a.consultation_type, 
-                a.reason_for_visit 
+                a.mode AS consultation_type, 
+                a.chief_complaint AS reason_for_visit 
             FROM Appointments a 
-            JOIN Patients p ON a.patient_id = p.id 
+            JOIN PatientProfiles p ON a.patient_id = p.id 
+            JOIN Users u ON p.user_id = u.id
             WHERE a.id = $1 AND a.doctor_id = $2
         `;
         const { rows } = await db.query(query, [appointmentId, doctorId]);
@@ -164,7 +166,7 @@ const doctorModel = {
 
     getApptSymptoms: async (doctorId, appointmentId) => {
         const query = `
-            SELECT pre_consultation_symptoms 
+            SELECT pre_consultation_symptoms, chief_complaint 
             FROM Appointments 
             WHERE id = $1 AND doctor_id = $2
         `;
@@ -175,51 +177,62 @@ const doctorModel = {
     getApptReports: async (doctorId, appointmentId) => {
         const query = `
             SELECT 
-                pr.id, 
-                pr.document_name, 
-                pr.document_type, 
-                pr.uploaded_at,
-                pr.file_url
-            FROM PatientReports pr
-            JOIN Appointments a ON pr.patient_id = a.patient_id
+                pd.id, 
+                pd.document_name, 
+                pd.document_type, 
+                pd.uploaded_at,
+                pd.file_url
+            FROM PatientDocuments pd
+            JOIN Appointments a ON pd.patient_id = a.patient_id
             WHERE a.id = $1 AND a.doctor_id = $2
-            ORDER BY pr.uploaded_at DESC
+            ORDER BY pd.uploaded_at DESC
         `;
         const { rows } = await db.query(query, [appointmentId, doctorId]);
         return rows;
     },
 
     getApptMedicalInfo: async (doctorId, appointmentId) => {
+        // Querying exactly what is available in the PatientProfiles table based on your schema
         const query = `
             SELECT 
-                pmh.allergies, 
-                pmh.chronic_conditions, 
-                pmh.current_medications, 
-                pmh.past_surgeries,
-                pmh.family_medical_history
-            FROM PatientMedicalHistory pmh
-            JOIN Appointments a ON pmh.patient_id = a.patient_id
+                p.allergies, 
+                p.medical_history AS chronic_conditions, 
+                p.current_medications::text AS current_medications, 
+                'None recorded' AS past_surgeries,
+                'None recorded' AS family_medical_history
+            FROM PatientProfiles p
+            JOIN Appointments a ON p.id = a.patient_id
             WHERE a.id = $1 AND a.doctor_id = $2
         `;
         const { rows } = await db.query(query, [appointmentId, doctorId]);
-        return rows[0];
+
+        return rows[0] || {
+            allergies: 'None recorded',
+            chronic_conditions: 'None recorded',
+            current_medications: 'None recorded',
+            past_surgeries: 'None recorded',
+            family_medical_history: 'None recorded'
+        };
     },
 
     rescheduleAppointment: async (doctorId, appointmentId, date, time) => {
+        const start_time = `${date} ${time}`;
         const query = `
             UPDATE Appointments 
-            SET appointment_date = $1, appointment_time = $2, status = 'Scheduled', updated_at = CURRENT_TIMESTAMP
-            WHERE id = $3 AND doctor_id = $4 
-            RETURNING id, appointment_date, appointment_time, status
+            SET start_time = $1::timestamp, 
+                end_time = $1::timestamp + interval '30 minutes',
+                status = 'Scheduled'
+            WHERE id = $2 AND doctor_id = $3 
+            RETURNING id, start_time AS appointment_date, start_time AS appointment_time, status
         `;
-        const { rows } = await db.query(query, [date, time, appointmentId, doctorId]);
+        const { rows } = await db.query(query, [start_time, appointmentId, doctorId]);
         return rows[0];
     },
 
     cancelAppointment: async (doctorId, appointmentId) => {
         const query = `
             UPDATE Appointments 
-            SET status = 'Cancelled', updated_at = CURRENT_TIMESTAMP
+            SET status = 'Cancelled'
             WHERE id = $1 AND doctor_id = $2 
             RETURNING id, status
         `;
@@ -233,9 +246,10 @@ const doctorModel = {
 
     getTotalEarnings: async (doctorId) => {
         const query = `
-            SELECT COALESCE(SUM(amount), 0) AS total 
-            FROM Payments 
-            WHERE doctor_id = $1 AND status = 'Completed'
+            SELECT COALESCE(SUM(d.consultation_fee), 0) AS total 
+            FROM Appointments a
+            JOIN DoctorProfiles d ON a.doctor_id = d.id
+            WHERE a.doctor_id = $1 AND a.status = 'Completed'
         `;
         const { rows } = await db.query(query, [doctorId]);
         return parseFloat(rows[0].total);
@@ -243,12 +257,13 @@ const doctorModel = {
 
     getMonthlyEarning: async (doctorId) => {
         const query = `
-            SELECT COALESCE(SUM(amount), 0) AS monthly 
-            FROM Payments 
-            WHERE doctor_id = $1 
-              AND status = 'Completed' 
-              AND EXTRACT(MONTH FROM payment_date) = EXTRACT(MONTH FROM CURRENT_DATE) 
-              AND EXTRACT(YEAR FROM payment_date) = EXTRACT(YEAR FROM CURRENT_DATE)
+            SELECT COALESCE(SUM(d.consultation_fee), 0) AS monthly 
+            FROM Appointments a
+            JOIN DoctorProfiles d ON a.doctor_id = d.id
+            WHERE a.doctor_id = $1 
+              AND a.status = 'Completed' 
+              AND EXTRACT(MONTH FROM a.start_time) = EXTRACT(MONTH FROM CURRENT_DATE) 
+              AND EXTRACT(YEAR FROM a.start_time) = EXTRACT(YEAR FROM CURRENT_DATE)
         `;
         const { rows } = await db.query(query, [doctorId]);
         return parseFloat(rows[0].monthly);
@@ -257,17 +272,18 @@ const doctorModel = {
     getEarningHistory: async (doctorId) => {
         const query = `
             SELECT 
-                p.id, 
-                p.payment_date, 
-                p.amount, 
-                p.payment_method,
-                pt.name AS patient_name, 
-                a.consultation_type 
-            FROM Payments p
-            JOIN Appointments a ON p.appointment_id = a.id
-            JOIN Patients pt ON a.patient_id = pt.id
-            WHERE p.doctor_id = $1 AND p.status = 'Completed'
-            ORDER BY p.payment_date DESC
+                a.id, 
+                a.start_time AS payment_date, 
+                d.consultation_fee AS amount, 
+                'Online' AS payment_method,
+                u.full_name AS patient_name, 
+                a.mode AS consultation_type 
+            FROM Appointments a
+            JOIN PatientProfiles p ON a.patient_id = p.id
+            JOIN Users u ON p.user_id = u.id
+            JOIN DoctorProfiles d ON a.doctor_id = d.id
+            WHERE a.doctor_id = $1 AND a.status = 'Completed'
+            ORDER BY a.start_time DESC
         `;
         const { rows } = await db.query(query, [doctorId]);
         return rows;
@@ -277,63 +293,72 @@ const doctorModel = {
     // PROFILE
     // ==========================================
 
-    getProfilePersonalInfo: async (doctorId) => {
+    getProfilePersonalInfo: async (userId) => {
+        // We select NULL for profile_image_url since it's not in the DB schema
         const query = `
-            SELECT first_name, last_name, specialization, experience_years, bio, profile_image_url 
-            FROM DoctorProfiles 
-            WHERE user_id = $1
+            SELECT u.full_name, d.specialization, d.experience_years, d.bio, NULL AS profile_image_url 
+            FROM DoctorProfiles d 
+            JOIN Users u ON d.user_id = u.id 
+            WHERE u.id = $1
         `;
-        const { rows } = await db.query(query, [doctorId]);
+        const { rows } = await db.query(query, [userId]);
+
+        if (rows[0] && rows[0].full_name) {
+            const names = rows[0].full_name.split(' ');
+            rows[0].first_name = names[0];
+            rows[0].last_name = names.slice(1).join(' ');
+        }
         return rows[0];
     },
 
     getNextConsultation: async (doctorId) => {
         const query = `
             SELECT 
-                a.appointment_date, 
-                a.appointment_time, 
-                p.name AS patient_name,
-                a.consultation_type
+                a.start_time AS appointment_date, 
+                a.start_time AS appointment_time, 
+                u.full_name AS patient_name,
+                a.mode AS consultation_type
             FROM Appointments a 
-            JOIN Patients p ON a.patient_id = p.id 
+            JOIN PatientProfiles p ON a.patient_id = p.id 
+            JOIN Users u ON p.user_id = u.id 
             WHERE a.doctor_id = $1 
-              AND a.appointment_date >= CURRENT_DATE 
+              AND a.start_time >= CURRENT_TIMESTAMP 
               AND a.status = 'Scheduled' 
-            ORDER BY a.appointment_date ASC, a.appointment_time ASC 
+            ORDER BY a.start_time ASC 
             LIMIT 1
         `;
         const { rows } = await db.query(query, [doctorId]);
         return rows[0];
     },
 
-    getContactInfo: async (doctorId) => {
+    getContactInfo: async (userId) => {
         const query = `
-            SELECT u.email, dp.phone_number, dp.clinic_address 
-            FROM DoctorProfiles dp 
-            JOIN Users u ON dp.user_id = u.id 
+            SELECT u.email, u.phone AS phone_number, d.location AS clinic_address 
+            FROM DoctorProfiles d 
+            JOIN Users u ON d.user_id = u.id 
             WHERE u.id = $1
         `;
-        const { rows } = await db.query(query, [doctorId]);
+        const { rows } = await db.query(query, [userId]);
         return rows[0];
     },
 
-    getCredentials: async (doctorId) => {
+    getCredentials: async (userId) => {
         const query = `
-            SELECT qualifications, medical_license_number, achievements 
+            SELECT qualifications, registration_number AS medical_license_number, education_details::text AS achievements 
             FROM DoctorProfiles 
             WHERE user_id = $1
         `;
-        const { rows } = await db.query(query, [doctorId]);
+        const { rows } = await db.query(query, [userId]);
         return rows[0];
     },
 
-    getPhilosophy: async (doctorId) => {
+    getPhilosophy: async (userId) => {
         const query = `
             SELECT philosophy_of_care 
             FROM DoctorProfiles 
             WHERE user_id = $1
         `;
-        const { rows } = await db.query(query, [doctorId]);
+        const { rows } = await db.query(query, [userId]);
         return rows[0];
     },
 
@@ -341,36 +366,46 @@ const doctorModel = {
     // SETTINGS
     // ==========================================
 
-    getSettingsPersonalInfo: async (doctorId) => {
+    getSettingsPersonalInfo: async (userId) => {
         const query = `
-            SELECT dp.first_name, dp.last_name, u.email, dp.phone_number, dp.profile_image_url, dp.bio 
-            FROM DoctorProfiles dp 
-            JOIN Users u ON dp.user_id = u.id 
+            SELECT u.full_name, u.email, u.phone AS phone_number, NULL AS profile_image_url, d.bio 
+            FROM DoctorProfiles d 
+            JOIN Users u ON d.user_id = u.id 
             WHERE u.id = $1
         `;
-        const { rows } = await db.query(query, [doctorId]);
+        const { rows } = await db.query(query, [userId]);
+
+        if (rows[0] && rows[0].full_name) {
+            const names = rows[0].full_name.split(' ');
+            rows[0].first_name = names[0];
+            rows[0].last_name = names.slice(1).join(' ');
+        }
         return rows[0];
     },
 
-    updateSettingsPersonalInfo: async (doctorId, data) => {
-        // Run in transaction to update both Users and DoctorProfiles tables
+    updateSettingsPersonalInfo: async (userId, data) => {
         const client = await db.connect();
         try {
             await client.query('BEGIN');
 
+            const fullName = `${data.first_name || ''} ${data.last_name || ''}`.trim();
+
+            // Note: Cannot update avatar because it doesn't exist in the schema
             const profileQuery = `
                 UPDATE DoctorProfiles 
-                SET first_name = $1, last_name = $2, phone_number = $3, bio = $4
-                WHERE user_id = $5
+                SET bio = COALESCE($1, bio)
+                WHERE user_id = $2
             `;
-            await client.query(profileQuery, [data.first_name, data.last_name, data.phone_number, data.bio, doctorId]);
+            await client.query(profileQuery, [data.bio, userId]);
 
             const userQuery = `
                 UPDATE Users 
-                SET email = $1 
-                WHERE id = $2
+                SET email = COALESCE($1, email), 
+                    phone = COALESCE($2, phone),
+                    full_name = COALESCE(NULLIF($3, ''), full_name)
+                WHERE id = $4
             `;
-            await client.query(userQuery, [data.email, doctorId]);
+            await client.query(userQuery, [data.email, data.phone_number, fullName, userId]);
 
             await client.query('COMMIT');
             return true;
@@ -382,76 +417,84 @@ const doctorModel = {
         }
     },
 
-    getPreferences: async (doctorId) => {
+    getPreferences: async (userId) => {
         const query = `SELECT preferences FROM DoctorProfiles WHERE user_id = $1`;
-        const { rows } = await db.query(query, [doctorId]);
+        const { rows } = await db.query(query, [userId]);
         return rows[0]?.preferences || {};
     },
 
-    updatePreferences: async (doctorId, preferences) => {
+    updatePreferences: async (userId, preferences) => {
         const query = `
             UPDATE DoctorProfiles 
             SET preferences = $1 
             WHERE user_id = $2 
             RETURNING preferences
         `;
-        const { rows } = await db.query(query, [JSON.stringify(preferences), doctorId]);
+        const { rows } = await db.query(query, [JSON.stringify(preferences), userId]);
         return rows[0];
     },
 
-    getProfessionalCredentials: async (doctorId) => {
+    getProfessionalCredentials: async (userId) => {
         const query = `
-            SELECT specialization, experience_years, qualifications, medical_license_number 
+            SELECT specialization, experience_years, qualifications, registration_number AS medical_license_number 
             FROM DoctorProfiles 
             WHERE user_id = $1
         `;
-        const { rows } = await db.query(query, [doctorId]);
+        const { rows } = await db.query(query, [userId]);
         return rows[0];
     },
 
-    updateProfessionalCredentials: async (doctorId, data) => {
+    updateProfessionalCredentials: async (userId, data) => {
         const query = `
             UPDATE DoctorProfiles 
-            SET specialization = $1, experience_years = $2, qualifications = $3, medical_license_number = $4 
+            SET specialization = COALESCE($1, specialization), 
+                experience_years = COALESCE($2, experience_years), 
+                qualifications = COALESCE($3, qualifications),
+                registration_number = COALESCE($4, registration_number)
             WHERE user_id = $5
         `;
-        await db.query(query, [data.specialization, data.experience_years, data.qualifications, data.medical_license_number, doctorId]);
+        await db.query(query, [data.specialization, data.experience_years, data.qualifications, data.medical_license_number, userId]);
         return true;
     },
 
-    getConsultationLogistics: async (doctorId) => {
+    getConsultationLogistics: async (userId) => {
         const query = `
-            SELECT consultation_fee, availability_schedule, clinic_address 
+            SELECT consultation_fee, availability_summary AS availability_schedule, location AS clinic_address 
             FROM DoctorProfiles 
             WHERE user_id = $1
         `;
-        const { rows } = await db.query(query, [doctorId]);
+        const { rows } = await db.query(query, [userId]);
         return rows[0];
     },
 
-    updateConsultationLogistics: async (doctorId, data) => {
+    updateConsultationLogistics: async (userId, data) => {
         const query = `
             UPDATE DoctorProfiles 
-            SET consultation_fee = $1, availability_schedule = $2, clinic_address = $3 
+            SET consultation_fee = COALESCE($1, consultation_fee),
+                availability_summary = COALESCE($2, availability_summary),
+                location = COALESCE($3, location)
             WHERE user_id = $4
         `;
-        await db.query(query, [data.consultation_fee, JSON.stringify(data.availability_schedule), data.clinic_address, doctorId]);
+        // Pass objects as JSON string if they are arrays/objects from frontend
+        const schedule = typeof data.availability_schedule === 'object' ? JSON.stringify(data.availability_schedule) : data.availability_schedule;
+
+        await db.query(query, [data.consultation_fee, schedule, data.clinic_address, userId]);
         return true;
     },
 
-    getPhilosophyOfCare: async (doctorId) => {
+    getPhilosophyOfCare: async (userId) => {
         const query = `SELECT philosophy_of_care FROM DoctorProfiles WHERE user_id = $1`;
-        const { rows } = await db.query(query, [doctorId]);
+        const { rows } = await db.query(query, [userId]);
         return rows[0];
     },
 
-    updatePhilosophyOfCare: async (doctorId, philosophy) => {
+    updatePhilosophyOfCare: async (userId, philosophy) => {
         const query = `
             UPDATE DoctorProfiles 
             SET philosophy_of_care = $1 
             WHERE user_id = $2
         `;
-        await db.query(query, [philosophy, doctorId]);
+        await db.query(query, [philosophy, userId]);
         return true;
     }
 };

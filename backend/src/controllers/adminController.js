@@ -49,19 +49,17 @@ exports.getAllDoctors = async (req, res) => {
 
 exports.addDoctor = async (req, res) => {
     try {
-        // 1. Pull the text fields from req.body
         const { full_name, email, phone, password, specialization, experience_years, qualifications, registration_number, consultation_fee, about } = req.body;
 
-        // 2. THE FIX: Catch the actual image file uploaded by Multer!
+        // 🚨 THE FIX: Capture the AWS S3 URL for Doctor Avatars!
         let avatar = null;
         if (req.file) {
-            avatar = `/uploads/${req.file.filename}`;
+            avatar = req.file.s3Url || `/uploads/${req.file.filename}`;
         }
 
         const salt = await bcrypt.genSalt(10);
         const password_hash = await bcrypt.hash(password || 'Ayurcure@Doc123', salt);
 
-        // 3. Pass the newly caught avatar URL to the database model
         const doctorId = await adminModel.createDoctorTransaction(
             { full_name, email, phone, password_hash },
             { specialization, experience_years, qualifications, registration_number, consultation_fee, about, avatar }
@@ -98,7 +96,14 @@ exports.getPendingApprovals = async (req, res) => {
 
 exports.updateDoctorDetails = async (req, res) => {
     try {
-        await adminModel.updateDoctorDetails(req.params.id, req.body);
+        const data = req.body;
+
+        // 🚨 THE FIX: Capture the AWS S3 URL!
+        if (req.file) {
+            data.avatar = req.file.s3Url || `/uploads/${req.file.filename}`;
+        }
+
+        await adminModel.updateDoctorDetails(req.params.id, data);
         res.status(200).json({ success: true, message: "Doctor updated successfully" });
     } catch (error) { res.status(500).json({ success: false, message: error.message }); }
 };
@@ -223,26 +228,20 @@ exports.getOrderPaymentSummary = async (req, res) => {
 // ==========================================
 exports.addNewProduct = async (req, res) => {
     try {
+        const productData = { ...req.body };
 
-        // req.body contains all the text fields from your FormData
-        const productData = { ...req.body }; 
-        
-        // req.file contains the physical image caught by Multer
+        // 🚨 THE FIX: Capture the AWS S3 URL!
         if (req.file) {
-            productData.image_url = `/uploads/${req.file.filename}`;
+            productData.image_url = req.file.s3Url || `/uploads/${req.file.filename}`;
         }
 
-        // Convert the stringified FormData numbers back to Real Numbers for PostgreSQL
         productData.price = parseFloat(productData.price) || 0;
         productData.stock_quantity = parseInt(productData.stock_quantity, 10) || 0;
 
-
-        // Save to DB
         const productId = await adminModel.addNewProduct(productData);
         res.status(201).json({ success: true, message: "Product added successfully", productId });
-    } catch (error) { 
-        console.error("🚨 ADD PRODUCT ERROR:", error.message);
-        res.status(500).json({ success: false, message: error.message }); 
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
     }
 };
 
@@ -259,8 +258,8 @@ exports.getAllProductsPagination = async (req, res) => {
         // Calculate total pages for the frontend
         const totalPages = Math.ceil(data.totalCount / limit);
 
-        res.status(200).json({ 
-            success: true, 
+        res.status(200).json({
+            success: true,
             products: data.products,
             pagination: {
                 currentPage: page,
@@ -268,9 +267,9 @@ exports.getAllProductsPagination = async (req, res) => {
                 totalItems: data.totalCount
             }
         });
-    } catch (error) { 
+    } catch (error) {
         console.error("🚨 PAGINATION ERROR:", error.message);
-        res.status(500).json({ success: false, message: error.message }); 
+        res.status(500).json({ success: false, message: error.message });
     }
 };
 
@@ -295,26 +294,26 @@ exports.getProductDetails = async (req, res) => {
 exports.updateProduct = async (req, res) => {
     try {
         const productData = req.body;
-        
-        // If the user uploaded a new image while editing, catch it!
+
+        // 🚨 THE FIX: Capture the AWS S3 URL!
         if (req.file) {
-            productData.image_url = `/uploads/${req.file.filename}`;
+            productData.image_url = req.file.s3Url || `/uploads/${req.file.filename}`;
         }
 
         await adminModel.updateProduct(req.params.id, productData);
         res.status(200).json({ success: true, message: "Product updated successfully" });
-    } catch (error) { 
-        res.status(500).json({ success: false, message: error.message }); 
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
     }
-};
+}
 
 exports.deleteProduct = async (req, res) => {
     try {
         await adminModel.deleteProduct(req.params.id);
         res.status(200).json({ success: true, message: "Product deleted successfully" });
-    } catch (error) { 
+    } catch (error) {
         console.error("Error deleting product:", error);
-        res.status(500).json({ success: false, message: error.message }); 
+        res.status(500).json({ success: false, message: error.message });
     }
 };
 // ==========================================
@@ -477,9 +476,9 @@ exports.getAllAdmins = async (req, res) => {
     try {
         const admins = await adminModel.getAllAdmins();
         res.status(200).json({ success: true, admins });
-    } catch (error) { 
+    } catch (error) {
         console.error("Error in getAllAdmins:", error);
-        res.status(500).json({ success: false, message: error.message }); 
+        res.status(500).json({ success: false, message: error.message });
     }
 };
 
@@ -488,9 +487,9 @@ exports.getAdminDetails = async (req, res) => {
     try {
         const data = await adminModel.getAdminDetails(req.params.id);
         res.status(200).json({ success: true, data });
-    } catch (error) { 
+    } catch (error) {
         console.error("Error in getAdminDetails:", error);
-        res.status(500).json({ success: false, message: error.message }); 
+        res.status(500).json({ success: false, message: error.message });
     }
 };
 

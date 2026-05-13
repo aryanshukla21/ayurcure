@@ -10,14 +10,14 @@ export const adminApi = {
     getRecentPatients: async () => (await axiosInstance.get('/admin/dashboard/get-recent-patients')).data,
     getRecentOrders: async () => (await axiosInstance.get('/admin/dashboard/get-recent-orders')).data,
 
-    // DOCTORS
+    // DOCTORS 
     getAllDoctors: async () => (await axiosInstance.get('/admin/doctors/get-all-doctors')).data,
-    addDoctor: async (data) => (await axiosInstance.post('/admin/doctors/add-doctor', data)).data,
+    addDoctor: async (data) => (await axiosInstance.post('/admin/doctors/add-doctor', data, { headers: { 'Content-Type': 'multipart/form-data' } })).data,
     deleteDoctor: async (id) => (await axiosInstance.delete(`/admin/doctors/delete-doctor/${id}`)).data,
     getVerificationRate: async () => (await axiosInstance.get('/admin/doctors/verification-rate')).data,
     getAverageResponseTime: async () => (await axiosInstance.get('/admin/doctors/average-response-time')).data,
     getPendingApprovals: async () => (await axiosInstance.get('/admin/doctors/pending-approvals')).data,
-    updateDoctorDetails: async (id, data) => (await axiosInstance.put(`/admin/doctors/${id}/update-doctor-details`, data)).data,
+    updateDoctorDetails: async (id, data) => (await axiosInstance.put(`/admin/doctors/${id}/update-doctor-details`, data, { headers: { 'Content-Type': 'multipart/form-data' } })).data,
     getDoctorDetails: async (id) => (await axiosInstance.get(`/admin/doctors/${id}/get-doctor-details`)).data,
 
     // PATIENTS
@@ -46,19 +46,19 @@ export const adminApi = {
     getOrderTimeline: async (id) => (await axiosInstance.get(`/admin/order-details/${id}/order-timeline`)).data,
     getOrderPaymentSummary: async (id) => (await axiosInstance.get(`/admin/order-details/${id}/payment-summary`)).data,
 
-    // INVENTORY
-    addNewProduct: async (data) => (await axiosInstance.post('/admin/inventory/add-new-product', data)).data,
+    // INVENTORY 
+    addNewProduct: async (data) => (await axiosInstance.post('/admin/inventory/add-new-product', data, { headers: { 'Content-Type': 'multipart/form-data' } })).data,
     getAllProductsPagination: async (page) => (await axiosInstance.get(`/admin/inventory/get-all-product-by-pagination/${page}`)).data,
     filterInventory: async (filters) => (await axiosInstance.post('/admin/inventory/filter', filters)).data,
     getAllCategories: async () => (await axiosInstance.get('/admin/inventory/all-category')).data,
     getProductDetails: async (id) => (await axiosInstance.get(`/admin/inventory/${id}/get-product-details`)).data,
-    updateProduct: async (id, data) => (await axiosInstance.put(`/admin/inventory/${id}/update-product`, data)).data,
+    updateProduct: async (id, data) => (await axiosInstance.put(`/admin/inventory/${id}/update-product`, data, { headers: { 'Content-Type': 'multipart/form-data' } })).data,
     deleteProduct: async (id) => (await axiosInstance.delete(`/admin/inventory/${id}/delete-product`)).data,
 
     // BLOGS
     getAllBlogs: async () => (await axiosInstance.get('/admin/blogs/get-all-blogs')).data,
-    addNewBlog: async (data) => (await axiosInstance.post('/admin/blogs/add-new-blog', data)).data,
-    updateBlog: async (id, data) => (await axiosInstance.put(`/admin/blogs/update-blog/${id}`, data)).data,
+    addNewBlog: async (data) => (await axiosInstance.post('/admin/blogs/add-new-blog', data, { headers: { 'Content-Type': 'multipart/form-data' } })).data,
+    updateBlog: async (id, data) => (await axiosInstance.put(`/admin/blogs/${id}/update-blog`, data, { headers: { 'Content-Type': 'multipart/form-data' } })).data,
     deleteBlog: async (id) => (await axiosInstance.delete(`/admin/blogs/delete-blog/${id}`)).data,
     getTrendingCategory: async () => (await axiosInstance.get('/admin/blogs/trending-category')).data,
     getBlogsReviewRequired: async () => (await axiosInstance.get('/admin/blogs/review-required')).data,
