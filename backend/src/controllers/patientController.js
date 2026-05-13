@@ -275,30 +275,22 @@ exports.changePassword = async (req, res) => {
     try {
         const { currentPassword, newPassword } = req.body;
 
-        // 1. Check for missing payload properties
         if (!currentPassword || !newPassword) {
             return res.status(400).json({ error: 'Current and new passwords are required' });
         }
 
         const user = await PatientModel.getUserPasswordHash(req.user.id);
 
-        // 2. Prevent TypeError if user no longer exists in DB
-        if (!user) {
-            return res.status(404).json({ error: 'User account not found.' });
-        }
-
-        // 3. Check if user authenticated via Google SSO (They won't have a local password)
+        // Check if user authenticated via SSO and has no local password
         if (!user.password_hash) {
-            return res.status(400).json({ error: 'Your account uses Single Sign-On (Google). Please set up a local password first.' });
+            return res.status(400).json({ error: 'Account uses Single Sign-On. Please set up a password first.' });
         }
 
-        // 4. Verify existing password
         const isValid = await authService.verifyHash(currentPassword, user.password_hash);
         if (!isValid) {
-            return res.status(401).json({ error: 'The current password you entered is incorrect.' });
+            return res.status(401).json({ error: 'Incorrect current password' });
         }
 
-        // 5. Hash and update new password
         const newHash = await authService.hashData(newPassword);
         await PatientModel.updateUserPassword(req.user.id, newHash);
 

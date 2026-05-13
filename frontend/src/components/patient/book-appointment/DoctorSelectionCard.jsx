@@ -21,26 +21,39 @@ const DoctorSelectionCard = ({ doctor, isSelected, onSelect, isLoading }) => {
     );
   }
 
-  // FIXED: Using doctor_id from the backend response
+  // Exact mapping for the backend properties
   const docId = doctor?.doctor_id || doctor?.id || doctor?._id;
-  const docName = doctor?.name || doctor?.full_name || 'Practitioner';
+  const docName = doctor?.full_name || doctor?.name || 'Practitioner';
   const nameParts = docName.split(' ');
   const firstName = nameParts[0];
   const lastName = nameParts.length > 1 ? nameParts.slice(1).join(' ') : '';
-  const specialty = doctor?.specialty || doctor?.specialization || 'Specialist';
-  const fee = doctor?.fee || doctor?.consultation_fee || '50';
+  const specialty = doctor?.specialization || doctor?.specialty || 'Specialist';
+  
+  // Dynamic fee extraction
+  const fee = doctor?.consultation_fee || doctor?.consultation_fees || doctor?.fee || doctor?.fees || '50';
+  
+  // Dynamic Image extraction targeting the updated backend query
+  const avatarUrl = doctor?.profile_image_url || doctor?.avatar || doctor?.profile_picture;
 
   return (
     <div
       onClick={() => onSelect(docId)}
       className={`rounded-[24px] p-6 border min-w-[300px] md:min-w-[320px] shrink-0 cursor-pointer transition-all duration-300 ${isSelected
-        ? 'bg-white border-[#4A7C59] shadow-md relative'
-        : 'bg-[#F4F1EB] border-[#EFEBE1] shadow-sm hover:border-[#D1CFC8] hover:shadow-md'
+          ? 'bg-white border-[#4A7C59] shadow-md relative'
+          : 'bg-[#F4F1EB] border-[#EFEBE1] shadow-sm hover:border-[#D1CFC8] hover:shadow-md'
         }`}
     >
       <div className="flex gap-4 mb-6">
-        <div className="w-20 h-20 rounded-2xl bg-[#EFEBE1] overflow-hidden shrink-0 flex items-center justify-center text-[#4A7C59] text-2xl font-bold">
-          {firstName.charAt(0)}
+        <div className="w-20 h-20 rounded-2xl bg-[#EFEBE1] border border-[#EFEBE1] overflow-hidden shrink-0 flex items-center justify-center text-[#4A7C59] text-2xl font-bold">
+          <img
+            src={avatarUrl || `https://ui-avatars.com/api/?name=${encodeURIComponent(docName)}&background=FDF9EE&color=3A6447`}
+            alt={docName}
+            className="w-full h-full object-cover"
+            onError={(e) => {
+              e.target.onerror = null;
+              e.target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(docName)}&background=FDF9EE&color=3A6447`;
+            }}
+          />
         </div>
         <div>
           <h3 className="text-lg font-bold text-gray-900 leading-tight">
@@ -49,10 +62,6 @@ const DoctorSelectionCard = ({ doctor, isSelected, onSelect, isLoading }) => {
           <p className="text-xs text-gray-500 font-medium leading-tight mt-1">
             {specialty.split(' ').map((word, i) => i === 1 ? <React.Fragment key={i}><br />{word}</React.Fragment> : ` ${word}`)}
           </p>
-          <div className="flex items-center gap-1 mt-2">
-            <Star size={12} className="fill-[#D9774B] text-[#D9774B]" />
-            <span className="text-xs font-bold text-gray-900">{doctor?.average_rating || doctor?.rating || '4.8'}</span>
-          </div>
         </div>
       </div>
       <div className="flex items-center justify-between pt-5 border-t border-[#EFEBE1]">
@@ -62,8 +71,8 @@ const DoctorSelectionCard = ({ doctor, isSelected, onSelect, isLoading }) => {
         </div>
         <button
           className={`px-6 py-2.5 rounded-full font-bold text-sm transition-colors ${isSelected
-            ? 'bg-[#3A6447] text-white'
-            : 'bg-white text-gray-500 border border-[#EFEBE1] hover:bg-gray-50'
+              ? 'bg-[#3A6447] text-white'
+              : 'bg-white text-gray-500 border border-[#EFEBE1] hover:bg-gray-50'
             }`}
         >
           {isSelected ? 'Selected' : 'Select Doctor'}

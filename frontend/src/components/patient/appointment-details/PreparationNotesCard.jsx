@@ -7,16 +7,12 @@ const PreparationNotesCard = ({ notes, instructions, isLoading }) => {
       <div className="bg-white rounded-[32px] p-8 border border-[#EFEBE1] shadow-sm animate-pulse h-full">
         <div className="h-6 bg-gray-200 rounded w-48 mb-6"></div>
         <div className="h-20 bg-gray-100 rounded-2xl mb-6"></div>
-        <div className="h-6 bg-gray-200 rounded w-48 mb-4"></div>
-        <div className="space-y-2">
-          <div className="h-4 bg-gray-100 rounded w-full"></div>
-          <div className="h-4 bg-gray-100 rounded w-5/6"></div>
-        </div>
       </div>
     );
   }
 
-  const safeInstructions = Array.isArray(instructions) ? instructions : [];
+  // Convert the string from the DB into an array so we can list it nicely!
+  const safeInstructions = instructions ? instructions.split('.').filter(i => i.trim() !== '') : [];
 
   return (
     <div className="bg-white rounded-[32px] p-8 border border-[#EFEBE1] shadow-sm h-full">
@@ -46,7 +42,7 @@ const PreparationNotesCard = ({ notes, instructions, isLoading }) => {
           {safeInstructions.map((instruction, idx) => (
             <li key={idx} className="flex items-start gap-3">
               <span className="w-1.5 h-1.5 bg-[#EBCB8B] rounded-full mt-2 shrink-0"></span>
-              <span className="text-sm text-gray-600 font-medium">{instruction}</span>
+              <span className="text-sm text-gray-600 font-medium">{instruction.trim()}</span>
             </li>
           ))}
         </ul>

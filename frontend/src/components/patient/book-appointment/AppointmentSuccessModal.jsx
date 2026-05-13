@@ -1,8 +1,17 @@
 import React from 'react';
-import { Check, Calendar, Clock } from 'lucide-react';
+import { Check, Calendar, Clock, User } from 'lucide-react';
 
 const AppointmentSuccessModal = ({ isOpen, appointmentDetails, onViewAppointment, onGoToDashboard }) => {
   if (!isOpen) return null;
+
+  // FIX: Safely parse the image URL just like we did on the Dashboard
+  const avatarUrl = appointmentDetails?.avatar ? (appointmentDetails.avatar.startsWith('http') ? appointmentDetails.avatar : `http://localhost:5000${appointmentDetails.avatar}`) : null;
+
+  // FIX: Smartly grab the first initial, ignoring "Dr. "
+  const getInitial = (name) => {
+    if (!name) return <User size={20} />;
+    return name.replace(/^Dr\.\s*/i, '').charAt(0).toUpperCase();
+  };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
@@ -23,14 +32,21 @@ const AppointmentSuccessModal = ({ isOpen, appointmentDetails, onViewAppointment
           Your video consultation has been scheduled successfully.
         </p>
 
-        {/* Appointment Details Card (Inner White Box) */}
+        {/* Appointment Details Card */}
         <div className="bg-white rounded-[24px] p-6 w-full shadow-sm border border-[#EFEBE1] mb-8 text-left">
 
           {/* Doctor Info */}
           <div className="flex items-center gap-4 mb-6">
-            <div className="w-12 h-12 rounded-xl bg-[#EAE5D9] text-[#4A7C59] flex items-center justify-center text-xl font-bold shrink-0">
-              {appointmentDetails?.doctorName ? appointmentDetails.doctorName.charAt(4) : 'D'}
-            </div>
+            
+            {/* FIX: Render the Avatar or the exact Initial */}
+            {avatarUrl ? (
+                <img src={avatarUrl} alt="Doctor" className="w-12 h-12 rounded-xl object-cover border border-[#EFEBE1] shrink-0" />
+            ) : (
+                <div className="w-12 h-12 rounded-xl bg-[#EAE5D9] text-[#4A7C59] flex items-center justify-center text-xl font-bold shrink-0 border border-[#EFEBE1]">
+                  {getInitial(appointmentDetails?.doctorName)}
+                </div>
+            )}
+
             <div>
               <p className="text-[12px] font-bold text-gray-400 uppercase tracking-widest mb-0.5">Primary Consultant</p>
               <h3 className="text-sm font-bold text-gray-900">{appointmentDetails?.doctorName || 'Practitioner'}</h3>

@@ -17,10 +17,10 @@ export const appointmentApi = {
     getPractitionerInfo: async (id) => (await axiosInstance.get(`/appointment/${id}/practitioner-info`)).data,
     getDocuments: async (id) => (await axiosInstance.get(`/appointment/${id}/related-documents`)).data,
     downloadDocument: async (id) => (await axiosInstance.get(`/appointment/${id}/related-documents/download`, { responseType: 'blob' })).data,
-
+    cancelAppointment: async (id) => (await axiosInstance.put(`/appointment/${id}/cancel`)).data,
+    
     // --- BOOK APPOINTMENT ---
-    createAppointment: async (data) => (await axiosInstance.post('/appointment/create', data)).data,
-    updateAppointmentStatus: async (id, status) => (await axiosInstance.put(`/appointment/${id}/status`, { status })).data,
+    createAppointment: async (data) => (await axiosInstance.post('/book-appointment/create', data)).data, // <-- ADD THIS LINE
     getAllPractitioners: async () => (await axiosInstance.get('/book-appointment/view-all-practitioners')).data,
     filterPractitioners: async (filters) => (await axiosInstance.get('/book-appointment/view-all-practitioners/filter', { params: filters })).data,
     searchPractitioners: async (docName) => (await axiosInstance.get(`/book-appointment/view-all-practitioners/search=${docName}`)).data,

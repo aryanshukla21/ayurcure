@@ -1,5 +1,5 @@
 import React from 'react';
-import { Video, XCircle, CalendarClock } from 'lucide-react';
+import { Video, XCircle } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
 
 const PatientActionSidebar = ({ actions, onCancelClick }) => {
@@ -28,19 +28,15 @@ const PatientActionSidebar = ({ actions, onCancelClick }) => {
           {isJoinable ? 'Join Consultation' : 'Call Unavailable'}
         </button>
 
-        <button
-          className="w-full py-4 rounded-xl font-bold flex items-center justify-center gap-2 transition-all bg-[#F8F6F0] hover:bg-[#EFEBE1] text-gray-700"
-        >
-          <CalendarClock size={18} />
-          Reschedule
-        </button>
+        {/* Removed the Reschedule button entirely! */}
 
         <button
           onClick={onCancelClick}
-          className="w-full py-4 rounded-xl font-bold flex items-center justify-center gap-2 transition-all border border-red-100 text-red-500 hover:bg-red-50"
+          disabled={actions?.status === 'Cancelled' || actions?.status === 'Completed'}
+          className="w-full py-4 rounded-xl font-bold flex items-center justify-center gap-2 transition-all border border-red-100 text-red-500 hover:bg-red-50 disabled:opacity-50 disabled:cursor-not-allowed"
         >
           <XCircle size={18} />
-          Cancel Appointment
+          {actions?.status === 'Cancelled' ? 'Already Cancelled' : 'Cancel Appointment'}
         </button>
       </div>
     </div>

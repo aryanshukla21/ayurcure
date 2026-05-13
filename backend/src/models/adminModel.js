@@ -10,7 +10,6 @@ const adminModel = {
     },
 
     getTotalPatients: async () => {
-        // FIX: Now it strictly checks the Users table to ensure they are still a patient!
         const query = `
             SELECT COUNT(p.id) as count 
             FROM PatientProfiles p
@@ -38,7 +37,6 @@ const adminModel = {
     // DASHBOARD RECENT LISTS
     // ==========================================
     getRecentDoctors: async () => {
-        // FIX: Added 'd.avatar' to the SELECT statement!
         const query = `
             SELECT d.id, u.full_name as name, d.specialization, d.verification_status as status, u.created_at, d.avatar 
             FROM DoctorProfiles d 
@@ -53,7 +51,7 @@ const adminModel = {
             SELECT p.id, u.full_name as name, p.patient_display_id, p.clinical_status as status, p.updated_at as last_visit 
             FROM PatientProfiles p 
             JOIN Users u ON p.user_id = u.id 
-            WHERE u.role = 'patient' -- FIX: Added to keep admins off the dashboard!
+            WHERE u.role = 'patient'
             ORDER BY u.created_at DESC LIMIT 5
         `;
         return (await db.query(query)).rows;
@@ -113,9 +111,48 @@ const adminModel = {
                 profileData.avatar,
                 profileData.clinic_address
             ]);
+            
+            const newDoctorId = profileRes.rows[0].id;
+
+            // FIX: DYNAMIC 30-MINUTE SLOT GENERATOR (TIMEZONE SAFE)
+            const slotInsertQuery = `
+                INSERT INTO DoctorSlots (doctor_id, start_time, end_time, is_booked)
+                VALUES ($1, $2, $3, false)
+            `;
+            
+            const startStr = profileData.startTime || '09:00';
+            const endStr = profileData.endTime || '17:00';
+
+            // Extract exact hours and minutes
+            const [startHour, startMinute] = startStr.split(':').map(Number);
+            const [endHour, endMinute] = endStr.split(':').map(Number);
+
+            for (let i = 0; i < 14; i++) {
+                // Initialize clean local date
+                const currentDay = new Date();
+                currentDay.setDate(currentDay.getDate() + i);
+                currentDay.setHours(0, 0, 0, 0);
+
+                let currentTime = new Date(currentDay);
+                currentTime.setHours(startHour, startMinute, 0, 0);
+
+                const endTimeObj = new Date(currentDay);
+                endTimeObj.setHours(endHour, endMinute, 0, 0);
+
+                // Generate strictly 30-minute blocks
+                while (currentTime < endTimeObj) {
+                    const slotStartTime = new Date(currentTime);
+                    currentTime.setMinutes(currentTime.getMinutes() + 30);
+                    const slotEndTime = new Date(currentTime);
+
+                    if (slotEndTime <= endTimeObj) {
+                        await client.query(slotInsertQuery, [newDoctorId, slotStartTime, slotEndTime]);
+                    }
+                }
+            }
 
             await client.query('COMMIT');
-            return profileRes.rows[0].id;
+            return newDoctorId;
         } catch (e) {
             await client.query('ROLLBACK');
             throw e;
@@ -159,6 +196,9 @@ const adminModel = {
                     DELETE FROM AppointmentReviews 
                     WHERE appointment_id IN (SELECT id FROM Appointments WHERE doctor_id = $1)
                 `, [doctorId]);
+                
+                // Delete the slots tied to this doctor to maintain referential integrity
+                await client.query(`DELETE FROM DoctorSlots WHERE doctor_id = $1`, [doctorId]);
 
                 await client.query(`DELETE FROM Appointments WHERE doctor_id = $1`, [doctorId]);
 
@@ -261,7 +301,7 @@ const adminModel = {
             SELECT p.id, p.patient_display_id, u.full_name as name, p.age, p.gender, u.phone, p.clinical_status, p.updated_at as last_visit
             FROM PatientProfiles p 
             JOIN Users u ON p.user_id = u.id
-            WHERE u.role = 'patient' -- FIX: Added to keep admins out of the main patient table!
+            WHERE u.role = 'patient' 
             ORDER BY u.created_at DESC
         `;
         return (await db.query(query)).rows;
@@ -306,7 +346,7 @@ const adminModel = {
             SELECT a.id, u.full_name as doctor_name, d.specialization, a.start_time as date, a.mode as type, a.status 
             FROM Appointments a 
             JOIN DoctorProfiles d ON a.doctor_id = d.id 
-            JOIN Users u ON d.user_id = u.id 
+            JOIN Users u ON p.user_id = u.id 
             WHERE a.patient_id = $1 
             ORDER BY a.start_time DESC
         `;
@@ -440,33 +480,41 @@ const adminModel = {
     // INVENTORY DYNAMIC FILTERING
     // ==========================================
     addNewProduct: async (data) => {
-        const query = `
-            INSERT INTO Products (name, category, brand, price, stock_quantity, ingredients, benefits, usage_instructions, image_url, created_at) 
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, NOW()) RETURNING id
-        `;
-        const { rows } = await db.query(query, [
-            data.name, 
-            data.category, 
-            data.brand || 'Ayurcure', 
-            data.price || 0,
-            data.stock_quantity || 0, 
-            data.ingredients || null, 
-            data.benefits || null, 
-            data.usage_instructions || null,
-            data.image_url || null 
-        ]);
-        return rows[0].id;
+    // THE FIX: Removed created_at and NOW() from the query
+    const query = `
+        INSERT INTO Products (name, category, brand, price, stock_quantity, ingredients, benefits, usage_instructions, image_url) 
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING id
+    `;
+    const { rows } = await db.query(query, [
+        data.name, 
+        data.category, 
+        data.brand || 'Ayurcure', 
+        data.price || 0,
+        data.stock_quantity || 0, 
+        data.ingredients || null, 
+        data.benefits || null, 
+        data.usage_instructions || null,
+        data.image_url || null 
+    ]);
+    return rows[0].id;
     },
 
     getAllProductsPagination: async (limit, offset) => {
+        // THE FIX: Changed 'ORDER BY created_at' to 'ORDER BY id'
         const query = `
-            SELECT id, name, category, stock_quantity as stock, price, 
+            SELECT id, name, category, stock_quantity as stock, price, image_url, 
             CASE WHEN stock_quantity > 10 THEN 'In Stock' WHEN stock_quantity > 0 THEN 'Low Stock' ELSE 'Out of Stock' END as status 
             FROM Products 
-            ORDER BY created_at DESC NULLS LAST 
+            ORDER BY id DESC 
             LIMIT $1 OFFSET $2
         `;
-        return (await db.query(query, [limit, offset])).rows;
+        const { rows: products } = await db.query(query, [limit, offset]);
+
+        const countQuery = `SELECT COUNT(*) FROM Products`;
+        const { rows: countRows } = await db.query(countQuery);
+        const totalCount = parseInt(countRows[0].count, 10);
+
+        return { products, totalCount };
     },
 
     filterInventory: async (filters) => {

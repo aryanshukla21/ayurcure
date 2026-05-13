@@ -21,7 +21,6 @@ const PatientAppointments = () => {
     const fetchAppointments = async () => {
       try {
         setLoading(true);
-        // Using the granular api design
         const response = await appointmentApi.getAll();
         setAppointmentsData(response.appointments || response || []);
       } catch (err) {
@@ -45,20 +44,29 @@ const PatientAppointments = () => {
     const currentYear = currentDate.getFullYear();
 
     const filteredData = appointmentsData.filter(apt => {
-      // 1. Status
-      if (activeTab !== 'all' && apt.status?.toLowerCase() !== activeTab) return false;
+      const status = apt.status?.toLowerCase() || '';
+
+      // 1. THE FIX: Handle "Scheduled" vs "Upcoming" properly!
+      if (activeTab !== 'all') {
+        if (activeTab === 'upcoming' && status !== 'scheduled' && status !== 'upcoming') return false;
+        if (activeTab === 'completed' && status !== 'completed') return false;
+        if (activeTab === 'cancelled' && status !== 'cancelled') return false;
+      }
+
       // 2. Month
-      if (isThisMonth && (apt.date || apt.scheduled_at)) {
-        const aptDate = new Date(apt.date || apt.scheduled_at);
+      if (isThisMonth && (apt.date || apt.scheduled_at || apt.start_time)) {
+        const aptDate = new Date(apt.date || apt.scheduled_at || apt.start_time);
         if (aptDate.getMonth() !== currentMonth || aptDate.getFullYear() !== currentYear) return false;
       }
+
       // 3. Search
       if (filterText.trim() !== '') {
         const query = filterText.toLowerCase();
-        const docName = (apt.doctorName || '').toLowerCase();
+        const docName = (apt.doctorName || apt.doctor_name || '').toLowerCase();
         const spec = (apt.specialty || apt.specialization || '').toLowerCase();
         if (!docName.includes(query) && !spec.includes(query)) return false;
       }
+
       return true;
     });
 

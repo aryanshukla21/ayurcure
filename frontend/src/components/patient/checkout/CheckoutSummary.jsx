@@ -50,8 +50,8 @@ const CheckoutSummary = ({ subtotal, tax, total, onPayNow, isSubmitting, isLoadi
                 onClick={onPayNow}
                 disabled={isSubmitting || safeTotal === 0}
                 className={`w-full font-bold py-4 rounded-2xl flex items-center justify-center gap-2 shadow-md transition-colors ${isSubmitting || safeTotal === 0
-                    ? 'bg-gray-400 cursor-not-allowed text-white'
-                    : 'bg-[#3A6447] hover:bg-[#2C4D36] text-white'
+                        ? 'bg-gray-400 cursor-not-allowed text-white'
+                        : 'bg-[#3A6447] hover:bg-[#2C4D36] text-white'
                     }`}
             >
                 {isSubmitting ? (

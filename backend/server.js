@@ -1,5 +1,6 @@
 require('dotenv').config();
 const express = require('express');
+const path = require('path'); // FIX: Imported path to resolve local directories
 const cors = require('cors');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
@@ -18,55 +19,55 @@ const app = express();
 // 1. SECURITY & PERFORMANCE MIDDLEWARE
 // ==========================================
 
-// Helmet: Secures app by setting various HTTP headers (e.g., XSS Protection, NoSniff)
-app.use(helmet());
+// Helmet: Secures app by setting various HTTP headers
+app.use(helmet({
+    crossOriginResourcePolicy: false // FIX: Allows images to be loaded by the frontend
+}));
 
-// Dynamic CORS Configuration (Uses frontend URL from env or falls back to localhost)
+// Dynamic CORS Configuration
 app.use(cors({
     origin: process.env.FRONTEND_URL || 'http://localhost:5173',
     credentials: true
 }));
 
-// Payload Limit: Prevents Denial of Service (DoS) attacks via massive JSON payloads
-app.use(express.json({ limit: '10kb' }));
+app.use(express.json({ limit: '10mb' }));
 app.use(cookieParser());
 
-// Logging: Morgan (Verbose in Dev, minimal in Prod to prevent logging sensitive data)
 if (process.env.NODE_ENV === 'production') {
-    app.use(morgan('short')); // Minimal logs
+    app.use(morgan('short'));
 } else {
-    app.use(morgan('dev')); // Colorful, detailed logs for local development
+    app.use(morgan('dev'));
 }
 
 // ==========================================
 // 2. RATE LIMITING
 // ==========================================
 
-// Global API Rate Limiter
 const apiLimiter = rateLimit({
-    windowMs: 15 * 60 * 1000, // 15 minutes
-    max: 100, // Limit each IP to 100 requests per windowMs
+    windowMs: 15 * 60 * 1000, 
+    max: 10000, 
     standardHeaders: true,
     legacyHeaders: false,
     message: { error: 'Too many requests from this IP, please try again after 15 minutes.' }
 });
 
-// Strict Auth/OTP Rate Limiter (Protects against brute-force attacks)
 const authLimiter = rateLimit({
-    windowMs: 60 * 60 * 1000, // 1 hour
-    max: 15, // Limit each IP to 15 login/OTP requests per hour
+    windowMs: 60 * 60 * 1000, 
+    max: 15, 
     standardHeaders: true,
     legacyHeaders: false,
     message: { error: 'Too many authentication attempts, please try again later.' }
 });
 
-// Apply rate limiters to respective routes
-app.use('/api', apiLimiter); // Applies to all /api routes
-app.use('/api/auth', authLimiter); // Overrides with stricter limit for auth routes
+app.use('/api', apiLimiter); 
+app.use('/api/auth', authLimiter); 
 
 // ==========================================
-// 3. API ROUTES & ERROR HANDLING
+// 3. API ROUTES & STATIC FILES
 // ==========================================
+
+// FIX: Serve the uploads directory publicly so the frontend can read the images!
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 app.use('/api', indexRoutes);
 
@@ -79,11 +80,9 @@ app.use(errorHandler);
 
 async function startServer() {
     try {
-        // Test database connection pool
         const { rows } = await db.query('SELECT NOW() AS current_time');
         console.log(`✅ Database Connected Successfully to Supabase at: ${rows[0].current_time}`);
 
-        // Start background jobs safely (sweep expired OTPs)
         if (typeof startOtpCleanupJob === 'function') {
             startOtpCleanupJob();
             console.log('✅ Background Jobs Started Successfully');

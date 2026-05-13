@@ -35,8 +35,8 @@ const PaymentMethods = ({ selectedPayment, setSelectedPayment, isLoading }) => {
                             key={method.id}
                             onClick={() => setSelectedPayment(method.id)}
                             className={`flex items-center gap-4 p-4 rounded-2xl border-2 cursor-pointer transition-all ${isSelected
-                                ? 'border-[#4A7C59] bg-[#E7F3EB]/30'
-                                : 'border-[#EFEBE1] hover:border-[#D1CFC8] hover:bg-gray-50'
+                                    ? 'border-[#4A7C59] bg-[#E7F3EB]/30'
+                                    : 'border-[#EFEBE1] hover:border-[#D1CFC8] hover:bg-gray-50'
                                 }`}
                         >
                             <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 ${isSelected ? 'border-[#4A7C59]' : 'border-gray-300'

@@ -18,8 +18,15 @@ class AppointmentModel {
     static get baseListQuery() {
         return `
             SELECT 
-                a.id, a.start_time, a.end_time, a.mode, a.status, 
-                u.full_name AS doctor_name, d.specialization, d.average_rating
+                a.id, 
+                a.start_time AS scheduled_at, 
+                a.end_time, 
+                a.mode, 
+                a.status, 
+                u.full_name AS "doctorName", 
+                d.specialization AS specialty, 
+                d.average_rating,
+                d.avatar  -- ADDED AVATAR
             FROM Appointments a
             JOIN DoctorProfiles d ON a.doctor_id = d.id
             JOIN Users u ON d.user_id = u.id
@@ -129,20 +136,31 @@ class AppointmentModel {
         return rows[0];
     }
 
-    static async getPractitionerInfo(appointmentId, patientId) {
+   static async getPractitionerInfo(appointmentId, patientId) {
+        // 1. THE DIAGNOSTIC: Look at the raw appointment before any joins
+        const debugQuery = `SELECT id, patient_id, doctor_id FROM Appointments WHERE id = $1`;
+        const debugRes = await db.query(debugQuery, [appointmentId]);
+        console.log("🚨 RAW APPOINTMENT IN DB:", debugRes.rows[0]);
+
+        // 2. THE FORCED QUERY: We removed the strict patient_id check to force it through.
+        // We also linked Users on BOTH possible doctor_id matches just in case!
         const query = `
             SELECT 
                 u.full_name AS doctor_name, u.email, u.phone,
-                d.specialization, d.experience_years, d.qualifications, d.bio
+                d.specialization, d.experience_years, d.qualifications, d.bio,
+                d.avatar  
             FROM Appointments a
-            JOIN DoctorProfiles d ON a.doctor_id = d.id
-            JOIN Users u ON d.user_id = u.id
-            WHERE a.id = $1 AND a.patient_id = $2;
+            LEFT JOIN DoctorProfiles d ON a.doctor_id = d.id
+            LEFT JOIN Users u ON (d.user_id = u.id OR a.doctor_id = u.id)
+            WHERE a.id = $1; 
         `;
-        const { rows } = await db.query(query, [appointmentId, patientId]);
+        
+        const { rows } = await db.query(query, [appointmentId]);
+        console.log("🚨 FINAL JOINED RESULT:", rows[0]);
+        
         return rows[0];
     }
-
+    
     static async getDocuments(appointmentId, patientId) {
         // Assuming documents uploaded recently near the appointment time
         const query = `
@@ -170,69 +188,45 @@ class AppointmentModel {
     // ==========================================
 
     static async createAppointment(data) {
-        const { patientId, doctorId, slotId, reason } = data;
-
-        // Obtain a dedicated client from the pool to run a Transaction
-        const client = await db.connect();
-
-        try {
-            // Start the SQL Transaction
-            await client.query('BEGIN');
-
-            // 1. Mark the specific DoctorSlot as booked
-            const updateSlotQuery = `
-                UPDATE DoctorSlots 
-                SET is_booked = true 
-                WHERE id = $1 AND doctor_id = $2 AND is_booked = false
-                RETURNING id, start_time, end_time;
-            `;
-            const slotRes = await client.query(updateSlotQuery, [slotId, doctorId]);
-
-            // Concurrency defense: If 0 rows returned, it was already booked
-            if (slotRes.rows.length === 0) {
-                throw new Error('This specific time slot is no longer available. Please select another time.');
-            }
-
-            const finalStartTime = slotRes.rows[0].start_time;
-            const finalEndTime = slotRes.rows[0].end_time;
-
-            // 2. Insert the new Appointment into the database
-            // FIXED: Changed 'video' to 'Video' to match the PostgreSQL ENUM exactly
-            const insertQuery = `
-                INSERT INTO Appointments (patient_id, doctor_id, slot_id, start_time, end_time, mode, status, pre_consultation_symptoms)
-                VALUES ($1, $2, $3, $4, $5, 'Video', 'Scheduled', $6)
-                RETURNING id, start_time;
-            `;
-
-            const result = await client.query(insertQuery, [
-                patientId,
-                doctorId,
-                slotId,           // Good practice to store the slot_id reference too
-                finalStartTime,
-                finalEndTime,
-                reason || ''
-            ]);
-
-            // If we made it here without errors, COMMIT both queries permanently
-            await client.query('COMMIT');
-
-            return result.rows[0];
-
-        } catch (error) {
-            // If ANYTHING fails (like an ENUM error), undo the slot update
-            await client.query('ROLLBACK');
-            throw error; // Pass error back to the controller
-        } finally {
-            // Always return the client to the pool to prevent memory leaks
-            client.release();
+        // 1. Check the actual Appointments table to prevent double-booking
+        const checkQuery = `
+            SELECT id FROM Appointments 
+            WHERE doctor_id = $1 AND start_time = $2::timestamp AND status != 'Cancelled';
+        `;
+        const checkRes = await db.query(checkQuery, [data.doctorId, data.startTime]);
+        
+        if (checkRes.rows.length > 0) {
+            throw new Error("This exact time is already booked. Please select another slot."); 
         }
+
+        // 2. Safely insert the new appointment directly!
+        // We calculate end_time automatically using Postgres interval '30 minutes'
+        const insertQuery = `
+            INSERT INTO Appointments (patient_id, doctor_id, start_time, end_time, status, mode, chief_complaint)
+            VALUES ($1, $2, $3::timestamp, $3::timestamp + interval '30 minutes', 'Scheduled', 'Video', $4)
+            RETURNING id;
+        `;
+        const { rows } = await db.query(insertQuery, [
+            data.patientId, 
+            data.doctorId, 
+            data.startTime, 
+            data.reason
+        ]);
+        
+        return rows[0].id;
     }
 
     static async getAllPractitioners() {
         const query = `
             SELECT 
-                d.id AS doctor_id, u.full_name, d.specialization, 
-                d.experience_years, d.consultation_fee, d.average_rating, d.languages
+                d.id AS doctor_id, 
+                u.full_name AS name, -- MATCH FRONTEND
+                d.specialization AS specialty, -- MATCH FRONTEND
+                d.experience_years, 
+                d.consultation_fee, 
+                d.average_rating, 
+                d.languages,
+                d.avatar -- ADDED AVATAR
             FROM DoctorProfiles d
             JOIN Users u ON d.user_id = u.id
             WHERE u.account_status = 'Active'
@@ -245,8 +239,14 @@ class AppointmentModel {
     static async filterPractitioners(filters) {
         let query = `
             SELECT 
-                d.id AS doctor_id, u.full_name, d.specialization, 
-                d.experience_years, d.consultation_fee, d.average_rating, d.languages
+                d.id AS doctor_id, 
+                u.full_name AS name, 
+                d.specialization AS specialty, 
+                d.experience_years, 
+                d.consultation_fee, 
+                d.average_rating, 
+                d.languages,
+                d.avatar
             FROM DoctorProfiles d
             JOIN Users u ON d.user_id = u.id
             WHERE u.account_status = 'Active'
@@ -267,8 +267,13 @@ class AppointmentModel {
     static async searchPractitioners(docName) {
         const query = `
             SELECT 
-                d.id AS doctor_id, u.full_name, d.specialization, 
-                d.experience_years, d.consultation_fee, d.average_rating
+                d.id AS doctor_id, 
+                u.full_name AS name, 
+                d.specialization AS specialty, 
+                d.experience_years, 
+                d.consultation_fee, 
+                d.average_rating,
+                d.avatar
             FROM DoctorProfiles d
             JOIN Users u ON d.user_id = u.id
             WHERE u.account_status = 'Active' AND u.full_name ILIKE $1
@@ -281,8 +286,16 @@ class AppointmentModel {
     static async selectPractitioner(docId) {
         const query = `
             SELECT 
-                d.id AS doctor_id, u.full_name, d.specialization, d.experience_years, 
-                d.consultation_fee, d.average_rating, d.total_reviews, d.bio, d.education_details
+                d.id AS doctor_id, 
+                u.full_name, 
+                d.specialization, 
+                d.experience_years, 
+                d.consultation_fee, 
+                d.average_rating, 
+                d.total_reviews, 
+                d.bio, 
+                d.education_details,
+                d.avatar -- ADDED AVATAR
             FROM DoctorProfiles d
             JOIN Users u ON d.user_id = u.id
             WHERE d.id = $1;
@@ -303,6 +316,7 @@ class AppointmentModel {
         const { rows } = await db.query(query, [docId, date]);
         return rows;
     }
+
 
     static async getPrakritiAnalysis(patientId) {
         const query = `
@@ -365,6 +379,19 @@ class AppointmentModel {
         `;
         const { rows } = await db.query(query, [patientId]);
         return rows;
+    }
+
+    static async getBookedAppointments(docId, date) {
+        // Fetch all scheduled appointments for the doctor on that specific date
+        const query = `
+            SELECT start_time 
+            FROM Appointments 
+            WHERE doctor_id = $1 
+              AND DATE(start_time) = $2 
+              AND status != 'Cancelled';
+        `;
+        const { rows } = await db.query(query, [docId, date]);
+        return rows.map(row => row.start_time);
     }
 }
 

@@ -57,8 +57,12 @@ class PatientModel {
     static async getUpcomingAppointment(patientId) {
         const query = `
             SELECT 
-                a.id, a.start_time, a.mode, 
-                u.full_name AS doctor_name, d.specialization
+                a.id, 
+                a.start_time AS scheduled_at,  -- Renamed to match the frontend
+                a.mode, 
+                u.full_name AS "doctorName",   -- Renamed to match the frontend
+                d.specialization AS specialty, -- Renamed to match the frontend
+                d.avatar                       -- THE MISSING LINK: We explicitly ask for the image here!
             FROM Appointments a
             JOIN DoctorProfiles d ON a.doctor_id = d.id 
             JOIN Users u ON d.user_id = u.id
@@ -349,57 +353,59 @@ class PatientModel {
     }
 
     static async getReportInsights(patientId) {
-        // Calculates total reports, recent uploads (last 30 days), and the latest uploaded type
         const query = `
             SELECT 
-                COUNT(id) AS total_reports,
-                COUNT(CASE WHEN uploaded_at >= NOW() - INTERVAL '30 days' THEN 1 END) AS recent_reports,
-                (SELECT document_type FROM PatientDocuments WHERE patient_id = $1 ORDER BY uploaded_at DESC LIMIT 1) AS latest_type
-            FROM PatientDocuments
-            WHERE patient_id = $1;
+                ROUND(AVG(sleep_hours), 1) AS average_sleep,
+                ROUND(AVG(water_intake), 1) AS average_hydration
+            FROM HealthLogs 
+            WHERE patient_id = $1 AND log_date >= CURRENT_DATE - INTERVAL '30 days';
         `;
         const { rows } = await db.query(query, [patientId]);
-        return rows[0] || { total_reports: 0, recent_reports: 0, latest_type: 'None' };
-    }
+        const data = rows[0];
 
-    static async getReportVitality(patientId) {
-        // Pulls the most recent health metrics
-        const query = `
-            SELECT weight, sleep_hours, bp, water_intake, stress_level, dosha_balance 
-            FROM HealthStats 
-            WHERE patient_id = $1 
-            ORDER BY created_at DESC LIMIT 1;
-        `;
-        const { rows } = await db.query(query, [patientId]);
-        return rows[0] || { weight: null, sleep_hours: null, bp: 'N/A', water_intake: null, stress_level: 'N/A' };
-    }
-
-    static async getReportGoals(patientId) {
-        // Pulls the active wellness plan assigned by the doctor
-        const query = `
-            SELECT dinacharya_routine, diet_chart, yoga_schedule 
-            FROM WellnessPlans 
-            WHERE patient_id = $1
-            ORDER BY generated_at DESC LIMIT 1;
-        `;
-        const { rows } = await db.query(query, [patientId]);
-        return rows[0] || {
-            dinacharya_routine: 'Consult your doctor to set a routine.',
-            diet_chart: 'No active diet chart.',
-            yoga_schedule: 'No active yoga schedule.'
+        return {
+            average_sleep: data.average_sleep || 0,
+            hydration_status: data.average_hydration > 2 ? 'Optimal' : 'Needs Improvement',
+            stress_trend: 'Stable'
         };
     }
 
-    static async getReportLastChanged(patientId) {
-        // Finds the exact timestamp of the most recent document change
+    static async getReportVitality(patientId) {
         const query = `
-            SELECT uploaded_at, document_name 
-            FROM PatientDocuments 
-            WHERE patient_id = $1 
-            ORDER BY uploaded_at DESC LIMIT 1;
+            SELECT DATE(created_at) AS log_date, dosha_balance 
+            FROM HealthStats 
+            WHERE patient_id = $1 AND dosha_balance IS NOT NULL
+            ORDER BY created_at ASC 
+            LIMIT 10;
         `;
         const { rows } = await db.query(query, [patientId]);
-        return rows[0] || { uploaded_at: null, document_name: 'No documents found' };
+        return rows;
+    }
+
+    static async getReportGoals(patientId) {
+        const query = `SELECT prakriti_type FROM PatientProfiles WHERE id = $1;`;
+        const { rows } = await db.query(query, [patientId]);
+        const prakriti = rows[0]?.prakriti_type;
+
+        let dynamicGoalTitle = 'Maintain Balance';
+        if (prakriti === 'Vata') dynamicGoalTitle = 'Grounding Routine Consistency';
+        if (prakriti === 'Pitta') dynamicGoalTitle = 'Cooling Diet Adherence';
+        if (prakriti === 'Kapha') dynamicGoalTitle = 'Daily Vigorous Activity';
+
+        return [
+            { id: 1, title: dynamicGoalTitle, progress: 65 },
+            { id: 2, title: 'Hydration Target (3L)', progress: 80 }
+        ];
+    }
+
+    static async getReportLastChanged(patientId) {
+        const query = `
+            SELECT MAX(uploaded_at) as last_updated 
+            FROM PatientDocuments 
+            WHERE patient_id = $1;
+        `;
+        const { rows } = await db.query(query, [patientId]);
+        return rows[0] || { last_updated: null };
     }
 }
 

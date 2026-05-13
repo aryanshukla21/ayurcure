@@ -49,13 +49,19 @@ exports.getAllDoctors = async (req, res) => {
 
 exports.addDoctor = async (req, res) => {
     try {
-        // NEW: Pulled 'avatar' from the request body
-        const { full_name, email, phone, password, specialization, experience_years, qualifications, registration_number, consultation_fee, about, avatar } = req.body;
+        // 1. Pull the text fields from req.body
+        const { full_name, email, phone, password, specialization, experience_years, qualifications, registration_number, consultation_fee, about } = req.body;
+
+        // 2. THE FIX: Catch the actual image file uploaded by Multer!
+        let avatar = null;
+        if (req.file) {
+            avatar = `/uploads/${req.file.filename}`;
+        }
 
         const salt = await bcrypt.genSalt(10);
         const password_hash = await bcrypt.hash(password || 'Ayurcure@Doc123', salt);
 
-        // NEW: Passed 'avatar' to the transaction
+        // 3. Pass the newly caught avatar URL to the database model
         const doctorId = await adminModel.createDoctorTransaction(
             { full_name, email, phone, password_hash },
             { specialization, experience_years, qualifications, registration_number, consultation_fee, about, avatar }
@@ -217,29 +223,57 @@ exports.getOrderPaymentSummary = async (req, res) => {
 // ==========================================
 exports.addNewProduct = async (req, res) => {
     try {
-        // Grab the text data
-        const productData = req.body; 
+
+        // req.body contains all the text fields from your FormData
+        const productData = { ...req.body }; 
         
-        // If multer caught a file, add its path to the data object!
+        // req.file contains the physical image caught by Multer
         if (req.file) {
             productData.image_url = `/uploads/${req.file.filename}`;
         }
 
+        // Convert the stringified FormData numbers back to Real Numbers for PostgreSQL
+        productData.price = parseFloat(productData.price) || 0;
+        productData.stock_quantity = parseInt(productData.stock_quantity, 10) || 0;
+
+
+        // Save to DB
         const productId = await adminModel.addNewProduct(productData);
         res.status(201).json({ success: true, message: "Product added successfully", productId });
     } catch (error) { 
+        console.error("🚨 ADD PRODUCT ERROR:", error.message);
         res.status(500).json({ success: false, message: error.message }); 
     }
 };
 
+
 exports.getAllProductsPagination = async (req, res) => {
     try {
-        const page = parseInt(req.params.page) || 1;
-        const limit = 100;
+        // req.query is safer than req.params for pagination (e.g., ?page=2)
+        const page = parseInt(req.query.page) || parseInt(req.params.page) || 1;
+        const limit = 10; // Loading 10 items per page is standard and fast
         const offset = (page - 1) * limit;
-        res.status(200).json({ success: true, products: await adminModel.getAllProductsPagination(limit, offset) });
-    } catch (error) { res.status(500).json({ success: false, message: error.message }); }
+
+        const data = await adminModel.getAllProductsPagination(limit, offset);
+
+        // Calculate total pages for the frontend
+        const totalPages = Math.ceil(data.totalCount / limit);
+
+        res.status(200).json({ 
+            success: true, 
+            products: data.products,
+            pagination: {
+                currentPage: page,
+                totalPages: totalPages,
+                totalItems: data.totalCount
+            }
+        });
+    } catch (error) { 
+        console.error("🚨 PAGINATION ERROR:", error.message);
+        res.status(500).json({ success: false, message: error.message }); 
+    }
 };
+
 
 exports.filterInventory = async (req, res) => {
     try { res.status(200).json({ success: true, products: await adminModel.filterInventory(req.body) }); }
@@ -437,6 +471,26 @@ exports.addAdmin = async (req, res) => {
     } catch (error) {
         if (error.code === '23505') return res.status(409).json({ success: false, message: 'Email already exists.' });
         res.status(500).json({ success: false, message: error.message });
+    }
+};
+exports.getAllAdmins = async (req, res) => {
+    try {
+        const admins = await adminModel.getAllAdmins();
+        res.status(200).json({ success: true, admins });
+    } catch (error) { 
+        console.error("Error in getAllAdmins:", error);
+        res.status(500).json({ success: false, message: error.message }); 
+    }
+};
+
+// You will also need this one so your "Edit Admin" button doesn't crash!
+exports.getAdminDetails = async (req, res) => {
+    try {
+        const data = await adminModel.getAdminDetails(req.params.id);
+        res.status(200).json({ success: true, data });
+    } catch (error) { 
+        console.error("Error in getAdminDetails:", error);
+        res.status(500).json({ success: false, message: error.message }); 
     }
 };
 

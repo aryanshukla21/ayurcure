@@ -1,12 +1,16 @@
 import React, { useState } from 'react';
-import { Search, Plus, Edit2, Trash2 } from 'lucide-react';
+// THE FIX: Added Image as ImageIcon to your imports
+import { Search, Plus, Edit2, Trash2, Image as ImageIcon } from 'lucide-react';
 import { useNavigate } from 'react-router-dom'; 
-import { adminApi } from '../../../api/adminApi'; // <-- Added API import
+import { adminApi } from '../../../api/adminApi'; 
 
 const InventoryTable = ({ products = [], categories = [] }) => {
     const navigate = useNavigate(); 
     const [searchTerm, setSearchTerm] = useState('');
     const [catFilter, setCatFilter] = useState('All');
+
+    // Make sure this matches your backend port!
+    const BACKEND_URL = 'http://localhost:5000';
 
     const filteredProducts = products.filter(p => {
         const matchSearch = p.name.toLowerCase().includes(searchTerm.toLowerCase());
@@ -20,13 +24,10 @@ const InventoryTable = ({ products = [], categories = [] }) => {
         return 'bg-red-50 text-red-700';
     };
 
-    // THE FIX: Added Delete Functionality
     const handleDelete = async (productId) => {
-        // Native browser pop-up to confirm deletion
         if (window.confirm("Are you sure you want to delete this product?")) {
             try {
                 await adminApi.deleteProduct(productId);
-                // Hard reload to instantly remove it from the table
                 window.location.reload(); 
             } catch (error) {
                 console.error("Failed to delete product:", error);
@@ -68,7 +69,7 @@ const InventoryTable = ({ products = [], categories = [] }) => {
                 <table className="w-full text-left border-collapse">
                     <thead>
                         <tr className="bg-gray-50/50 text-[11px] uppercase tracking-widest text-gray-500">
-                            <th className="px-6 py-4 font-extrabold">Product Name</th>
+                            <th className="px-6 py-4 font-extrabold">Product</th>
                             <th className="px-6 py-4 font-extrabold">Category</th>
                             <th className="px-6 py-4 font-extrabold">Stock</th>
                             <th className="px-6 py-4 font-extrabold">Price</th>
@@ -79,7 +80,22 @@ const InventoryTable = ({ products = [], categories = [] }) => {
                     <tbody className="divide-y divide-gray-50">
                         {filteredProducts.map((product) => (
                             <tr key={product.id} className="hover:bg-gray-50/50 transition-colors">
-                                <td className="px-6 py-4 font-bold text-gray-900 text-sm">{product.name}</td>
+                                {/* THE FIX: Added the Image Thumbnail layout here */}
+                                <td className="px-6 py-4 flex items-center gap-3">
+                                    <div className="w-10 h-10 rounded-lg border border-gray-100 overflow-hidden bg-white flex-shrink-0 flex items-center justify-center">
+                                        {product.image_url ? (
+                                            <img 
+                                                src={`${BACKEND_URL}${product.image_url}`} 
+                                                alt={product.name} 
+                                                className="w-full h-full object-cover"
+                                                onError={(e) => { e.target.style.display = 'none'; }}
+                                            />
+                                        ) : (
+                                            <ImageIcon className="text-gray-300" size={16} />
+                                        )}
+                                    </div>
+                                    <span className="font-bold text-gray-900 text-sm">{product.name}</span>
+                                </td>
                                 <td className="px-6 py-4 font-medium text-gray-500 text-sm">{product.category}</td>
                                 <td className="px-6 py-4 font-bold text-gray-700 text-sm">{product.stock} Units</td>
                                 <td className="px-6 py-4 font-black text-[#3A6447] text-sm">₹{Number(product.price).toLocaleString()}</td>
@@ -88,15 +104,13 @@ const InventoryTable = ({ products = [], categories = [] }) => {
                                         {product.status}
                                     </span>
                                 </td>
-                                <td className="px-6 py-4 text-right">
-                                    {/* THE FIX: Added Navigation to Edit Page */}
+                                <td className="px-6 py-4 text-right whitespace-nowrap">
                                     <button 
                                         onClick={() => navigate(`/admin/inventory/edit/${product.id}`)}
                                         className="text-blue-500 hover:bg-blue-50 p-2 rounded-lg transition-colors mr-2"
                                     >
                                         <Edit2 size={16} />
                                     </button>
-                                    {/* THE FIX: Added Delete function execution */}
                                     <button 
                                         onClick={() => handleDelete(product.id)}
                                         className="text-red-500 hover:bg-red-50 p-2 rounded-lg transition-colors"

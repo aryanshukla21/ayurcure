@@ -48,7 +48,6 @@ const AddProductForm = () => {
                 formDataToSend.append('imageFile', formData.imageFile);
             }
 
-            // Send the FormData instead of the old JSON payload
            // Send the FormData instead of the old JSON payload
             const res = await adminApi.addNewProduct(formDataToSend);
 

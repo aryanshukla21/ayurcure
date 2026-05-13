@@ -30,6 +30,7 @@ router.get('/appointment/prepare-for-your-next-visit', ctrl.getPrepInstructions)
 router.get('/appointment/:id/actions', ctrl.getActions);
 router.get('/appointment/:id/your-symptoms-and-notes', ctrl.getSymptoms);
 router.get('/appointment/:id/practitioner-info', ctrl.getPractitionerInfo);
+router.put('/appointment/:id/cancel', ctrl.cancelAppointment);
 
 // Documents mapping
 router.get('/appointment/:id/related-documents', ctrl.getDocuments);
@@ -38,8 +39,12 @@ router.get('/appointment/:id/related-documents/download', ctrl.downloadDocument)
 // ==========================================
 // 3. BOOK APPOINTMENT 
 // ==========================================
-router.post('/appointment/create', ctrl.createAppointment);
+
+// THE FIX: The POST route must be here!
+router.post('/book-appointment/create', ctrl.createAppointment);
+
 router.get('/book-appointment/view-all-practitioners', ctrl.getAllPractitioners);
+
 
 // Query params route (e.g., ?specialty=Vata)
 router.get('/book-appointment/view-all-practitioners/filter', ctrl.filterPractitioners);

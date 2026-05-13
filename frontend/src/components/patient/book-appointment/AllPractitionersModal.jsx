@@ -22,7 +22,6 @@ const AllPractitionersModal = ({ isOpen, onClose, onSelectDoctor, doctors = [], 
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-gray-900/60 backdrop-blur-sm animate-fade-in">
       <div className="bg-white w-full max-w-4xl rounded-[32px] shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
 
-        {/* Header */}
         <div className="p-6 md:p-8 border-b border-[#EFEBE1] flex justify-between items-center bg-[#FDF9EE]">
           <div>
             <h2 className="text-2xl font-extrabold text-gray-900">Select Practitioner</h2>
@@ -33,7 +32,6 @@ const AllPractitionersModal = ({ isOpen, onClose, onSelectDoctor, doctors = [], 
           </button>
         </div>
 
-        {/* Filters */}
         <div className="p-6 border-b border-[#EFEBE1] flex flex-col sm:flex-row gap-4 items-center justify-between">
           <div className="relative w-full sm:w-72 shrink-0">
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
@@ -51,8 +49,7 @@ const AllPractitionersModal = ({ isOpen, onClose, onSelectDoctor, doctors = [], 
               <button
                 key={spec}
                 onClick={() => setActiveFilter(spec)}
-                className={`px-4 py-2 rounded-full text-xs font-bold whitespace-nowrap transition-colors ${activeFilter === spec ? 'bg-[#3A6447] text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                  }`}
+                className={`px-4 py-2 rounded-full text-xs font-bold whitespace-nowrap transition-colors ${activeFilter === spec ? 'bg-[#3A6447] text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}
               >
                 {spec}
               </button>
@@ -60,11 +57,9 @@ const AllPractitionersModal = ({ isOpen, onClose, onSelectDoctor, doctors = [], 
           </div>
         </div>
 
-        {/* Doctor Grid */}
         <div className="p-6 md:p-8 overflow-y-auto bg-gray-50 flex-1">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {isLoading ? (
-              // Skeleton loaders while fetching
               [1, 2, 3, 4].map(i => (
                 <div key={i} className="bg-white rounded-[24px] p-6 border border-[#EFEBE1] h-[220px] animate-pulse flex flex-col justify-between">
                   <div className="flex gap-4">
@@ -78,9 +73,17 @@ const AllPractitionersModal = ({ isOpen, onClose, onSelectDoctor, doctors = [], 
                 </div>
               ))
             ) : filteredDoctors.length > 0 ? (
-              filteredDoctors.map(doctor => (
-                <PractitionerModalCard key={doctor.id || doctor._id} doctor={doctor} onSelect={onSelectDoctor} />
-              ))
+              filteredDoctors.map(doctor => {
+                // THE FIX: Intercept the select function so it strictly passes the DB doctor_id
+                const docId = doctor.doctor_id || doctor.id || doctor._id;
+                return (
+                  <PractitionerModalCard 
+                    key={docId} 
+                    doctor={doctor} 
+                    onSelect={() => onSelectDoctor(docId)} // Enforce the correct ID here!
+                  />
+                );
+              })
             ) : (
               <div className="col-span-1 md:col-span-2 text-center py-12 text-gray-500 font-medium">
                 No practitioners found matching your criteria.

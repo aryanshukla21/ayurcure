@@ -10,9 +10,6 @@ const PrakritiAnalysisPromo = () => {
       <p className="text-sm text-white/80 leading-relaxed mb-4 relative z-10 pr-4">
         Book a session to discover your unique constitution.
       </p>
-      <div className="flex items-center gap-2 text-[#E8C8A0] text-xs font-bold uppercase tracking-wider relative z-10 cursor-pointer hover:text-white transition-colors">
-        <MessageSquare size={14} /> Live Support
-      </div>
     </div>
   );
 };

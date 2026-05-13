@@ -66,12 +66,19 @@ const AdminAddDoctorPage = () => {
       } else {
         setError(res.message || 'Failed to add doctor.');
       }
-    } catch (err) {
-      console.error('Submission failed', err);
-      setError(err.response?.data?.message || err.message || 'An error occurred during submission.');
-    } finally {
-      setIsSubmitting(false);
-    }
+    } catch (error) {
+            console.error("Submission failed", error);
+            
+            // THE FIX: Catch the specific 409 Conflict Error!
+            if (error.response && error.response.status === 409) {
+                // This displays the exact message we wrote in the backend controller!
+                alert(`⚠️ ERROR: ${error.response.data.message || "This Email, Phone, or Registration Number is already registered to another doctor!"}`);
+            } else {
+                alert("Database Error: Failed to add doctor. Check your inputs and try again.");
+            }
+        } finally {
+            setIsSubmitting(false);
+        }
   };
 
   return (

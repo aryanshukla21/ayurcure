@@ -1,4 +1,5 @@
 const AppointmentModel = require('../models/appointmentModel');
+
 const logger = require('../utils/logger');
 const path = require('path');
 const fs = require('fs');
@@ -158,12 +159,35 @@ exports.getSymptoms = async (req, res) => {
 
 exports.getPractitionerInfo = async (req, res) => {
     try {
-        const patientId = await getPatientId(req.user.id, res);
-        if (!patientId) return;
-        const data = await AppointmentModel.getPractitionerInfo(req.params.id, patientId);
-        res.status(200).json(data);
+        // 1. THE TRACKER: Let's see what the auth middleware is actually giving us!
+        console.log("🚨 FULL REQ.USER OBJECT:", req.user);
+
+        // Try to grab the ID from a few common places just in case!
+        const patientId = req.user?.id || req.user?.userId || req.user?._id || null; 
+        console.log("🚨 CHECKING PATIENT ID:", patientId);
+
+        // Fetch the data
+        const info = await AppointmentModel.getPractitionerInfo(req.params.id, patientId);
+        
+        // 2. THE SAFETY NET: If the database finds nothing, stop here so we don't crash!
+        if (!info) {
+            console.log("🚨 DB ERROR: Found 0 rows. The appointment ID or patientId is wrong!");
+            return res.status(404).json({ error: 'Practitioner info not found' });
+        }
+
+        // If we get here, it worked! Send the data.
+        res.status(200).json({
+            doctor_name: info.doctor_name,
+            email: info.email,
+            phone: info.phone,
+            specialization: info.specialization,
+            experience_years: info.experience_years,
+            qualifications: info.qualifications,
+            bio: info.bio,
+            avatar: info.avatar 
+        });
     } catch (err) {
-        logger.error(`getPractitionerInfo Error: ${err.message}`);
+        console.error(`getPractitionerInfo Error: ${err.message}`);
         res.status(500).json({ error: 'Failed to fetch practitioner info' });
     }
 };
@@ -201,6 +225,7 @@ exports.downloadDocument = async (req, res) => {
     }
 };
 
+
 // ==========================================
 // 3. BOOK APPOINTMENT
 // ==========================================
@@ -210,26 +235,29 @@ exports.createAppointment = async (req, res) => {
         const patientId = await getPatientId(req.user.id, res);
         if (!patientId) return;
 
-        // Extract slotId instead of date/time
-        const { doctorId, slotId, reason, amount } = req.body;
+        const { doctorId, date, time, reason } = req.body;
+        
+        // Safely parse "10:30 AM" into 24-hour format
+        const [timePart, modifier] = time.split(' ');
+        let [hours, minutes] = timePart.split(':');
+        if (modifier === 'PM' && hours !== '12') hours = parseInt(hours, 10) + 12;
+        if (modifier === 'AM' && hours === '12') hours = '00';
+        hours = hours.toString().padStart(2, '0');
+        
+        // Format exactly as PostgreSQL Timestamp: "2026-05-12 10:30:00"
+        const exactTimestamp = `${date} ${hours}:${minutes}:00`;
 
-        if (!doctorId || !slotId) {
-            return res.status(400).json({ error: 'Doctor and a valid time slot are required to book an appointment.' });
-        }
-
-        const newAppointment = await AppointmentModel.createAppointment({
+        const appointmentId = await AppointmentModel.createAppointment({
             patientId,
             doctorId,
-            slotId, // Passed exactly to DB
-            reason,
-            amount
+            startTime: exactTimestamp,
+            reason: reason
         });
 
-        res.status(201).json({ message: 'Appointment confirmed successfully!', appointment: newAppointment });
+        res.status(201).json({ success: true, appointmentId });
     } catch (err) {
         logger.error(`createAppointment Error: ${err.message}`);
-        // If slot is taken, send exactly a 409 to trigger the frontend alert
-        res.status(409).json({ error: err.message || 'Failed to confirm appointment' });
+        res.status(500).json({ error: err.message || 'Failed to create appointment' });
     }
 };
 
@@ -277,6 +305,9 @@ exports.selectPractitioner = async (req, res) => {
     }
 };
 
+// backend/src/controllers/appointmentController.js
+// ... inside exports.getAvailableSlots
+
 exports.getAvailableSlots = async (req, res) => {
     try {
         const { docId } = req.params;
@@ -284,8 +315,45 @@ exports.getAvailableSlots = async (req, res) => {
 
         if (!date) return res.status(400).json({ error: 'Date query parameter is required' });
 
-        const data = await AppointmentModel.getAvailableSlots(docId, date);
-        res.status(200).json(data);
+        // 1. Get booked appointments for that date
+        const bookedTimes = await AppointmentModel.getBookedAppointments(docId, date);
+        
+        // Convert booked times to simple "HH:MM" strings for easier comparison
+        const bookedStrings = bookedTimes.map(t => {
+            const d = new Date(t);
+            return d.toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit' });
+        });
+
+        // 2. Generate slots (e.g., 9:00 AM to 5:00 PM)
+        const generateSlots = (startHour, endHour) => {
+            const slots = [];
+            for (let hour = startHour; hour < endHour; hour++) {
+                // Formatting hour to "HH:00" and "HH:30"
+                const hStr = hour.toString().padStart(2, '0');
+                slots.push({ time: `${hStr}:00`, isBooked: bookedStrings.includes(`${hStr}:00`) });
+                slots.push({ time: `${hStr}:30`, isBooked: bookedStrings.includes(`${hStr}:30`) });
+            }
+            return slots;
+        };
+
+        // Let's assume standard working hours 09:00 to 17:00 (5 PM)
+        // In a real scenario, you'd fetch the doctor's specific working hours from DoctorProfiles
+        const dailySlots = generateSlots(9, 17);
+
+        // Format for frontend (e.g., "09:00 AM")
+        const formattedSlots = dailySlots.map(slot => {
+            const [hours, minutes] = slot.time.split(':');
+            let h = parseInt(hours, 10);
+            const ampm = h >= 12 ? 'PM' : 'AM';
+            h = h % 12 || 12; // Convert 0 or 12 to 12
+            return {
+                timeStr: `${h.toString().padStart(2, '0')}:${minutes} ${ampm}`,
+                rawTime: slot.time,
+                isBooked: slot.isBooked
+            };
+        });
+
+        res.status(200).json(formattedSlots);
     } catch (err) {
         logger.error(`getAvailableSlots Error: ${err.message}`);
         res.status(500).json({ error: 'Failed to fetch available slots' });
@@ -338,6 +406,20 @@ exports.getPrakritiAnalysis = async (req, res) => {
     }
 };
 
+exports.cancelAppointment = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const db = require('../config/db'); // Make sure this path matches your db config file
+        
+        // Update the status to 'Cancelled' in PostgreSQL
+        await db.query(`UPDATE Appointments SET status = 'Cancelled' WHERE id = $1`, [id]);
+        
+        res.status(200).json({ success: true, message: 'Appointment cancelled successfully' });
+    } catch (err) {
+        console.error("Cancel Error:", err);
+        res.status(500).json({ error: 'Failed to cancel appointment' });
+    }
+};
 // ==========================================
 // 4. PRESCRIPTIONS
 // ==========================================
