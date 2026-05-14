@@ -91,14 +91,6 @@ const authLimiter = rateLimit({
     message: { error: 'Too many authentication attempts, please try again later.' }
 });
 
-const appointmentMutationLimiter = rateLimit({
-    windowMs: 15 * 60 * 1000,
-    max: 30,
-    standardHeaders: true,
-    legacyHeaders: false,
-    message: { error: 'Too many appointment update requests. Please try again later.' }
-});
-
 const paymentVerifyLimiter = rateLimit({
     windowMs: 5 * 60 * 1000,
     max: 20,
@@ -109,7 +101,6 @@ const paymentVerifyLimiter = rateLimit({
 
 app.use('/api', apiLimiter);
 app.use('/api/auth', authLimiter);
-app.use('/api/appointment/:id/cancel', appointmentMutationLimiter);
 app.use('/api/ecommerce/orders/verify', paymentVerifyLimiter);
 
 // ==========================================

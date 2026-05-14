@@ -49,6 +49,11 @@ const CheckoutPage = () => {
     const total = cartTotal + tax;
 
     useEffect(() => {
+        if (!hasValidCheckoutFlow || cartItems.length === 0) {
+            setIsLoadingProfile(false);
+            return;
+        }
+
         const fetchUserProfile = async () => {
             try {
                 const [personalRes, contactRes] = await Promise.all([
@@ -73,7 +78,7 @@ const CheckoutPage = () => {
             }
         };
         fetchUserProfile();
-    }, []);
+    }, [cartItems.length, hasValidCheckoutFlow]);
 
     const handleInputChange = (e) => {
         const { name, value } = e.target;
@@ -170,20 +175,20 @@ const CheckoutPage = () => {
         }
     };
 
-    if (isLoadingProfile) {
-        return (
-            <div className="flex items-center justify-center min-h-screen bg-[#FDF9EE]">
-                <Loader2 className="w-10 h-10 text-[#4A7C59] animate-spin" />
-            </div>
-        );
-    }
-
     if (!hasValidCheckoutFlow) {
         return <Navigate to="/patient/cart" replace />;
     }
 
     if (cartItems.length === 0) {
         return <Navigate to="/patient/pharmacy-store" replace />;
+    }
+
+    if (isLoadingProfile) {
+        return (
+            <div className="flex items-center justify-center min-h-screen bg-[#FDF9EE]">
+                <Loader2 className="w-10 h-10 text-[#4A7C59] animate-spin" />
+            </div>
+        );
     }
 
     return (
