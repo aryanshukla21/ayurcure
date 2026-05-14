@@ -1,502 +1,378 @@
-const db = require('../config/db');
+-- ==========================================
+-- 0. CLEAN SLATE (Drops existing data & tables)
+-- ==========================================
+DROP SCHEMA public CASCADE;
+CREATE SCHEMA public;
 
-const doctorModel = {
-    createProfile: async (data) => {
-        const query = `
-            INSERT INTO DoctorProfiles (user_id, verification_status) 
-            VALUES ($1, 'Pending') 
-            RETURNING id;
-        `;
-        const { rows } = await db.query(query, [data.user_id]);
-        return rows[0];
-    },
+GRANT ALL ON SCHEMA public TO postgres;
+GRANT ALL ON SCHEMA public TO public;
 
-    // ==========================================
-    // DASHBOARD
-    // ==========================================
+-- Enable UUID extension
+CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
-    getTotalPatients: async (doctorId) => {
-        const query = `
-            SELECT COUNT(DISTINCT patient_id) AS "totalPatients" 
-            FROM Appointments 
-            WHERE doctor_id = $1 AND status != 'Cancelled'
-        `;
-        const { rows } = await db.query(query, [doctorId]);
-        return rows[0];
-    },
+-- ==========================================
+-- 1. ENUM DEFINITIONS
+-- ==========================================
+CREATE TYPE user_role AS ENUM ('patient', 'doctor', 'admin');
+CREATE TYPE auth_provider_type AS ENUM ('local', 'google', 'apple');
+CREATE TYPE account_status_type AS ENUM ('Active', 'Deactivated', 'Banned');
+CREATE TYPE prakriti_enum AS ENUM ('Vata', 'Pitta', 'Kapha');
+CREATE TYPE record_enum AS ENUM ('Prescription', 'Lab Report', 'Other');
+CREATE TYPE verification_enum AS ENUM ('Pending', 'Verified', 'Active');
+CREATE TYPE appointment_mode AS ENUM ('Video', 'Audio', 'Chat');
+CREATE TYPE appointment_status AS ENUM ('Scheduled', 'Completed', 'Cancelled');
+CREATE TYPE discount_enum AS ENUM ('Percentage', 'Flat');
+CREATE TYPE payout_status_enum AS ENUM ('Pending', 'Processing', 'Paid');
+CREATE TYPE banner_type AS ENUM ('App Banner', 'Push Notification');
+CREATE TYPE banner_status AS ENUM ('Draft', 'Active', 'Archived');
+CREATE TYPE article_status AS ENUM ('Pending Review', 'Published');
 
-    getAppointmentsToday: async (doctorId) => {
-        const query = `
-            SELECT COUNT(*) AS "appointmentsToday" 
-            FROM Appointments 
-            WHERE doctor_id = $1 
-              AND DATE(start_time) = CURRENT_DATE 
-              AND status NOT IN ('Cancelled', 'Completed')
-        `;
-        const { rows } = await db.query(query, [doctorId]);
-        return rows[0];
-    },
+-- ==========================================
+-- 2. CORE AUTHENTICATION
+-- ==========================================
+CREATE TABLE Users (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    role user_role NOT NULL,
+    full_name VARCHAR(255) NOT NULL,
+    email VARCHAR(255) UNIQUE NOT NULL,
+    phone VARCHAR(20) UNIQUE,
+    auth_provider auth_provider_type,
+    password_hash VARCHAR(255),
+    
+    -- SSO and Notifications
+    google_id VARCHAR(255) UNIQUE, 
+    fcm_token VARCHAR(255),        
+    
+    otp_hash VARCHAR(255),
+    otp_expires_at TIMESTAMP,
+    is_email_verified BOOLEAN DEFAULT false,
+    is_phone_verified BOOLEAN DEFAULT false,
+    account_status account_status_type DEFAULT 'Active',
+    ban_reason TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
 
-    getUpcomingConsultations: async (doctorId) => {
-        const query = `
-            SELECT COUNT(*) AS "upcomingConsultations" 
-            FROM Appointments 
-            WHERE doctor_id = $1 
-              AND start_time >= CURRENT_TIMESTAMP 
-              AND status = 'Scheduled'
-        `;
-        const { rows } = await db.query(query, [doctorId]);
-        return rows[0];
-    },
+-- ==========================================
+-- 3. PATIENT MODULE
+-- ==========================================
+CREATE TABLE PatientProfiles (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID UNIQUE NOT NULL REFERENCES Users(id) ON DELETE CASCADE,
+    
+    -- Basic Core Info
+    age INT,
+    gender VARCHAR(50),
+    health_history TEXT,
+    prakriti_type prakriti_enum,
+    prakriti_report_url VARCHAR(500),
+    referral_code VARCHAR(50) UNIQUE,
+    wallet_credits DECIMAL(10, 2) DEFAULT 0.00,
+    
+    -- Detailed Clinical & Personal Info
+    patient_display_id VARCHAR(50) UNIQUE,
+    clinical_status VARCHAR(50) DEFAULT 'Active',
+    dob DATE,
+    blood_group VARCHAR(10),
+    height_cm DECIMAL(5, 2),
+    weight_kg DECIMAL(5, 2),
+    bmi DECIMAL(5, 2),
+    vikruti VARCHAR(100),
+    address TEXT,
+    diet_preference VARCHAR(100),
+    allergies TEXT,
+    
+    -- Emergency Contact
+    emergency_contact_name VARCHAR(100),
+    emergency_contact_relation VARCHAR(50),
+    emergency_contact_phone VARCHAR(20),
+    
+    -- Medical Notes & Assignments
+    chief_complaints TEXT,
+    medical_history TEXT,
+    current_medications JSONB,
+    lifestyle_profile TEXT,
+    treatment_plan TEXT,
+    doctor_notes TEXT,
+    primary_doctor_id UUID REFERENCES Users(id) ON DELETE SET NULL,
+    
+    -- Application Settings
+    settings JSONB DEFAULT '{}',
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
 
-    getRecentUpcomingAppointments: async (doctorId) => {
-        const query = `
-            SELECT 
-                a.id, 
-                u.full_name AS patient_name, 
-                a.start_time AS appointment_date, 
-                a.start_time AS appointment_time, 
-                a.status,
-                a.mode AS consultation_type 
-            FROM Appointments a 
-            JOIN PatientProfiles p ON a.patient_id = p.id 
-            JOIN Users u ON p.user_id = u.id
-            WHERE a.doctor_id = $1 
-              AND a.start_time >= CURRENT_TIMESTAMP 
-              AND a.status = 'Scheduled'
-            ORDER BY a.start_time ASC 
-            LIMIT 5
-        `;
-        const { rows } = await db.query(query, [doctorId]);
-        return rows;
-    },
+CREATE TABLE HealthLogs (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    patient_id UUID NOT NULL REFERENCES PatientProfiles(id) ON DELETE CASCADE,
+    log_date DATE NOT NULL,
+    sleep_hours DECIMAL(4, 2),
+    water_intake DECIMAL(5, 2),
+    stress_level VARCHAR(50),
+    symptoms TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
 
-    getEarningSummary: async (doctorId) => {
-        const query = `
-            SELECT 
-                COALESCE(SUM(d.consultation_fee), 0) AS total_earnings, 
-                COALESCE(SUM(CASE WHEN EXTRACT(MONTH FROM a.start_time) = EXTRACT(MONTH FROM CURRENT_DATE) THEN d.consultation_fee ELSE 0 END), 0) AS monthly_earnings 
-            FROM Appointments a
-            JOIN DoctorProfiles d ON a.doctor_id = d.id
-            WHERE a.doctor_id = $1 AND a.status = 'Completed'
-        `;
-        const { rows } = await db.query(query, [doctorId]);
-        return {
-            total: parseFloat(rows[0].total_earnings),
-            monthly: parseFloat(rows[0].monthly_earnings)
-        };
-    },
+CREATE TABLE HealthStats (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    patient_id UUID NOT NULL REFERENCES PatientProfiles(id) ON DELETE CASCADE,
+    weight DECIMAL(5, 2),
+    sleep_hours DECIMAL(4, 2),
+    bp VARCHAR(20),
+    dosha_balance INT, 
+    water_intake DECIMAL(5, 2),
+    stress_level VARCHAR(50),
+    symptoms TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
 
-    // ==========================================
-    // APPOINTMENTS
-    // ==========================================
+CREATE TABLE PatientRoutines (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    patient_id UUID UNIQUE NOT NULL REFERENCES PatientProfiles(id) ON DELETE CASCADE,
+    morning TEXT,
+    afternoon TEXT,
+    evening TEXT,
+    night TEXT,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
 
-    getAppointmentsList: async (doctorId, filterType) => {
-        let statusFilter = '';
-        let dateFilter = '';
+CREATE TABLE WellnessPlans (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    patient_id UUID UNIQUE NOT NULL REFERENCES PatientProfiles(id) ON DELETE CASCADE,
+    dinacharya_routine TEXT,
+    diet_chart TEXT,
+    yoga_schedule TEXT,
+    generated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
 
-        switch (filterType) {
-            case 'Today':
-                dateFilter = 'AND DATE(a.start_time) = CURRENT_DATE';
-                break;
-            case 'Upcoming':
-                dateFilter = 'AND a.start_time >= CURRENT_TIMESTAMP';
-                statusFilter = "AND a.status = 'Scheduled'";
-                break;
-            case 'Completed':
-                statusFilter = "AND a.status = 'Completed'";
-                break;
-            case 'Cancelled':
-                statusFilter = "AND a.status = 'Cancelled'";
-                break;
-            case 'All':
-            default:
-                break;
-        }
+CREATE TABLE PatientDocuments (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    patient_id UUID NOT NULL REFERENCES PatientProfiles(id) ON DELETE CASCADE,
+    document_name VARCHAR(255),
+    document_type VARCHAR(100),
+    file_url VARCHAR(500) NOT NULL,
+    uploaded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
 
-        const query = `
-            SELECT 
-                a.id, 
-                u.full_name AS patient_name, 
-                p.gender,
-                p.age,
-                a.start_time AS appointment_date, 
-                a.start_time AS appointment_time, 
-                a.status, 
-                a.mode AS consultation_type 
-            FROM Appointments a 
-            JOIN PatientProfiles p ON a.patient_id = p.id 
-            JOIN Users u ON p.user_id = u.id
-            WHERE a.doctor_id = $1 
-            ${dateFilter} 
-            ${statusFilter}
-            ORDER BY a.start_time DESC
-        `;
-        const { rows } = await db.query(query, [doctorId]);
-        return rows;
-    },
+CREATE TABLE WellnessTips (
+    id SERIAL PRIMARY KEY,
+    content TEXT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
 
-    // ==========================================
-    // APPOINTMENT DETAILS
-    // ==========================================
+-- ==========================================
+-- 4. DOCTOR MODULE
+-- ==========================================
+CREATE TABLE DoctorProfiles (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID UNIQUE NOT NULL REFERENCES Users(id) ON DELETE CASCADE,
+    qualifications VARCHAR(255),
+    registration_number VARCHAR(100) UNIQUE,
+    specialization VARCHAR(100),
+    experience_years INT,
+    verification_status verification_enum DEFAULT 'Pending',
+    consultation_fee DECIMAL(10, 2),
+    
+    -- Contact & Location
+    location VARCHAR(255),
+    languages TEXT[], 
+    
+    -- Consultation & Availability
+    consultation_duration_mins INT DEFAULT 30,
+    availability_summary VARCHAR(255), 
+    
+    -- Professional Stats
+    publications_count INT DEFAULT 0,
+    average_rating DECIMAL(3, 2) DEFAULT 0.00,
+    total_reviews INT DEFAULT 0,
+    
+    -- Bio & Detailed Background
+    bio TEXT,
+    education_details JSONB, 
+    sub_specializations TEXT[], 
+    certifications TEXT[],
 
-    getApptPatientInfo: async (doctorId, appointmentId) => {
-        const query = `
-            SELECT 
-                a.id, 
-                p.id AS patient_id, 
-                u.full_name AS patient_name, 
-                p.age, 
-                p.gender, 
-                p.blood_group, 
-                u.phone AS contact_number,
-                a.start_time AS appointment_date, 
-                a.start_time AS appointment_time, 
-                a.status, 
-                a.mode AS consultation_type, 
-                a.chief_complaint AS reason_for_visit 
-            FROM Appointments a 
-            JOIN PatientProfiles p ON a.patient_id = p.id 
-            JOIN Users u ON p.user_id = u.id
-            WHERE a.id = $1 AND a.doctor_id = $2
-        `;
-        const { rows } = await db.query(query, [appointmentId, doctorId]);
-        return rows[0];
-    },
+    philosophy_of_care TEXT,
+    preferences JSONB DEFAULT '{}',
+    profile_image_url VARCHAR(255),
+    
+    total_earnings DECIMAL(12, 2) DEFAULT 0.00,
+    admin_comments TEXT,
+    verified_by_admin_id UUID REFERENCES Users(id) ON DELETE SET NULL
+);
 
-    getApptSymptoms: async (doctorId, appointmentId) => {
-        const query = `
-            SELECT pre_consultation_symptoms, chief_complaint 
-            FROM Appointments 
-            WHERE id = $1 AND doctor_id = $2
-        `;
-        const { rows } = await db.query(query, [appointmentId, doctorId]);
-        return rows[0];
-    },
+CREATE TABLE DoctorSlots (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    doctor_id UUID NOT NULL REFERENCES DoctorProfiles(id) ON DELETE CASCADE,
+    start_time TIMESTAMP NOT NULL,
+    end_time TIMESTAMP NOT NULL,
+    is_booked BOOLEAN DEFAULT false
+);
 
-    getApptReports: async (doctorId, appointmentId) => {
-        const query = `
-            SELECT 
-                pd.id, 
-                pd.document_name, 
-                pd.document_type, 
-                pd.uploaded_at,
-                pd.file_url
-            FROM PatientDocuments pd
-            JOIN Appointments a ON pd.patient_id = a.patient_id
-            WHERE a.id = $1 AND a.doctor_id = $2
-            ORDER BY pd.uploaded_at DESC
-        `;
-        const { rows } = await db.query(query, [appointmentId, doctorId]);
-        return rows;
-    },
+CREATE TABLE Articles (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    doctor_id UUID NOT NULL REFERENCES DoctorProfiles(id) ON DELETE CASCADE,
+    title VARCHAR(255) NOT NULL,
+    content TEXT NOT NULL,
+    status article_status DEFAULT 'Pending Review'
+);
 
-    getApptMedicalInfo: async (doctorId, appointmentId) => {
-        // Querying exactly what is available in the PatientProfiles table based on your schema
-        const query = `
-            SELECT 
-                p.allergies, 
-                p.medical_history AS chronic_conditions, 
-                p.current_medications::text AS current_medications, 
-                'None recorded' AS past_surgeries,
-                'None recorded' AS family_medical_history
-            FROM PatientProfiles p
-            JOIN Appointments a ON p.id = a.patient_id
-            WHERE a.id = $1 AND a.doctor_id = $2
-        `;
-        const { rows } = await db.query(query, [appointmentId, doctorId]);
-        
-        return rows[0] || {
-            allergies: 'None recorded',
-            chronic_conditions: 'None recorded',
-            current_medications: 'None recorded',
-            past_surgeries: 'None recorded',
-            family_medical_history: 'None recorded'
-        };
-    },
+-- ==========================================
+-- 5. APPOINTMENT MODULE
+-- ==========================================
+CREATE TABLE Appointments (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    patient_id UUID NOT NULL REFERENCES PatientProfiles(id) ON DELETE CASCADE,
+    doctor_id UUID NOT NULL REFERENCES DoctorProfiles(id) ON DELETE CASCADE,
+    slot_id UUID REFERENCES DoctorSlots(id) ON DELETE SET NULL,
+    start_time TIMESTAMP NOT NULL,
+    end_time TIMESTAMP NOT NULL,
+    mode appointment_mode NOT NULL,
+    status appointment_status DEFAULT 'Scheduled',
+    meet_link VARCHAR(500),
+    pre_consultation_symptoms TEXT,
+    chief_complaint TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
 
-    rescheduleAppointment: async (doctorId, appointmentId, date, time) => {
-        const start_time = `${date} ${time}`; 
-        const query = `
-            UPDATE Appointments 
-            SET start_time = $1::timestamp, 
-                end_time = $1::timestamp + interval '30 minutes',
-                status = 'Scheduled'
-            WHERE id = $2 AND doctor_id = $3 
-            RETURNING id, start_time AS appointment_date, start_time AS appointment_time, status
-        `;
-        const { rows } = await db.query(query, [start_time, appointmentId, doctorId]);
-        return rows[0];
-    },
+CREATE TABLE Prescriptions (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    appointment_id UUID UNIQUE NOT NULL REFERENCES Appointments(id) ON DELETE CASCADE,
+    patient_id UUID NOT NULL REFERENCES PatientProfiles(id) ON DELETE CASCADE,
+    medicine_name VARCHAR(255),
+    dosage VARCHAR(100),
+    timing VARCHAR(100),
+    duration VARCHAR(100),
+    lifestyle_advice TEXT,
+    is_active BOOLEAN DEFAULT true,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
 
-    cancelAppointment: async (doctorId, appointmentId) => {
-        const query = `
-            UPDATE Appointments 
-            SET status = 'Cancelled'
-            WHERE id = $1 AND doctor_id = $2 
-            RETURNING id, status
-        `;
-        const { rows } = await db.query(query, [appointmentId, doctorId]);
-        return rows[0];
-    },
+CREATE TABLE AppointmentReviews (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    appointment_id UUID UNIQUE NOT NULL REFERENCES Appointments(id) ON DELETE CASCADE,
+    rating INT CHECK (rating >= 1 AND rating <= 5),
+    review_text TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
 
-    // ==========================================
-    // EARNINGS
-    // ==========================================
+-- ==========================================
+-- 6. E-COMMERCE MODULE
+-- ==========================================
+CREATE TABLE Products (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    name VARCHAR(255) NOT NULL,
+    category VARCHAR(100),
+    brand VARCHAR(100),
+    ingredients TEXT,
+    benefits TEXT,
+    usage_instructions TEXT,
+    certifications VARCHAR(255),
+    prakriti_suitability VARCHAR(100),
+    price DECIMAL(10, 2) NOT NULL,
+    stock_quantity INT NOT NULL DEFAULT 0
+);
 
-    getTotalEarnings: async (doctorId) => {
-        const query = `
-            SELECT COALESCE(SUM(d.consultation_fee), 0) AS total 
-            FROM Appointments a
-            JOIN DoctorProfiles d ON a.doctor_id = d.id
-            WHERE a.doctor_id = $1 AND a.status = 'Completed'
-        `;
-        const { rows } = await db.query(query, [doctorId]);
-        return parseFloat(rows[0].total);
-    },
+CREATE TABLE Wishlists (
+    patient_id UUID NOT NULL REFERENCES PatientProfiles(id) ON DELETE CASCADE,
+    product_id UUID NOT NULL REFERENCES Products(id) ON DELETE CASCADE,
+    PRIMARY KEY (patient_id, product_id)
+);
 
-    getMonthlyEarning: async (doctorId) => {
-        const query = `
-            SELECT COALESCE(SUM(d.consultation_fee), 0) AS monthly 
-            FROM Appointments a
-            JOIN DoctorProfiles d ON a.doctor_id = d.id
-            WHERE a.doctor_id = $1 
-              AND a.status = 'Completed' 
-              AND EXTRACT(MONTH FROM a.start_time) = EXTRACT(MONTH FROM CURRENT_DATE) 
-              AND EXTRACT(YEAR FROM a.start_time) = EXTRACT(YEAR FROM CURRENT_DATE)
-        `;
-        const { rows } = await db.query(query, [doctorId]);
-        return parseFloat(rows[0].monthly);
-    },
+CREATE TABLE Orders (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    patient_id UUID NOT NULL REFERENCES PatientProfiles(id) ON DELETE CASCADE,
+    total_amount DECIMAL(10, 2) NOT NULL,
+    discount_applied DECIMAL(10, 2) DEFAULT 0.00,
+    shipping_address TEXT NOT NULL,
+    payment_method VARCHAR(50),
+    payment_status VARCHAR(50),
+    razorpay_order_id VARCHAR(255), 
+    razorpay_payment_id VARCHAR(255),
+    order_status VARCHAR(50),
+    delivery_eta TIMESTAMP,
+    pending_tasks INT DEFAULT 0,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
 
-    getEarningHistory: async (doctorId) => {
-        const query = `
-            SELECT 
-                a.id, 
-                a.start_time AS payment_date, 
-                d.consultation_fee AS amount, 
-                'Online' AS payment_method,
-                u.full_name AS patient_name, 
-                a.mode AS consultation_type 
-            FROM Appointments a
-            JOIN PatientProfiles p ON a.patient_id = p.id
-            JOIN Users u ON p.user_id = u.id
-            JOIN DoctorProfiles d ON a.doctor_id = d.id
-            WHERE a.doctor_id = $1 AND a.status = 'Completed'
-            ORDER BY a.start_time DESC
-        `;
-        const { rows } = await db.query(query, [doctorId]);
-        return rows;
-    },
+CREATE TABLE PaymentHistory (
+    id SERIAL PRIMARY KEY,
+    order_id UUID REFERENCES Orders(id) ON DELETE CASCADE,
+    patient_id UUID REFERENCES PatientProfiles(id) ON DELETE CASCADE,
+    razorpay_order_id VARCHAR(255),
+    razorpay_payment_id VARCHAR(255),
+    amount DECIMAL(10, 2) NOT NULL,
+    status VARCHAR(50) NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
 
-    // ==========================================
-    // PROFILE
-    // ==========================================
+CREATE TABLE OrderItems (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    order_id UUID NOT NULL REFERENCES Orders(id) ON DELETE CASCADE,
+    product_id UUID NOT NULL REFERENCES Products(id) ON DELETE RESTRICT,
+    quantity INT NOT NULL,
+    price_at_purchase DECIMAL(10, 2) NOT NULL
+);
 
-    getProfilePersonalInfo: async (userId) => {
-        // We select NULL for profile_image_url since it's not in the DB schema
-        const query = `
-            SELECT u.full_name, d.specialization, d.experience_years, d.bio, NULL AS profile_image_url 
-            FROM DoctorProfiles d 
-            JOIN Users u ON d.user_id = u.id 
-            WHERE u.id = $1
-        `;
-        const { rows } = await db.query(query, [userId]);
-        
-        if (rows[0] && rows[0].full_name) {
-            const names = rows[0].full_name.split(' ');
-            rows[0].first_name = names[0];
-            rows[0].last_name = names.slice(1).join(' ');
-        }
-        return rows[0];
-    },
+CREATE TABLE Subscriptions (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    patient_id UUID NOT NULL REFERENCES PatientProfiles(id) ON DELETE CASCADE,
+    product_id UUID NOT NULL REFERENCES Products(id) ON DELETE CASCADE,
+    frequency VARCHAR(50) NOT NULL,
+    next_billing_date DATE,
+    status VARCHAR(50)
+);
 
-    getNextConsultation: async (doctorId) => {
-        const query = `
-            SELECT 
-                a.start_time AS appointment_date, 
-                a.start_time AS appointment_time, 
-                u.full_name AS patient_name,
-                a.mode AS consultation_type
-            FROM Appointments a 
-            JOIN PatientProfiles p ON a.patient_id = p.id 
-            JOIN Users u ON p.user_id = u.id 
-            WHERE a.doctor_id = $1 
-              AND a.start_time >= CURRENT_TIMESTAMP 
-              AND a.status = 'Scheduled' 
-            ORDER BY a.start_time ASC 
-            LIMIT 1
-        `;
-        const { rows } = await db.query(query, [doctorId]);
-        return rows[0];
-    },
+CREATE TABLE Coupons (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    code VARCHAR(50) UNIQUE NOT NULL,
+    discount_value DECIMAL(10, 2) NOT NULL,
+    discount_type discount_enum NOT NULL,
+    expiry_date TIMESTAMP
+);
 
-    getContactInfo: async (userId) => {
-        const query = `
-            SELECT u.email, u.phone AS phone_number, d.location AS clinic_address 
-            FROM DoctorProfiles d 
-            JOIN Users u ON d.user_id = u.id 
-            WHERE u.id = $1
-        `;
-        const { rows } = await db.query(query, [userId]);
-        return rows[0];
-    },
+-- ==========================================
+-- 7. ADMIN & PLATFORM MODULE
+-- ==========================================
+CREATE TABLE Payouts (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    doctor_id UUID NOT NULL REFERENCES DoctorProfiles(id) ON DELETE RESTRICT,
+    processed_by_admin_id UUID REFERENCES Users(id) ON DELETE SET NULL,
+    period_start DATE,
+    period_end DATE,
+    total_consultations INT,
+    amount_due DECIMAL(10, 2),
+    status payout_status_enum DEFAULT 'Pending',
+    transaction_reference VARCHAR(255),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
 
-    getCredentials: async (userId) => {
-        const query = `
-            SELECT qualifications, registration_number AS medical_license_number, education_details::text AS achievements 
-            FROM DoctorProfiles 
-            WHERE user_id = $1
-        `;
-        const { rows } = await db.query(query, [userId]);
-        return rows[0];
-    },
+CREATE TABLE BannerCampaigns (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    title VARCHAR(255) NOT NULL,
+    image_url VARCHAR(500) NOT NULL,
+    target_link VARCHAR(500),
+    type banner_type NOT NULL,
+    status banner_status DEFAULT 'Draft',
+    start_date TIMESTAMP,
+    end_date TIMESTAMP,
+    created_by UUID NOT NULL REFERENCES Users(id) ON DELETE RESTRICT
+);
 
-    getPhilosophy: async (userId) => {
-        const query = `
-            SELECT philosophy_of_care 
-            FROM DoctorProfiles 
-            WHERE user_id = $1
-        `;
-        const { rows } = await db.query(query, [userId]);
-        return rows[0];
-    },
+CREATE TABLE AdminActionLogs (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    admin_id UUID NOT NULL REFERENCES Users(id) ON DELETE RESTRICT,
+    action_type VARCHAR(100) NOT NULL,
+    target_entity_id UUID,
+    details TEXT,
+    timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
 
-    // ==========================================
-    // SETTINGS
-    // ==========================================
-
-    getSettingsPersonalInfo: async (userId) => {
-        const query = `
-            SELECT u.full_name, u.email, u.phone AS phone_number, NULL AS profile_image_url, d.bio 
-            FROM DoctorProfiles d 
-            JOIN Users u ON d.user_id = u.id 
-            WHERE u.id = $1
-        `;
-        const { rows } = await db.query(query, [userId]);
-
-        if (rows[0] && rows[0].full_name) {
-            const names = rows[0].full_name.split(' ');
-            rows[0].first_name = names[0];
-            rows[0].last_name = names.slice(1).join(' ');
-        }
-        return rows[0];
-    },
-
-    updateSettingsPersonalInfo: async (userId, data) => {
-        const client = await db.connect();
-        try {
-            await client.query('BEGIN');
-
-            const fullName = `${data.first_name || ''} ${data.last_name || ''}`.trim();
-
-            // Note: Cannot update avatar because it doesn't exist in the schema
-            const profileQuery = `
-                UPDATE DoctorProfiles 
-                SET bio = COALESCE($1, bio)
-                WHERE user_id = $2
-            `;
-            await client.query(profileQuery, [data.bio, userId]);
-
-            const userQuery = `
-                UPDATE Users 
-                SET email = COALESCE($1, email), 
-                    phone = COALESCE($2, phone),
-                    full_name = COALESCE(NULLIF($3, ''), full_name)
-                WHERE id = $4
-            `;
-            await client.query(userQuery, [data.email, data.phone_number, fullName, userId]);
-
-            await client.query('COMMIT');
-            return true;
-        } catch (e) {
-            await client.query('ROLLBACK');
-            throw e;
-        } finally {
-            client.release();
-        }
-    },
-
-    getPreferences: async (userId) => {
-        const query = `SELECT preferences FROM DoctorProfiles WHERE user_id = $1`;
-        const { rows } = await db.query(query, [userId]);
-        return rows[0]?.preferences || {};
-    },
-
-    updatePreferences: async (userId, preferences) => {
-        const query = `
-            UPDATE DoctorProfiles 
-            SET preferences = $1 
-            WHERE user_id = $2 
-            RETURNING preferences
-        `;
-        const { rows } = await db.query(query, [JSON.stringify(preferences), userId]);
-        return rows[0];
-    },
-
-    getProfessionalCredentials: async (userId) => {
-        const query = `
-            SELECT specialization, experience_years, qualifications, registration_number AS medical_license_number 
-            FROM DoctorProfiles 
-            WHERE user_id = $1
-        `;
-        const { rows } = await db.query(query, [userId]);
-        return rows[0];
-    },
-
-    updateProfessionalCredentials: async (userId, data) => {
-        const query = `
-            UPDATE DoctorProfiles 
-            SET specialization = COALESCE($1, specialization), 
-                experience_years = COALESCE($2, experience_years), 
-                qualifications = COALESCE($3, qualifications),
-                registration_number = COALESCE($4, registration_number)
-            WHERE user_id = $5
-        `;
-        await db.query(query, [data.specialization, data.experience_years, data.qualifications, data.medical_license_number, userId]);
-        return true;
-    },
-
-    getConsultationLogistics: async (userId) => {
-        const query = `
-            SELECT consultation_fee, availability_summary AS availability_schedule, location AS clinic_address 
-            FROM DoctorProfiles 
-            WHERE user_id = $1
-        `;
-        const { rows } = await db.query(query, [userId]);
-        return rows[0];
-    },
-
-    updateConsultationLogistics: async (userId, data) => {
-        const query = `
-            UPDATE DoctorProfiles 
-            SET consultation_fee = COALESCE($1, consultation_fee),
-                availability_summary = COALESCE($2, availability_summary),
-                location = COALESCE($3, location)
-            WHERE user_id = $4
-        `;
-        // Pass objects as JSON string if they are arrays/objects from frontend
-        const schedule = typeof data.availability_schedule === 'object' ? JSON.stringify(data.availability_schedule) : data.availability_schedule;
-        
-        await db.query(query, [data.consultation_fee, schedule, data.clinic_address, userId]);
-        return true;
-    },
-
-    getPhilosophyOfCare: async (userId) => {
-        const query = `SELECT philosophy_of_care FROM DoctorProfiles WHERE user_id = $1`;
-        const { rows } = await db.query(query, [userId]);
-        return rows[0];
-    },
-
-    updatePhilosophyOfCare: async (userId, philosophy) => {
-        const query = `
-            UPDATE DoctorProfiles 
-            SET philosophy_of_care = $1 
-            WHERE user_id = $2
-        `;
-        await db.query(query, [philosophy, userId]);
-        return true;
-    }
-};
-
-module.exports = doctorModel;
+CREATE TABLE Blogs (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    title VARCHAR(255) NOT NULL,
+    content TEXT NOT NULL,
+    category VARCHAR(100),
+    author_id UUID REFERENCES Users(id) ON DELETE SET NULL,
+    status VARCHAR(50) DEFAULT 'Draft', -- Draft, Published
+    views INT DEFAULT 0,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);

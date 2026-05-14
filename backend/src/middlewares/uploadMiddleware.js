@@ -3,6 +3,11 @@ const { S3Client, PutObjectCommand } = require('@aws-sdk/client-s3');
 const crypto = require('crypto');
 const path = require('path');
 const logger = require('../utils/logger');
+const dns = require('dns');
+
+// 🚨 PERFORMANCE FIX: Force Node.js to use IPv4 first.
+// This prevents the 15-second AWS S3 timeout bug caused by Node.js 18+ IPv6 resolution.
+dns.setDefaultResultOrder('ipv4first');
 
 // 1. Fail-Fast Check for AWS Credentials
 const isAwsConfigured = process.env.AWS_REGION &&
@@ -70,7 +75,7 @@ const uploadToS3 = async (req, res, next) => {
             try {
                 console.log(`[AWS S3 Middleware] Sending PutObjectCommand to AWS S3...`);
                 const command = new PutObjectCommand(params);
-                await s3.send(command);
+                await s3.send(command); // This will now execute instantly over IPv4
                 console.log(`✅ [AWS S3 Middleware] Successfully uploaded ${file.originalname} to S3.`);
             } catch (s3SendError) {
                 console.error(`🚨 [AWS S3 Middleware] S3 SEND ERROR for ${file.originalname}:`, s3SendError);

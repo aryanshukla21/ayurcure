@@ -294,9 +294,8 @@ const doctorModel = {
     // ==========================================
 
     getProfilePersonalInfo: async (userId) => {
-        // We select NULL for profile_image_url since it's not in the DB schema
         const query = `
-            SELECT u.full_name, d.specialization, d.experience_years, d.bio, NULL AS profile_image_url 
+            SELECT u.full_name, d.specialization, d.experience_years, d.bio, d.profile_image_url AS avatar 
             FROM DoctorProfiles d 
             JOIN Users u ON d.user_id = u.id 
             WHERE u.id = $1
@@ -368,7 +367,7 @@ const doctorModel = {
 
     getSettingsPersonalInfo: async (userId) => {
         const query = `
-            SELECT u.full_name, u.email, u.phone AS phone_number, NULL AS profile_image_url, d.bio 
+            SELECT u.full_name, u.email, u.phone AS phone_number, d.profile_image_url AS avatar, d.bio 
             FROM DoctorProfiles d 
             JOIN Users u ON d.user_id = u.id 
             WHERE u.id = $1
@@ -390,13 +389,14 @@ const doctorModel = {
 
             const fullName = `${data.first_name || ''} ${data.last_name || ''}`.trim();
 
-            // Note: Cannot update avatar because it doesn't exist in the schema
+            // 🚨 FIX: Added profile_image_url to the SET clause and passed data.avatar as $3
             const profileQuery = `
                 UPDATE DoctorProfiles 
-                SET bio = COALESCE($1, bio)
+                SET bio = COALESCE($1, bio),
+                    profile_image_url = COALESCE($3, profile_image_url)
                 WHERE user_id = $2
             `;
-            await client.query(profileQuery, [data.bio, userId]);
+            await client.query(profileQuery, [data.bio, userId, data.avatar]);
 
             const userQuery = `
                 UPDATE Users 

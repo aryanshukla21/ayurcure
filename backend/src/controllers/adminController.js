@@ -324,18 +324,34 @@ exports.getAllBlogs = async (req, res) => {
     catch (error) { res.status(500).json({ success: false, message: error.message }); }
 };
 
+// Add image support to addNewBlog
 exports.addNewBlog = async (req, res) => {
     try {
+        // 🚨 FIX: Capture the S3 URL for blog thumbnails
+        if (req.file && req.file.s3Url) {
+            req.body.image_url = req.file.s3Url; // Adjust property name to match your DB column
+        }
+
         const blogId = await adminModel.addNewBlog(req.body, req.user.id);
         res.status(201).json({ success: true, message: "Blog published successfully", blogId });
-    } catch (error) { res.status(500).json({ success: false, message: error.message }); }
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
 };
 
+// Add image support to updateBlog
 exports.updateBlog = async (req, res) => {
     try {
+        // 🚨 FIX: Capture the S3 URL for blog thumbnails
+        if (req.file && req.file.s3Url) {
+            req.body.image_url = req.file.s3Url; // Adjust property name to match your DB column
+        }
+
         await adminModel.updateBlog(req.params.id, req.body);
         res.status(200).json({ success: true, message: "Blog updated successfully" });
-    } catch (error) { res.status(500).json({ success: false, message: error.message }); }
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
 };
 
 exports.deleteBlog = async (req, res) => {

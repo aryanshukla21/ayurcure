@@ -302,9 +302,9 @@ exports.getSettingsPersonalInfo = async (req, res) => {
 
 exports.updateSettingsPersonalInfo = async (req, res) => {
     try {
-        // If an image was uploaded to S3, multer-s3 attaches the URL to req.file.location
-        if (req.file && req.file.location) {
-            req.body.avatar = req.file.location;
+        // 🚨 FIX: Change req.file.location to req.file.s3Url
+        if (req.file && req.file.s3Url) {
+            req.body.avatar = req.file.s3Url;
         }
         await doctorModel.updateSettingsPersonalInfo(req.user.id, req.body);
         res.status(200).json({ success: true, message: 'Personal information updated successfully' });
