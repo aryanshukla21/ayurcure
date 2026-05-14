@@ -24,6 +24,7 @@ const BillingForm = ({ formData, handleInputChange, isLoading }) => {
             <h2 className="text-xl font-bold text-gray-900 mb-6">Shipping & Billing Information</h2>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mb-2">
+                {/* READ-ONLY FIELDS */}
                 <div>
                     <label className="block text-[11px] font-bold text-gray-500 uppercase tracking-widest mb-2 ml-1">
                         Full Name
@@ -32,9 +33,8 @@ const BillingForm = ({ formData, handleInputChange, isLoading }) => {
                         type="text"
                         name="fullName"
                         value={safeFormData.fullName || ''}
-                        onChange={handleInputChange}
-                        className="w-full px-4 py-3.5 bg-[#FAF7F2] border border-[#EFEBE1] rounded-2xl text-sm font-medium text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#4A7C59] transition-all"
-                        placeholder="e.g. Aarav Sharma"
+                        readOnly
+                        className="w-full px-4 py-3.5 bg-gray-100 border border-gray-200 rounded-2xl text-sm font-medium text-gray-500 cursor-not-allowed focus:outline-none"
                     />
                 </div>
                 <div>
@@ -45,9 +45,8 @@ const BillingForm = ({ formData, handleInputChange, isLoading }) => {
                         type="email"
                         name="email"
                         value={safeFormData.email || ''}
-                        onChange={handleInputChange}
-                        className="w-full px-4 py-3.5 bg-[#FAF7F2] border border-[#EFEBE1] rounded-2xl text-sm font-medium text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#4A7C59] transition-all"
-                        placeholder="e.g. aarav@example.com"
+                        readOnly
+                        className="w-full px-4 py-3.5 bg-gray-100 border border-gray-200 rounded-2xl text-sm font-medium text-gray-500 cursor-not-allowed focus:outline-none"
                     />
                 </div>
                 <div>
@@ -58,44 +57,50 @@ const BillingForm = ({ formData, handleInputChange, isLoading }) => {
                         type="tel"
                         name="mobile"
                         value={safeFormData.mobile || ''}
-                        onChange={handleInputChange}
-                        className="w-full px-4 py-3.5 bg-[#FAF7F2] border border-[#EFEBE1] rounded-2xl text-sm font-medium text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#4A7C59] transition-all"
-                        placeholder="+91 98765 43210"
+                        readOnly
+                        className="w-full px-4 py-3.5 bg-gray-100 border border-gray-200 rounded-2xl text-sm font-medium text-gray-500 cursor-not-allowed focus:outline-none"
                     />
                 </div>
+
+                {/* EDITABLE ADDRESS FIELDS */}
                 <div>
                     <label className="block text-[11px] font-bold text-gray-500 uppercase tracking-widest mb-2 ml-1">
-                        Street Address
+                        Street Address <span className="text-red-500 text-sm">*</span>
                     </label>
                     <input
                         type="text"
                         name="address"
+                        required
                         value={safeFormData.address || ''}
                         onChange={handleInputChange}
                         className="w-full px-4 py-3.5 bg-[#FAF7F2] border border-[#EFEBE1] rounded-2xl text-sm font-medium text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#4A7C59] transition-all"
                         placeholder="House/Flat No., Street, Landmark"
                     />
                 </div>
+
                 <div>
                     <label className="block text-[11px] font-bold text-gray-500 uppercase tracking-widest mb-2 ml-1">
-                        City / District
+                        City / District <span className="text-red-500 text-sm">*</span>
                     </label>
                     <input
                         type="text"
                         name="city"
+                        required
                         value={safeFormData.city || ''}
                         onChange={handleInputChange}
                         className="w-full px-4 py-3.5 bg-[#FAF7F2] border border-[#EFEBE1] rounded-2xl text-sm font-medium text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#4A7C59] transition-all"
                         placeholder="e.g. Mumbai"
                     />
                 </div>
+
                 <div>
                     <label className="block text-[11px] font-bold text-gray-500 uppercase tracking-widest mb-2 ml-1">
-                        Postal Code
+                        Postal Code <span className="text-red-500 text-sm">*</span>
                     </label>
                     <input
                         type="text"
                         name="postalCode"
+                        required
                         value={safeFormData.postalCode || ''}
                         onChange={handleInputChange}
                         className="w-full px-4 py-3.5 bg-[#FAF7F2] border border-[#EFEBE1] rounded-2xl text-sm font-medium text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#4A7C59] transition-all"

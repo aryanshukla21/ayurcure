@@ -507,7 +507,12 @@ exports.verifyPayment = async (req, res) => {
     try {
         const { razorpay_payment_id, razorpay_order_id, razorpay_signature, order_id } = req.body;
 
-        // 1. Verify the signature cryptographically
+        // FIXED: Validate presence of gateway keys to prevent server crash during HMAC generation
+        if (!razorpay_payment_id || !razorpay_order_id || !razorpay_signature) {
+            await EcommerceModel.updatePaymentStatus(order_id, 'Failed');
+            return res.status(400).json({ error: 'Incomplete payment payload received.' });
+        }
+
         const isValid = paymentService.verifyPaymentSignature(
             razorpay_order_id,
             razorpay_payment_id,
@@ -515,14 +520,11 @@ exports.verifyPayment = async (req, res) => {
         );
 
         if (!isValid) {
-            // Update order status to failed if necessary
             await EcommerceModel.updatePaymentStatus(order_id, 'Failed');
             return res.status(400).json({ error: 'Payment verification failed' });
         }
 
-        // 2. Update internal database status to 'Paid'
         await EcommerceModel.updatePaymentStatus(order_id, 'Paid', razorpay_payment_id);
-
         res.status(200).json({ success: true, message: 'Payment verified successfully' });
     } catch (err) {
         logger.error(`verifyPayment Error: ${err.message}`);

@@ -23,10 +23,10 @@ class PaymentService {
     async createOrder(amountInRupees, receiptId) {
         try {
             const options = {
-                amount: amountInRupees * 100, // Razorpay processes amounts in the smallest currency sub-unit (paise)
+                amount: Math.round(amountInRupees * 100), // FIXED: Prevents JS floating point crashes
                 currency: 'INR',
                 receipt: receiptId.toString(),
-                payment_capture: 1 // Auto-capture payment upon authorization
+                payment_capture: 1
             };
 
             const order = await this.razorpay.orders.create(options);

@@ -11,6 +11,10 @@ import CheckoutSummary from '../../components/patient/checkout/CheckoutSummary';
 
 const loadRazorpayScript = () => {
     return new Promise((resolve) => {
+        // Check if already loaded to avoid DOM clutter
+        if (window.Razorpay) {
+            return resolve(true);
+        }
         const script = document.createElement('script');
         script.src = 'https://checkout.razorpay.com/v1/checkout.js';
         script.onload = () => resolve(true);
@@ -31,20 +35,24 @@ const CheckoutPage = () => {
         fullName: '', email: '', mobile: '', address: '', city: '', postalCode: ''
     });
 
-    const tax = cartItems.length > 0 ? 4.50 : 0;
+    const tax = cartItems.length > 0 ? 5.0 : 0;
     const total = cartTotal + tax;
 
     useEffect(() => {
         const fetchUserProfile = async () => {
             try {
-                const response = await patientApi.getProfilePersonal();
-                const profile = response.profile || response || {};
+                const [personalRes, contactRes] = await Promise.all([
+                    patientApi.getProfilePersonal(),
+                    patientApi.getProfileContact()
+                ]);
+                const personal = personalRes.profile || personalRes || {};
+                const contact = contactRes.profile || contactRes || {};
 
                 setFormData({
-                    fullName: profile.name || profile.full_name || '',
-                    email: profile.email || '',
-                    mobile: profile.phone || '',
-                    address: profile.address || '',
+                    fullName: personal.full_name || personal.name || personal.fullName || '',
+                    email: contact.email || contact.email_address || '',
+                    mobile: contact.phone || contact.phone_number || contact.mobile || '',
+                    address: '',
                     city: '',
                     postalCode: ''
                 });
@@ -63,16 +71,25 @@ const CheckoutPage = () => {
     };
 
     const handlePayNow = async () => {
+        // Cart validation
         if (cartItems.length === 0) {
             alert("Your cart is empty. Please add items to proceed.");
             return;
         }
+
+        // Mandatory Address Validation
+        const { address, city, postalCode } = formData;
+        if (!address?.trim() || !city?.trim() || !postalCode?.trim()) {
+            alert("Please fill in all mandatory address fields (Street Address, City, and Postal Code) before paying.");
+            return; // Stops the function, prevents payment
+        }
+
         setIsSubmitting(true);
 
         const orderPayload = {
             items: cartItems.map(item => ({ product_id: item.id, quantity: item.quantity, price: item.price })),
             total_amount: total,
-            shipping_address: `${formData.address}, ${formData.city} - ${formData.postalCode}`,
+            shipping_address: `${address.trim()}, ${city.trim()} - ${postalCode.trim()}`,
             payment_method: selectedPayment === 'cod' ? 'Cash' : 'Online'
         };
 
