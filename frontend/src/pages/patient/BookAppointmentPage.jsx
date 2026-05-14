@@ -177,6 +177,7 @@ const BookAppointmentPage = () => {
             </div>
 
             <button
+              type='button'
               onClick={handleConfirmAppointment}
               disabled={!selectedDoctorId || !selectedTime || !reason.trim()}
               className={`w-full text-white font-bold py-4 rounded-2xl flex items-center justify-center gap-2 shadow-md transition-colors ${(!selectedDoctorId || !selectedTime || !reason.trim())

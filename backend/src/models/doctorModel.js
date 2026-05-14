@@ -468,18 +468,78 @@ const doctorModel = {
     },
 
     updateConsultationLogistics: async (userId, data) => {
-        const query = `
-            UPDATE DoctorProfiles 
-            SET consultation_fee = COALESCE($1, consultation_fee),
-                availability_summary = COALESCE($2, availability_summary),
-                location = COALESCE($3, location)
-            WHERE user_id = $4
-        `;
-        // Pass objects as JSON string if they are arrays/objects from frontend
-        const schedule = typeof data.availability_schedule === 'object' ? JSON.stringify(data.availability_schedule) : data.availability_schedule;
+        const client = await db.connect();
+        try {
+            await client.query('BEGIN');
 
-        await db.query(query, [data.consultation_fee, schedule, data.clinic_address, userId]);
-        return true;
+            const scheduleObj = typeof data.availability_schedule === 'object'
+                ? data.availability_schedule
+                : JSON.parse(data.availability_schedule);
+            const scheduleJson = JSON.stringify(scheduleObj);
+
+            // 1. Update Profile
+            const updateQuery = `
+                UPDATE DoctorProfiles 
+                SET consultation_fee = COALESCE($1, consultation_fee),
+                    availability_summary = COALESCE($2, availability_summary),
+                    location = COALESCE($3, location)
+                WHERE user_id = $4
+                RETURNING id;
+            `;
+            const docRes = await client.query(updateQuery, [data.consultation_fee, scheduleJson, data.clinic_address, userId]);
+            const doctorId = docRes.rows[0].id;
+
+            // 2. Clear FUTURE unbooked slots to prepare for regeneration
+            await client.query(`
+                DELETE FROM DoctorSlots 
+                WHERE doctor_id = $1 AND start_time >= CURRENT_DATE AND is_booked = false
+            `, [doctorId]);
+
+            // 3. Generate slots for a 7-day rolling window
+            const daysMap = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+            const today = new Date();
+
+            for (let i = 0; i <= 7; i++) {
+                const targetDate = new Date(today);
+                targetDate.setDate(today.getDate() + i);
+
+                const dayName = daysMap[targetDate.getDay()];
+                const yyyy = targetDate.getFullYear();
+                const mm = String(targetDate.getMonth() + 1).padStart(2, '0');
+                const dd = String(targetDate.getDate()).padStart(2, '0');
+                const datePrefix = `${yyyy}-${mm}-${dd}`;
+
+                // Only add slots if the doctor checked this day
+                if (scheduleObj[dayName] === true) {
+                    for (let hour = 9; hour < 17; hour++) {
+                        const start1 = `${datePrefix} ${String(hour).padStart(2, '0')}:00:00`;
+                        const end1 = `${datePrefix} ${String(hour).padStart(2, '0')}:30:00`;
+
+                        const start2 = `${datePrefix} ${String(hour).padStart(2, '0')}:30:00`;
+                        const end2 = `${datePrefix} ${String(hour + 1).padStart(2, '0')}:00:00`;
+
+                        // Insert query using NOT EXISTS to prevent overwriting existing booked slots
+                        const insertQuery = `
+                            INSERT INTO DoctorSlots (doctor_id, start_time, end_time, is_booked)
+                            SELECT $1, $2, $3, false
+                            WHERE NOT EXISTS (
+                                SELECT 1 FROM DoctorSlots WHERE doctor_id = $1 AND start_time = $2
+                            )
+                        `;
+                        await client.query(insertQuery, [doctorId, start1, end1]);
+                        await client.query(insertQuery, [doctorId, start2, end2]);
+                    }
+                }
+            }
+
+            await client.query('COMMIT');
+            return true;
+        } catch (error) {
+            await client.query('ROLLBACK');
+            throw error;
+        } finally {
+            client.release();
+        }
     },
 
     getPhilosophyOfCare: async (userId) => {

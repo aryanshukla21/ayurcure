@@ -1,6 +1,6 @@
 require('dotenv').config();
 const express = require('express');
-const path = require('path'); // FIX: Imported path to resolve local directories
+const path = require('path');
 const cors = require('cors');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
@@ -11,7 +11,7 @@ const cookieParser = require('cookie-parser');
 // Import routes and error handler
 const indexRoutes = require('./src/routes/index');
 const errorHandler = require('./src/middlewares/errorHandler');
-const { startOtpCleanupJob, startAppointmentSweepJob } = require('./src/utils/cronJobs');
+const { startOtpCleanupJob, startAppointmentSweepJob, startDoctorSlotMaintenanceJob } = require('./src/utils/cronJobs');
 
 const app = express();
 
@@ -83,6 +83,7 @@ async function startServer() {
         const { rows } = await db.query('SELECT NOW() AS current_time');
         console.log(`✅ Database Connected Successfully to Supabase at: ${rows[0].current_time}`);
 
+        // Initialize Background Jobs
         if (typeof startOtpCleanupJob === 'function') {
             startOtpCleanupJob();
             console.log('✅ Background Jobs Started Successfully');
@@ -95,6 +96,14 @@ async function startServer() {
             console.log('✅ Appointment Sweep Job Started Successfully');
         } else {
             console.warn('⚠️ startAppointmentSweepJob is not a valid function. Check cronJobs.js export.');
+        }
+
+        // --- NEW: Initialize Doctor Slot Maintenance Job ---
+        if (typeof startDoctorSlotMaintenanceJob === 'function') {
+            startDoctorSlotMaintenanceJob();
+            console.log('✅ Doctor Slot Maintenance Job Started Successfully');
+        } else {
+            console.warn('⚠️ startDoctorSlotMaintenanceJob is not a valid function. Check cronJobs.js export.');
         }
 
         const PORT = process.env.PORT || 5000;

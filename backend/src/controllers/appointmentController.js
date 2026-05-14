@@ -252,29 +252,39 @@ exports.createAppointment = async (req, res) => {
         const patientId = await getPatientId(req.user.id, res);
         if (!patientId) return;
 
-        const { doctorId, date, time, reason } = req.body;
+        const db = require('../config/db');
+        const { doctorId, date, time, reason, paymentId } = req.body;
 
-        // Safely parse "10:30 AM" into 24-hour format
         const [timePart, modifier] = time.split(' ');
         let [hours, minutes] = timePart.split(':');
         if (modifier === 'PM' && hours !== '12') hours = parseInt(hours, 10) + 12;
         if (modifier === 'AM' && hours === '12') hours = '00';
         hours = hours.toString().padStart(2, '0');
 
-        // Format exactly as PostgreSQL Timestamp: "2026-05-12 10:30:00"
         const exactTimestamp = `${date} ${hours}:${minutes}:00`;
 
-        const appointmentId = await AppointmentModel.createAppointment({
-            patientId,
-            doctorId,
-            startTime: exactTimestamp,
-            reason: reason
-        });
+        // MARK THE SLOT AS BOOKED IN THE DB
+        const slotUpdate = await db.query(`
+            UPDATE DoctorSlots 
+            SET is_booked = true 
+            WHERE doctor_id = $1 AND start_time = $2::timestamp
+            RETURNING id
+        `, [doctorId, exactTimestamp]);
 
-        res.status(201).json({ success: true, appointmentId });
+        const assignedSlotId = slotUpdate.rows.length > 0 ? slotUpdate.rows[0].id : null;
+
+        // CREATE APPOINTMENT RECORD WITH SLOT REFERENCE
+        const apptQuery = `
+            INSERT INTO Appointments (patient_id, doctor_id, slot_id, start_time, end_time, mode, status, chief_complaint)
+            VALUES ($1, $2, $3, $4::timestamp, $4::timestamp + interval '30 minutes', 'Video', 'Scheduled', $5)
+            RETURNING id
+        `;
+        const { rows } = await db.query(apptQuery, [patientId, doctorId, assignedSlotId, exactTimestamp, reason]);
+
+        res.status(201).json({ success: true, appointmentId: rows[0].id });
     } catch (err) {
-        logger.error(`createAppointment Error: ${err.message}`);
-        res.status(500).json({ error: err.message || 'Failed to create appointment' });
+        console.error(`createAppointment Error: ${err.message}`);
+        res.status(500).json({ error: 'Failed to create appointment' });
     }
 };
 
@@ -325,62 +335,59 @@ exports.selectPractitioner = async (req, res) => {
 exports.getAvailableSlots = async (req, res) => {
     try {
         const { docId } = req.params;
-        const { date } = req.query;
+        const { date } = req.query; // e.g., 2026-05-16
 
         if (!date) return res.status(400).json({ error: 'Date query parameter is required' });
 
-        const bookedTimes = await AppointmentModel.getBookedAppointments(docId, date);
-        const bookedStrings = bookedTimes.map(t => {
-            const d = new Date(t);
-            return d.toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit' });
-        });
+        const db = require('../config/db');
 
-        // --- NEW TIME VALIDATION LOGIC ---
+        // Safely format date for PostgreSQL matching
+        let formattedDate = date;
+        if (date.includes('/')) {
+            const parts = date.split('/');
+            formattedDate = `${parts[2]}-${parts[0].padStart(2, '0')}-${parts[1].padStart(2, '0')}`;
+        }
+
+        // Fetch slots natively from the database schema
+        const query = `
+            SELECT id AS slot_id, start_time, is_booked 
+            FROM DoctorSlots 
+            WHERE doctor_id = $1 AND DATE(start_time) = $2::date
+            ORDER BY start_time ASC
+        `;
+        const { rows } = await db.query(query, [docId, formattedDate]);
+
+        if (rows.length === 0) return res.status(200).json([]);
+
+        // Handle past times check for "today"
         const now = new Date();
-        // Construct today's date string safely for local timezone comparison
         const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
-        const isToday = (date === todayStr);
-        const currentHour = now.getHours();
-        const currentMinute = now.getMinutes();
+        const isToday = formattedDate === todayStr;
 
-        const generateSlots = (startHour, endHour) => {
-            const slots = [];
-            for (let hour = startHour; hour < endHour; hour++) {
-                const hStr = hour.toString().padStart(2, '0');
+        const formattedSlots = rows.map(slot => {
+            const st = new Date(slot.start_time);
+            const hours = st.getHours();
+            const minutes = st.getMinutes();
 
-                // If the user selects today, gray out slots that have already passed
-                const isPast00 = isToday && ((hour < currentHour) || (hour === currentHour && currentMinute >= 0));
-                const isPast30 = isToday && ((hour < currentHour) || (hour === currentHour && currentMinute >= 30));
+            const ampm = hours >= 12 ? 'PM' : 'AM';
+            const displayHour = hours % 12 || 12;
 
-                slots.push({
-                    time: `${hStr}:00`,
-                    isBooked: bookedStrings.includes(`${hStr}:00`) || isPast00
-                });
-                slots.push({
-                    time: `${hStr}:30`,
-                    isBooked: bookedStrings.includes(`${hStr}:30`) || isPast30
-                });
+            let pastTimeCheck = false;
+            if (isToday && (hours < now.getHours() || (hours === now.getHours() && minutes <= now.getMinutes()))) {
+                pastTimeCheck = true;
             }
-            return slots;
-        };
 
-        const dailySlots = generateSlots(9, 17);
-
-        const formattedSlots = dailySlots.map(slot => {
-            const [hours, minutes] = slot.time.split(':');
-            let h = parseInt(hours, 10);
-            const ampm = h >= 12 ? 'PM' : 'AM';
-            h = h % 12 || 12;
             return {
-                timeStr: `${h.toString().padStart(2, '0')}:${minutes} ${ampm}`,
-                rawTime: slot.time,
-                isBooked: slot.isBooked
+                slotId: slot.slot_id,
+                timeStr: `${displayHour.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')} ${ampm}`,
+                rawTime: `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`,
+                isBooked: slot.is_booked || pastTimeCheck
             };
         });
 
         res.status(200).json(formattedSlots);
     } catch (err) {
-        logger.error(`getAvailableSlots Error: ${err.message}`);
+        console.error(`getAvailableSlots Error: ${err.message}`);
         res.status(500).json({ error: 'Failed to fetch available slots' });
     }
 };
