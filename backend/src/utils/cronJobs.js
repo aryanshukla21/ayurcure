@@ -1,5 +1,6 @@
 const cron = require('node-cron');
 const UserModel = require('../models/userModel');
+const db = require('../config/db')
 const logger = require('./logger');
 
 /**
@@ -20,4 +21,27 @@ const startOtpCleanupJob = () => {
     });
 };
 
-module.exports = { startOtpCleanupJob };
+/**
+ * Sweeps the Appointments table every 5 minutes.
+ * If an appointment's end_time has passed and it is still 'Scheduled', 
+ * it forces the status to 'Completed'.
+ */
+const startAppointmentSweepJob = () => {
+    cron.schedule('* * * * *', async () => {
+        try {
+            const query = `
+                UPDATE Appointments 
+                SET status = 'Completed' 
+                WHERE status = 'Scheduled' AND end_time < CURRENT_TIMESTAMP
+            `;
+            const result = await db.query(query);
+            if (result.rowCount > 0) {
+                logger.info(`CRON: Swept ${result.rowCount} overdue appointments to 'Completed'.`);
+            }
+        } catch (error) {
+            logger.error(`CRON ERROR: Failed to sweep past appointments: ${error.message}`);
+        }
+    });
+};
+
+module.exports = { startOtpCleanupJob, startAppointmentSweepJob };

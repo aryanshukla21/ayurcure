@@ -1,10 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { CheckCircle2, MessageSquare, Loader2 } from 'lucide-react';
+import { ShieldCheck, MessageSquare, Loader2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 import DoctorSelectionCard from '../../components/patient/book-appointment/DoctorSelectionCard';
 import AllPractitionersModal from '../../components/patient/book-appointment/AllPractitionersModal';
-import AppointmentSuccessModal from '../../components/patient/book-appointment/AppointmentSuccessModal';
 import TimeSlotSelector from '../../components/patient/book-appointment/TimeSlotSelector';
 
 import { appointmentApi } from '../../api/appointmentApi';
@@ -23,15 +22,13 @@ const BookAppointmentPage = () => {
   const [loading, setLoading] = useState(true);
   const [slotsLoading, setSlotsLoading] = useState(false);
   const [error, setError] = useState(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const [selectedDoctorId, setSelectedDoctorId] = useState(null);
-  const [selectedDate, setSelectedDate] = useState(todayStr); 
+  const [selectedDate, setSelectedDate] = useState(todayStr);
   const [selectedTime, setSelectedTime] = useState('');
   const [reason, setReason] = useState('');
 
   const [isPractitionersModalOpen, setIsPractitionersModalOpen] = useState(false);
-  const [isSuccessModalOpen, setIsSuccessModalOpen] = useState(false);
 
   useEffect(() => {
     const fetchDoctors = async () => {
@@ -40,10 +37,9 @@ const BookAppointmentPage = () => {
         const response = await appointmentApi.getAllPractitioners();
         const fetchedDoctors = response.practitioners || response || [];
         setDoctors(fetchedDoctors);
-        
-        // THE FIX: Added .doctor_id so it actually selects the first doctor
+
         if (fetchedDoctors.length > 0) {
-            setSelectedDoctorId(fetchedDoctors[0].doctor_id || fetchedDoctors[0].id || fetchedDoctors[0]._id);
+          setSelectedDoctorId(fetchedDoctors[0].doctor_id || fetchedDoctors[0].id || fetchedDoctors[0]._id);
         }
       } catch (err) {
         setError("Unable to load practitioners. Please try again later.");
@@ -55,49 +51,52 @@ const BookAppointmentPage = () => {
   }, []);
 
   useEffect(() => {
-      if (!selectedDoctorId || !selectedDate) return;
-      const fetchDynamicSlots = async () => {
-          try {
-              setSlotsLoading(true);
-              setSelectedTime(''); 
-              const response = await appointmentApi.getAvailableSlots(selectedDoctorId, selectedDate);
-              setTimeSlots(response.slots || response || []);
-          } catch (err) {
-              console.error("Failed to load time slots", err);
-              setTimeSlots([]);
-          } finally {
-              setSlotsLoading(false);
-          }
-      };
-      fetchDynamicSlots();
+    if (!selectedDoctorId || !selectedDate) return;
+    const fetchDynamicSlots = async () => {
+      try {
+        setSlotsLoading(true);
+        setSelectedTime('');
+        const response = await appointmentApi.getAvailableSlots(selectedDoctorId, selectedDate);
+        setTimeSlots(response.slots || response || []);
+      } catch (err) {
+        console.error("Failed to load time slots", err);
+        setTimeSlots([]);
+      } finally {
+        setSlotsLoading(false);
+      }
+    };
+    fetchDynamicSlots();
   }, [selectedDoctorId, selectedDate]);
 
-  // THE FIX: Added .doctor_id so it finds the correct doctor object
   const selectedDoctor = doctors.find(doc => (doc.doctor_id || doc.id || doc._id) === selectedDoctorId) || null;
   const baseFee = selectedDoctor?.consultation_fee ? parseFloat(selectedDoctor.consultation_fee) : 50.00;
-  const taxAmount = baseFee > 0 ? (baseFee * 0.18) : 0; 
+  const taxAmount = baseFee > 0 ? (baseFee * 0.18) : 0;
   const totalAmount = (baseFee + taxAmount).toFixed(2);
 
-  const handleConfirmAppointment = async () => {
+  const handleConfirmAppointment = (e) => {
+    e.preventDefault(); // 1. Prevent any accidental page refreshes
     if (!selectedDoctorId || !selectedTime || !reason.trim()) return;
 
-    try {
-      setIsSubmitting(true);
-      const appointmentPayload = {
+    const payload = {
+      bookingData: {
         doctorId: selectedDoctorId,
-        date: selectedDate, 
+        doctorName: selectedDoctor?.name || selectedDoctor?.full_name ? `Dr. ${selectedDoctor?.full_name || selectedDoctor?.name}` : 'Selected Practitioner',
+        date: selectedDate,
         time: selectedTime,
-        reason: reason,
-        amount: parseFloat(totalAmount)
-      };
+        reason: reason
+      },
+      financials: {
+        fee: baseFee.toFixed(2),
+        tax: taxAmount.toFixed(2),
+        total: totalAmount
+      }
+    };
 
-      await appointmentApi.createAppointment(appointmentPayload);
-      setIsSuccessModalOpen(true);
-    } catch (err) {
-      alert("Failed to confirm appointment. Please try again.");
-    } finally {
-      setIsSubmitting(false);
-    }
+    // 2. Fail-safe: Store in sessionStorage in case the router drops the state object
+    sessionStorage.setItem('pendingAppointment', JSON.stringify(payload));
+
+    // 3. Navigate
+    navigate('/patient/consultation/payment', { state: payload });
   };
 
   if (loading) return <div className="flex items-center justify-center min-h-screen bg-[#FDF9EE]"><Loader2 className="w-10 h-10 text-green-700 animate-spin" /></div>;
@@ -106,19 +105,6 @@ const BookAppointmentPage = () => {
   return (
     <div className="bg-[#FDF9EE] min-h-full p-8 md:p-10 font-sans max-w-[1600px] mx-auto">
       <AllPractitionersModal isOpen={isPractitionersModalOpen} onClose={() => setIsPractitionersModalOpen(false)} onSelectDoctor={(id) => { setSelectedDoctorId(id); setIsPractitionersModalOpen(false); }} doctors={doctors} />
-
-      {isSuccessModalOpen && selectedDoctor && (
-        <AppointmentSuccessModal
-          isOpen={isSuccessModalOpen}
-          appointmentDetails={{
-            doctorName: selectedDoctor.name || `Dr. ${selectedDoctor.full_name}`,
-            date: new Date(selectedDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
-            time: selectedTime
-          }}
-          onViewAppointment={() => { setIsSuccessModalOpen(false); navigate('/patient/appointments', { replace: true }); }}
-          onGoToDashboard={() => { setIsSuccessModalOpen(false); navigate('/patient/dashboard', { replace: true }); }}
-        />
-      )}
 
       <div className="mb-10">
         <h1 className="text-4xl md:text-[40px] font-extrabold text-gray-900 mb-3 tracking-tight">Book Appointment</h1>
@@ -134,7 +120,6 @@ const BookAppointmentPage = () => {
             </div>
             <div className="flex overflow-x-auto gap-6 pb-4 snap-x snap-mandatory [&::-webkit-scrollbar]:hidden">
               {doctors.map(doctor => {
-                // THE FIX: Added .doctor_id so the unique keys match!
                 const docId = doctor.doctor_id || doctor.id || doctor._id;
                 return (
                   <div key={docId} className="snap-start shrink-0">
@@ -162,16 +147,16 @@ const BookAppointmentPage = () => {
 
         <div className="lg:col-span-1">
           <div className="bg-white rounded-[32px] p-8 border border-[#EFEBE1] shadow-sm mb-6">
-            
-            <TimeSlotSelector 
-                selectedDate={selectedDate}
-                minDate={todayStr}
-                maxDate={maxDateStr}
-                onDateChange={setSelectedDate}
-                slots={timeSlots}
-                selectedTime={selectedTime}
-                onSelectTime={setSelectedTime}
-                isLoading={slotsLoading}
+
+            <TimeSlotSelector
+              selectedDate={selectedDate}
+              minDate={todayStr}
+              maxDate={maxDateStr}
+              onDateChange={setSelectedDate}
+              slots={timeSlots}
+              selectedTime={selectedTime}
+              onSelectTime={setSelectedTime}
+              isLoading={slotsLoading}
             />
 
             <h3 className="text-[11px] font-bold text-gray-400 uppercase tracking-widest mb-5">Appointment Summary</h3>
@@ -193,16 +178,18 @@ const BookAppointmentPage = () => {
 
             <button
               onClick={handleConfirmAppointment}
-              disabled={isSubmitting || !selectedDoctorId || !selectedTime || !reason.trim()}
-              className={`w-full text-white font-bold py-4 rounded-2xl flex items-center justify-center gap-2 shadow-md transition-colors ${
-                  (isSubmitting || !selectedDoctorId || !selectedTime || !reason.trim()) 
-                  ? 'bg-gray-300 text-gray-500 cursor-not-allowed' 
-                  : 'bg-[#3A6447] hover:bg-[#2C4D36]'
-              }`}
+              disabled={!selectedDoctorId || !selectedTime || !reason.trim()}
+              className={`w-full text-white font-bold py-4 rounded-2xl flex items-center justify-center gap-2 shadow-md transition-colors ${(!selectedDoctorId || !selectedTime || !reason.trim())
+                ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                : 'bg-[#3A6447] hover:bg-[#2C4D36]'
+                }`}
             >
-              {isSubmitting ? <Loader2 size={18} className="animate-spin" /> : <CheckCircle2 size={18} />}
-              {isSubmitting ? 'Processing...' : 'Confirm Appointment'}
+              <ShieldCheck size={18} />
+              Proceed to Payment
             </button>
+            <p className="text-[10px] text-gray-400 text-center mt-4 px-4 leading-relaxed">
+              Secure checkout. You will be redirected to the payment gateway.
+            </p>
           </div>
 
           <div className="bg-[#79563E] rounded-[24px] p-6 relative overflow-hidden text-white shadow-sm">

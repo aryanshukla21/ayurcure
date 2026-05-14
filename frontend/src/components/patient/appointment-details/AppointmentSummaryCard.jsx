@@ -27,17 +27,17 @@ const AppointmentSummaryCard = ({ practitioner, actions, isLoading }) => {
 
   // Parse the exact timestamp from the database
   const aptDate = new Date(safeAct.start_time);
-  
+
   // Image Logic (Ready to catch it if you ever add it to the backend)
   const rawAvatar = safePrac.avatar;
   let avatarUrl = null;
   if (rawAvatar) {
-      if (rawAvatar.startsWith('http') || rawAvatar.startsWith('data:image')) {
-          avatarUrl = rawAvatar;
-      } else {
-          const cleanPath = rawAvatar.startsWith('/') ? rawAvatar : `/${rawAvatar}`;
-          avatarUrl = `http://localhost:5000${cleanPath}`;
-      }
+    if (rawAvatar.startsWith('http') || rawAvatar.startsWith('data:image')) {
+      avatarUrl = rawAvatar;
+    } else {
+      const cleanPath = rawAvatar.startsWith('/') ? rawAvatar : `/${rawAvatar}`;
+      avatarUrl = `http://localhost:5000${cleanPath}`;
+    }
   }
 
   return (
@@ -46,13 +46,13 @@ const AppointmentSummaryCard = ({ practitioner, actions, isLoading }) => {
 
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-8">
         <div className="flex items-center gap-6">
-          
+
           {avatarUrl ? (
-             <img src={avatarUrl} alt="Doctor" className="w-20 h-20 rounded-[24px] object-cover shadow-inner" />
+            <img src={avatarUrl} alt="Doctor" className="w-20 h-20 rounded-[24px] object-cover shadow-inner" />
           ) : (
-             <div className="w-20 h-20 bg-[#EFEBE1] rounded-[24px] flex items-center justify-center text-[#8B6A47] font-bold text-3xl shadow-inner">
-               {docName.replace(/^Dr\.\s*/i, '').charAt(0).toUpperCase()}
-             </div>
+            <div className="w-20 h-20 bg-[#EFEBE1] rounded-[24px] flex items-center justify-center text-[#8B6A47] font-bold text-3xl shadow-inner">
+              {docName.replace(/^Dr\.\s*/i, '').charAt(0).toUpperCase()}
+            </div>
           )}
 
           <div>
@@ -64,8 +64,8 @@ const AppointmentSummaryCard = ({ practitioner, actions, isLoading }) => {
         </div>
 
         <span className={`px-4 py-1.5 rounded-full text-[10px] font-extrabold uppercase tracking-widest border ${safeAct.status === 'Completed' ? 'bg-[#F3E8FF] text-[#9333EA] border-[#e9d5ff]' :
-            safeAct.status === 'Cancelled' ? 'bg-[#FEE2E2] text-[#EF4444] border-[#fecaca]' :
-              'bg-[#E7F3EB] text-[#4A7C59] border-[#cce8d6]'
+          safeAct.status === 'Cancelled' ? 'bg-[#FEE2E2] text-[#EF4444] border-[#fecaca]' :
+            'bg-[#E7F3EB] text-[#4A7C59] border-[#cce8d6]'
           }`}>
           {safeAct.status || 'Scheduled'}
         </span>

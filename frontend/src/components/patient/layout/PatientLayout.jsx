@@ -3,7 +3,7 @@ import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { Search, ShoppingCart, ChevronLeft } from 'lucide-react';
 import PatientSidebar from './PatientSidebar';
 import { useCart } from '../../../context/CartContext';
-import { patientApi } from '../../../api/patientApi'; 
+import { patientApi } from '../../../api/patientApi';
 
 const PatientLayout = () => {
   const location = useLocation();
@@ -11,7 +11,7 @@ const PatientLayout = () => {
 
   const { cartCount } = useCart();
   const [globalSearchQuery, setGlobalSearchQuery] = useState('');
-  
+
   const [profile, setProfile] = useState(null);
   const [isLoadingProfile, setIsLoadingProfile] = useState(true);
 
@@ -35,7 +35,7 @@ const PatientLayout = () => {
       }
     };
     window.addEventListener('avatarUpdated', handleUpdate);
-    
+
     return () => window.removeEventListener('avatarUpdated', handleUpdate);
   }, []);
 
@@ -138,7 +138,8 @@ const PatientLayout = () => {
         </header>
 
         <div className="flex-1 overflow-y-auto custom-scrollbar">
-          <Outlet context={{ globalSearchQuery }} />
+          {/* Passing the global profile down to the child routes! */}
+          <Outlet context={{ globalSearchQuery, globalProfile: profile, isLoadingProfile }} />
         </div>
       </main>
     </div>

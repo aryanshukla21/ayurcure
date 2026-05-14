@@ -71,6 +71,7 @@ import PatientProfilePage from './pages/patient/PatientProfilePage';
 import PatientSettingsPage from './pages/patient/PatientSettingsPage';
 import PatientOrderDetailsPage from './pages/patient/PatientOrderDetailsPage';
 import DoctorRecommendationsPage from './pages/patient/DoctorRecommendationsPage';
+import ConsultationPaymentPage from './pages/patient/ConsultationPaymentPage';
 
 // Pharmacy Pages
 import PharmacyStore from './pages/patient/PharmacyStore';
@@ -164,6 +165,7 @@ function App() {
             <Route path="health-records" element={<PatientHealthReportsPage />} />
             <Route path="profile" element={<PatientProfilePage />} />
             <Route path="settings" element={<PatientSettingsPage />} />
+            <Route path="consultation/payment" element={<ConsultationPaymentPage />} />
 
           </Route>
 

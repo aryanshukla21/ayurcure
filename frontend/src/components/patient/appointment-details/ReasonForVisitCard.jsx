@@ -11,6 +11,11 @@ const ReasonForVisitCard = ({ reason, isLoading }) => {
     );
   }
 
+  // Safely handle if 'reason' is passed as a string OR as the full API response object
+  const displayReason = typeof reason === 'string'
+    ? reason
+    : (reason?.chief_complaint || reason?.pre_consultation_symptoms || 'No reason provided by the patient.');
+
   return (
     <div className="bg-white rounded-[32px] p-8 border border-[#EFEBE1] shadow-sm h-full">
       <div className="flex items-center gap-3 mb-6">
@@ -22,7 +27,7 @@ const ReasonForVisitCard = ({ reason, isLoading }) => {
 
       <div className="bg-gray-50 border border-gray-100 rounded-2xl p-5">
         <p className="text-sm text-gray-700 font-medium italic">
-          "{reason || 'No reason provided by the patient.'}"
+          "{displayReason}"
         </p>
       </div>
     </div>

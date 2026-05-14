@@ -1,5 +1,5 @@
 import React from 'react';
-import { CheckCircle2, Loader2 } from 'lucide-react';
+import { ShieldCheck, Loader2 } from 'lucide-react'; // Changed CheckCircle2 to ShieldCheck for payments
 
 const AppointmentSummaryPanel = ({ fee, tax, onConfirm, isSubmitting, isLoading }) => {
   if (isLoading) {
@@ -48,11 +48,11 @@ const AppointmentSummaryPanel = ({ fee, tax, onConfirm, isSubmitting, isLoading 
         className={`w-full text-white font-bold py-4 rounded-2xl flex items-center justify-center gap-2 shadow-md transition-colors ${isSubmitting ? 'bg-gray-400 cursor-not-allowed' : 'bg-[#3A6447] hover:bg-[#2C4D36]'
           }`}
       >
-        {isSubmitting ? <Loader2 size={18} className="animate-spin" /> : <CheckCircle2 size={18} />}
-        {isSubmitting ? 'Processing...' : 'Confirm Appointment'}
+        {isSubmitting ? <Loader2 size={18} className="animate-spin" /> : <ShieldCheck size={18} />}
+        {isSubmitting ? 'Processing...' : 'Proceed to Payment'}
       </button>
       <p className="text-[10px] text-gray-400 text-center mt-4 px-4 leading-relaxed">
-        By confirming, you agree to our cancellation policy.
+        Secure checkout. You will be redirected to the payment gateway.
       </p>
     </>
   );

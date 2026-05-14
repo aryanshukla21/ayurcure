@@ -32,18 +32,18 @@ const AppointmentsTable = ({ appointments = [], activeTab }) => {
     };
 
     return (
-        <div className="bg-[#f8efdc] rounded-3xl shadow-sm border border-gray-100 overflow-hidden flex flex-col">
+        <div className="bg-[#f8efdc] rounded-[32px] shadow-sm border border-[#EFEBE1] overflow-hidden flex flex-col">
             <div className="overflow-x-auto">
                 <table className="w-full text-left border-collapse">
                     <thead>
-                        <tr className=" text-xs uppercase tracking-widest text-amber-700 border-b border-gray-100">
-                            <th className="px-8 py-3 font-bold">Patient Name</th>
-                            <th className="px-8 py-3 font-bold">Date</th>
-                            <th className="px-8 py-3 font-bold">Time</th>
-                            <th className="px-8 py-3 font-bold">Status</th>
+                        <tr className="text-xs uppercase tracking-widest text-amber-700 border-b border-[#EFEBE1]">
+                            <th className="px-8 py-4 font-bold">Patient Name</th>
+                            <th className="px-8 py-4 font-bold">Date</th>
+                            <th className="px-8 py-4 font-bold">Time</th>
+                            <th className="px-8 py-4 font-bold">Status</th>
                         </tr>
                     </thead>
-                    <tbody className="divide-y divide-gray-50">
+                    <tbody className="divide-y divide-gray-50/50">
                         {paginatedAppointments.length === 0 ? (
                             <tr>
                                 <td colSpan="4" className="p-16 text-center">
@@ -56,12 +56,14 @@ const AppointmentsTable = ({ appointments = [], activeTab }) => {
                                 const name = apt?.patient_name || 'Unknown Patient';
                                 const initials = typeof name === 'string' ? name.substring(0, 2).toUpperCase() : 'P';
 
+                                // THE FIX: Cleanly parsing the native Date
                                 const dateStr = apt?.appointment_date
                                     ? new Date(apt.appointment_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
                                     : 'N/A';
 
+                                // THE FIX: Cleanly parsing the native Time (Removed the 1970 string hack)
                                 const timeStr = apt?.appointment_time
-                                    ? new Date(`1970-01-01T${apt.appointment_time}`).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                                    ? new Date(apt.appointment_time).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })
                                     : 'N/A';
 
                                 const statusStr = apt?.status || 'Scheduled';
@@ -70,24 +72,24 @@ const AppointmentsTable = ({ appointments = [], activeTab }) => {
                                     <tr
                                         key={apt?.id || index}
                                         onClick={() => navigate(`/doctor/appointments/${apt?.id}`)}
-                                        className="hover:bg-gray-50 transition-colors group cursor-pointer"
+                                        className="hover:bg-white transition-colors group cursor-pointer"
                                     >
-                                        <td className="px-8 py-2">
+                                        <td className="px-8 py-4">
                                             <div className="flex items-center gap-4">
-                                                <div className="w-12 h-12 rounded-full bg-[#FDF9EE] flex items-center justify-center font-bold text-[#4A7C59] text-lg group-hover:bg-white transition-colors border border-transparent group-hover:border-gray-200">
+                                                <div className="w-10 h-10 rounded-full bg-white flex items-center justify-center font-bold text-[#4A7C59] text-sm group-hover:shadow-sm transition-all border border-[#EFEBE1]">
                                                     {initials}
                                                 </div>
-                                                <span className="font-bold text-gray-900 text-xs">{name}</span>
+                                                <span className="font-bold text-gray-900 text-sm">{name}</span>
                                             </div>
                                         </td>
-                                        <td className="px-8 py-2">
-                                            <span className="text-gray-600 font-semibold text-xs">{dateStr}</span>
+                                        <td className="px-8 py-4">
+                                            <span className="text-gray-600 font-semibold text-sm">{dateStr}</span>
                                         </td>
-                                        <td className="px-8 py-2">
-                                            <span className="font-bold text-gray-800 text-xs">{timeStr}</span>
+                                        <td className="px-8 py-4">
+                                            <span className="font-bold text-gray-800 text-sm">{timeStr}</span>
                                         </td>
-                                        <td className="px-8 py-2">
-                                            <span className={`px-4 py-2 rounded-full text-xs font-bold tracking-wide ${getStatusStyle(statusStr)}`}>
+                                        <td className="px-8 py-4">
+                                            <span className={`px-4 py-1.5 rounded-full text-xs font-bold tracking-wide ${getStatusStyle(statusStr)}`}>
                                                 {statusStr}
                                             </span>
                                         </td>
@@ -101,7 +103,7 @@ const AppointmentsTable = ({ appointments = [], activeTab }) => {
 
             {/* Pagination Controls */}
             {totalItems > 0 && (
-                <div className="px-8 py-5 border-t border-gray-100 flex flex-col sm:flex-row items-center justify-between gap-4">
+                <div className="px-8 py-5 bg-white border-t border-[#EFEBE1] flex flex-col sm:flex-row items-center justify-between gap-4">
                     <p className="text-sm font-medium text-gray-500">
                         Showing <span className="font-bold text-gray-900">{startIndex + 1}</span> to <span className="font-bold text-gray-900">{endIndex}</span> of <span className="font-bold text-gray-900">{totalItems}</span> appointments
                     </p>
@@ -110,7 +112,7 @@ const AppointmentsTable = ({ appointments = [], activeTab }) => {
                         <button
                             onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
                             disabled={currentPage === 1}
-                            className="p-2 rounded-xl border border-gray-200 text-gray-600 hover:bg-gray-50 hover:text-gray-900 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                            className="p-2 rounded-xl border border-[#EFEBE1] text-gray-600 hover:bg-gray-50 hover:text-gray-900 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                         >
                             <ChevronLeft size={18} />
                         </button>
@@ -141,7 +143,7 @@ const AppointmentsTable = ({ appointments = [], activeTab }) => {
                         <button
                             onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
                             disabled={currentPage === totalPages}
-                            className="p-2 rounded-xl border border-gray-200 text-gray-600 hover:bg-gray-50 hover:text-gray-900 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                            className="p-2 rounded-xl border border-[#EFEBE1] text-gray-600 hover:bg-gray-50 hover:text-gray-900 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                         >
                             <ChevronRight size={18} />
                         </button>

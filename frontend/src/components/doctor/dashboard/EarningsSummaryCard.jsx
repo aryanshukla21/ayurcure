@@ -2,24 +2,30 @@ import React from 'react';
 
 const EarningsSummaryCard = ({ earnings }) => {
     return (
-        <div className="bg-white rounded-3xl p-5 shadow-sm border border-gray-100 h-4/5 flex flex-col">
-            <div className="mb-10">
-                <h3 className="text-lg font-extrabold text-gray-900">Earnings Summary</h3>
+        // THE FIX: Changed h-4/5 to h-full, and increased padding to p-8 for better breathing room
+        <div className="bg-white rounded-[32px] p-8 shadow-sm border border-[#EFEBE1] h-full flex flex-col justify-between">
+
+            <div>
+                <div className="mb-8">
+                    <h3 className="text-lg font-extrabold text-gray-900 tracking-tight">Earnings Summary</h3>
+                </div>
+
+                <div className="mb-8">
+                    <p className="text-[11px] text-gray-500 font-extrabold tracking-widest uppercase mb-2">Total Earnings</p>
+                    <h2 className="text-4xl font-black text-gray-900 tracking-tight">
+                        ₹{Number(earnings?.total || 0).toLocaleString()}
+                    </h2>
+                </div>
             </div>
 
-            <div className="mb-2 flex-1">
-                <p className="text-sm text-gray-500 font-bold tracking-widest uppercase mb-4">Total Earnings</p>
-                <h2 className="text-3xl font-black text-gray-900 mb-2 tracking-tight">
-                    ₹{Number(earnings?.total || 0).toLocaleString()}
-                </h2>
-            </div>
-
-            <div className="pt-2 border-t border-gray-100">
-                <p className="text-sm text-gray-500 font-bold tracking-widest uppercase mb-4">Monthly Earnings</p>
-                <h2 className="text-3xl font-extrabold text-[#4A7C59]">
+            {/* THE FIX: Pushed to the bottom using Flexbox naturally */}
+            <div className="pt-6 border-t border-[#EFEBE1]">
+                <p className="text-[11px] text-gray-500 font-extrabold tracking-widest uppercase mb-2">Monthly Earnings</p>
+                <h2 className="text-3xl font-extrabold text-[#3A6447] tracking-tight">
                     ₹{Number(earnings?.monthly || 0).toLocaleString()}
                 </h2>
             </div>
+
         </div>
     );
 };

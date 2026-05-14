@@ -322,47 +322,55 @@ exports.selectPractitioner = async (req, res) => {
     }
 };
 
-// backend/src/controllers/appointmentController.js
-// ... inside exports.getAvailableSlots
-
 exports.getAvailableSlots = async (req, res) => {
     try {
         const { docId } = req.params;
-        const { date } = req.query; // Expected format: YYYY-MM-DD
+        const { date } = req.query;
 
         if (!date) return res.status(400).json({ error: 'Date query parameter is required' });
 
-        // 1. Get booked appointments for that date
         const bookedTimes = await AppointmentModel.getBookedAppointments(docId, date);
-
-        // Convert booked times to simple "HH:MM" strings for easier comparison
         const bookedStrings = bookedTimes.map(t => {
             const d = new Date(t);
             return d.toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit' });
         });
 
-        // 2. Generate slots (e.g., 9:00 AM to 5:00 PM)
+        // --- NEW TIME VALIDATION LOGIC ---
+        const now = new Date();
+        // Construct today's date string safely for local timezone comparison
+        const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+        const isToday = (date === todayStr);
+        const currentHour = now.getHours();
+        const currentMinute = now.getMinutes();
+
         const generateSlots = (startHour, endHour) => {
             const slots = [];
             for (let hour = startHour; hour < endHour; hour++) {
-                // Formatting hour to "HH:00" and "HH:30"
                 const hStr = hour.toString().padStart(2, '0');
-                slots.push({ time: `${hStr}:00`, isBooked: bookedStrings.includes(`${hStr}:00`) });
-                slots.push({ time: `${hStr}:30`, isBooked: bookedStrings.includes(`${hStr}:30`) });
+
+                // If the user selects today, gray out slots that have already passed
+                const isPast00 = isToday && ((hour < currentHour) || (hour === currentHour && currentMinute >= 0));
+                const isPast30 = isToday && ((hour < currentHour) || (hour === currentHour && currentMinute >= 30));
+
+                slots.push({
+                    time: `${hStr}:00`,
+                    isBooked: bookedStrings.includes(`${hStr}:00`) || isPast00
+                });
+                slots.push({
+                    time: `${hStr}:30`,
+                    isBooked: bookedStrings.includes(`${hStr}:30`) || isPast30
+                });
             }
             return slots;
         };
 
-        // Let's assume standard working hours 09:00 to 17:00 (5 PM)
-        // In a real scenario, you'd fetch the doctor's specific working hours from DoctorProfiles
         const dailySlots = generateSlots(9, 17);
 
-        // Format for frontend (e.g., "09:00 AM")
         const formattedSlots = dailySlots.map(slot => {
             const [hours, minutes] = slot.time.split(':');
             let h = parseInt(hours, 10);
             const ampm = h >= 12 ? 'PM' : 'AM';
-            h = h % 12 || 12; // Convert 0 or 12 to 12
+            h = h % 12 || 12;
             return {
                 timeStr: `${h.toString().padStart(2, '0')}:${minutes} ${ampm}`,
                 rawTime: slot.time,

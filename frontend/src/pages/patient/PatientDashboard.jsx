@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useOutletContext } from 'react-router-dom'; // 🔥 IMPORT ADDED
 import { patientApi } from '../../api/patientApi';
 import PatientProfileSummary from '../../components/patient/dashboard/PatientProfileSummary';
 import UpcomingAppointmentCard from '../../components/patient/dashboard/UpcomingAppointmentCard';
@@ -8,56 +9,57 @@ import MedicalHistory from '../../components/patient/dashboard/MedicalHistory';
 import QuickMetrics from '../../components/patient/dashboard/QuickMetrics';
 
 const PatientDashboard = () => {
-  // Granular Data States
-  const [profile, setProfile] = useState(null);
-  const [location, setLocation] = useState(null); // NEW: State for location
-  const [upcoming, setUpcoming] = useState(null);
-  const [weightData, setWeightData] = useState(null);
-  const [activity, setActivity] = useState(null);
-  const [history, setHistory] = useState(null);
-  const [metrics, setMetrics] = useState(null);
+  // Grab the profile from the Layout to prevent a duplicate DB call!
+  const { globalProfile, isLoadingProfile } = useOutletContext();
 
-  // Independent fetchers inside useEffect
+  const [location, setLocation] = useState(undefined);
+  const [upcoming, setUpcoming] = useState(undefined);
+  const [weightData, setWeightData] = useState(undefined);
+  const [activity, setActivity] = useState(undefined);
+  const [history, setHistory] = useState(undefined);
+  const [metrics, setMetrics] = useState(undefined);
+
   useEffect(() => {
-    patientApi.getDashPatientDetails()
-      .then(data => setProfile(data))
-      .catch(err => console.error("Profile fetch failed", err));
+    const fetchDashboardData = async () => {
+      // Batch 1 - Critical Data 
+      await Promise.all([
+        patientApi.getProfileContact()
+          .then(data => {
+            if (data && data.address) {
+              const parts = data.address.split(',');
+              setLocation(parts.length > 1 ? parts[1].trim() : data.address);
+            } else {
+              setLocation(null);
+            }
+          })
+          .catch(err => { console.error(err); setLocation(null); }),
 
-    // NEW: Fetch contact info to extract the city for the dashboard
-    patientApi.getProfileContact()
-      .then(data => {
-        if (data && data.address) {
-          // The address is saved as "Street, City, State - Pincode"
-          // We split by comma and grab the second item (index 1) which is the City
-          const parts = data.address.split(',');
-          if (parts.length > 1) {
-            setLocation(parts[1].trim());
-          } else {
-            setLocation(data.address);
-          }
-        }
-      })
-      .catch(err => console.error("Contact fetch failed", err));
+        patientApi.getDashUpcomingSession()
+          .then(data => setUpcoming(data || null))
+          .catch(err => { console.error(err); setUpcoming(null); })
+      ]);
 
-    patientApi.getDashUpcomingSession()
-      .then(data => setUpcoming(data))
-      .catch(err => console.error("Upcoming fetch failed", err));
+      // Batch 2 - Secondary Data (Charts & Metrics)
+      await Promise.all([
+        patientApi.getDashWeightTracker()
+          .then(data => setWeightData(data || []))
+          .catch(err => { console.error(err); setWeightData([]); }),
 
-    patientApi.getDashWeightTracker()
-      .then(data => setWeightData(data))
-      .catch(err => console.error("Weight fetch failed", err));
+        patientApi.getDashWellnessActivity()
+          .then(data => setActivity(data || []))
+          .catch(err => { console.error(err); setActivity([]); }),
 
-    patientApi.getDashWellnessActivity()
-      .then(data => setActivity(data))
-      .catch(err => console.error("Activity fetch failed", err));
+        patientApi.getDashMedicalHistory()
+          .then(data => setHistory(data || {}))
+          .catch(err => { console.error(err); setHistory({}); }),
 
-    patientApi.getDashMedicalHistory()
-      .then(data => setHistory(data))
-      .catch(err => console.error("History fetch failed", err));
+        patientApi.getDashQuickMetrics()
+          .then(data => setMetrics(data || []))
+          .catch(err => { console.error(err); setMetrics([]); })
+      ]);
+    };
 
-    patientApi.getDashQuickMetrics()
-      .then(data => setMetrics(data))
-      .catch(err => console.error("Metrics fetch failed", err));
+    fetchDashboardData();
   }, []);
 
   return (
@@ -65,28 +67,44 @@ const PatientDashboard = () => {
       {/* Top Row: Profile & Appointment */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-10">
         <div className="lg:col-span-2">
-          {/* Passed the extracted location down as a prop */}
-          <PatientProfileSummary profile={profile || {}} location={location} isLoading={!profile} />
+          {/* Using globalProfile and isLoadingProfile from Outlet context */}
+          <PatientProfileSummary
+            profile={globalProfile || {}}
+            location={location}
+            isLoading={isLoadingProfile}
+          />
         </div>
         <div className="lg:col-span-1">
-          <UpcomingAppointmentCard appointment={upcoming} isLoading={upcoming === null} />
+          <UpcomingAppointmentCard
+            appointment={upcoming}
+            isLoading={upcoming === undefined}
+          />
         </div>
       </div>
 
       {/* Middle Row: Charts */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-10">
-        <WeightTracker 
-            weightData={weightData || []} 
-            profileWeight={profile?.weight_kg} 
-            isLoading={!weightData && !profile} 
+        <WeightTracker
+          weightData={weightData || []}
+          profileWeight={globalProfile?.weight_kg}
+          isLoading={weightData === undefined || isLoadingProfile}
         />
-        <WellnessActivity activityData={activity || []} isLoading={!activity} />
+        <WellnessActivity
+          activityData={activity || []}
+          isLoading={activity === undefined}
+        />
       </div>
 
       {/* Bottom Row: Medical History & Metrics */}
       <div className="flex flex-col gap-8 pb-2">
-        <MedicalHistory history={history || {}} isLoading={!history} />
-        <QuickMetrics metrics={metrics || []} isLoading={!metrics} />
+        <MedicalHistory
+          history={history || {}}
+          isLoading={history === undefined}
+        />
+        <QuickMetrics
+          metrics={metrics || []}
+          isLoading={metrics === undefined}
+        />
       </div>
     </div>
   );

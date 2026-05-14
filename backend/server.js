@@ -11,7 +11,7 @@ const cookieParser = require('cookie-parser');
 // Import routes and error handler
 const indexRoutes = require('./src/routes/index');
 const errorHandler = require('./src/middlewares/errorHandler');
-const { startOtpCleanupJob } = require('./src/utils/cronJobs');
+const { startOtpCleanupJob, startAppointmentSweepJob } = require('./src/utils/cronJobs');
 
 const app = express();
 
@@ -44,23 +44,23 @@ if (process.env.NODE_ENV === 'production') {
 // ==========================================
 
 const apiLimiter = rateLimit({
-    windowMs: 15 * 60 * 1000, 
-    max: 10000, 
+    windowMs: 15 * 60 * 1000,
+    max: 10000,
     standardHeaders: true,
     legacyHeaders: false,
     message: { error: 'Too many requests from this IP, please try again after 15 minutes.' }
 });
 
 const authLimiter = rateLimit({
-    windowMs: 60 * 60 * 1000, 
-    max: 15, 
+    windowMs: 60 * 60 * 1000,
+    max: 15,
     standardHeaders: true,
     legacyHeaders: false,
     message: { error: 'Too many authentication attempts, please try again later.' }
 });
 
-app.use('/api', apiLimiter); 
-app.use('/api/auth', authLimiter); 
+app.use('/api', apiLimiter);
+app.use('/api/auth', authLimiter);
 
 // ==========================================
 // 3. API ROUTES & STATIC FILES
@@ -88,6 +88,13 @@ async function startServer() {
             console.log('✅ Background Jobs Started Successfully');
         } else {
             console.warn('⚠️ startOtpCleanupJob is not a valid function. Check cronJobs.js export.');
+        }
+
+        if (typeof startAppointmentSweepJob === 'function') {
+            startAppointmentSweepJob();
+            console.log('✅ Appointment Sweep Job Started Successfully');
+        } else {
+            console.warn('⚠️ startAppointmentSweepJob is not a valid function. Check cronJobs.js export.');
         }
 
         const PORT = process.env.PORT || 5000;

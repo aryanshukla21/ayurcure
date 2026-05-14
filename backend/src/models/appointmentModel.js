@@ -153,7 +153,7 @@ class AppointmentModel {
             WHERE id = $1 AND patient_id = $2;
         `;
         const { rows } = await db.query(query, [appointmentId, patientId]);
-        return rows[0];
+        return rows[0] || { chief_complaint: null, pre_consultation_symptoms: null };
     }
 
     static async getPractitionerInfo(appointmentId, patientId) {
@@ -220,7 +220,6 @@ class AppointmentModel {
         }
 
         // 2. Safely insert the new appointment directly!
-        // We calculate end_time automatically using Postgres interval '30 minutes'
         const insertQuery = `
             INSERT INTO Appointments (patient_id, doctor_id, start_time, end_time, status, mode, chief_complaint)
             VALUES ($1, $2, $3::timestamp, $3::timestamp + interval '30 minutes', 'Scheduled', 'Video', $4)
