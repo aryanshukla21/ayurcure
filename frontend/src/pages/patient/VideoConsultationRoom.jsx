@@ -4,6 +4,8 @@ import AgoraRTC from 'agora-rtc-sdk-ng';
 import { Mic, MicOff, Video, VideoOff, PhoneOff, Loader2 } from 'lucide-react';
 import { consultationApi } from '../../api/consultationApi';
 
+const CONSULTATION_ACCESS_EXPIRY_MS = 30 * 60 * 1000;
+
 // ---------------------------------------------------------
 // 1. Dedicated Remote Player Component (Fixes Race Conditions)
 // ---------------------------------------------------------
@@ -75,7 +77,7 @@ const VideoConsultationRoom = () => {
         const isStoredAccessValid =
             storedAccess &&
             String(storedAccess.appointmentId) === String(appointmentId) &&
-            Date.now() - Number(storedAccess.issuedAt || 0) < 30 * 60 * 1000;
+            Date.now() - Number(storedAccess.issuedAt || 0) < CONSULTATION_ACCESS_EXPIRY_MS;
 
         if (!isFromSecureFlow && !isStoredAccessValid) {
             navigate('/patient/appointments', { replace: true });

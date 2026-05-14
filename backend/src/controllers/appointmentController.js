@@ -3,6 +3,7 @@ const AppointmentModel = require('../models/appointmentModel');
 const logger = require('../utils/logger');
 const path = require('path');
 const fs = require('fs');
+const { isValidResourceId } = require('../utils/idValidation');
 
 // ==========================================
 // UTILITY HELPERS
@@ -433,7 +434,7 @@ exports.getPrakritiAnalysis = async (req, res) => {
 exports.cancelAppointment = async (req, res) => {
     try {
         const appointmentId = String(req.params.id || '').trim();
-        if (!/^[a-zA-Z0-9-]{8,}$/.test(appointmentId)) {
+        if (!isValidResourceId(appointmentId)) {
             return res.status(400).json({ error: 'Invalid appointment id' });
         }
 

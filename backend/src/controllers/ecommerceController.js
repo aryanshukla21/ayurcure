@@ -5,6 +5,7 @@ const fs = require('fs');
 const path = require('path');
 const { generateInvoicePdf } = require('../utils/generatePdf');
 const paymentService = require('../services/paymentService');
+const { isValidResourceId } = require('../utils/idValidation');
 
 // ==========================================
 // UTILITY HELPERS
@@ -508,7 +509,7 @@ exports.verifyPayment = async (req, res) => {
         const { razorpay_payment_id, razorpay_order_id, razorpay_signature, order_id } = req.body;
 
         const parsedOrderId = String(order_id || '').trim();
-        if (!/^[a-zA-Z0-9-]{8,}$/.test(parsedOrderId)) {
+        if (!isValidResourceId(parsedOrderId)) {
             return res.status(400).json({ error: 'Invalid order id received.' });
         }
 
