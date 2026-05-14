@@ -9,22 +9,27 @@ const { OAuth2Client } = require('google-auth-library');
 const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
 // ==========================================
-// THE CACHES
+// IN-MEMORY CACHES
 // ==========================================
 const tempOtpCache = new Map(); // Stores generated Email OTPs
-const verifiedPhonesCache = new Map(); // Stores successful Twilio Phone verifications (Prevents 404 Double-Dip)
+const verifiedPhonesCache = new Map(); // Stores successful Phone verifications
 
-// UPDATED: Now checks the role. Admins get 10 years, everyone else gets 7 days.
+/**
+ * Issues a secure, HttpOnly JWT cookie.
+ * @param {Object} res - Express response object
+ * @param {string} token - JWT token
+ * @param {string} role - User role (determines session duration)
+ */
 const setTokenCookie = (res, token, role) => {
-    const maxAgeMs = role === 'admin' 
+    const maxAgeMs = role === 'admin'
         ? 10 * 365 * 24 * 60 * 60 * 1000 // 10 Years for Admin
         : 7 * 24 * 60 * 60 * 1000;       // 7 Days for Patient/Doctor
 
     res.cookie('token', token, {
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',
-        sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
-        maxAge: maxAgeMs 
+        sameSite: 'strict',
+        maxAge: maxAgeMs
     });
 };
 
@@ -32,7 +37,6 @@ const setTokenCookie = (res, token, role) => {
 // 1. LOCAL AUTHENTICATION & REGISTRATION
 // ==========================================
 
-// STEP 1: Send OTPs but DO NOT create the user in the database yet
 exports.sendSignupOtps = async (req, res) => {
     try {
         let { email, phone } = req.body;
@@ -66,25 +70,21 @@ exports.sendSignupOtps = async (req, res) => {
     }
 };
 
-// STEP 2: Pre-Registration & Post-Registration OTP Verification
 exports.verifyOtp = async (req, res) => {
     try {
         let { email, phone, otp } = req.body;
 
         if (!otp) return res.status(400).json({ error: 'OTP is required.' });
 
-        // Email Verification Logic
         if (email) {
             email = email.toLowerCase().trim();
 
-            // Check if user is already in DB (Forgot Password flow)
             const user = await UserModel.getUserByEmail(email);
             if (user) {
                 req.body.token = otp;
                 return await exports.verifyEmailToken(req, res);
             }
 
-            // Otherwise, it's the Signup Flow
             if (!tempOtpCache.has(email)) {
                 return res.status(400).json({ error: 'OTP expired or server restarted. Please click resend.' });
             }
@@ -99,12 +99,11 @@ exports.verifyOtp = async (req, res) => {
             return res.status(200).json({ message: 'Email OTP verified successfully.' });
         }
 
-        // Phone Verification Logic
         if (phone && !email) {
             const isApproved = await notificationService.verifyPhoneOTP(phone, otp);
             if (!isApproved) return res.status(400).json({ error: 'Invalid or expired phone OTP.' });
 
-            // TWILIO FIX: Cache the approval so Step 3 doesn't hit Twilio again
+            // Cache the approval to prevent redundant third-party API calls during final registration
             verifiedPhonesCache.set(phone, { verified: true, expiresAt: Date.now() + 15 * 60000 });
 
             return res.status(200).json({ message: 'Phone OTP verified successfully.' });
@@ -117,13 +116,12 @@ exports.verifyOtp = async (req, res) => {
     }
 };
 
-// STEP 3: Verify both OTPs and Permanently Store User Details
 exports.verifyAndRegister = async (req, res) => {
     try {
         let { role, full_name, email, phone, password, emailOtp, phoneOtp } = req.body;
         email = email.toLowerCase().trim();
 
-        // 1. Verify Phone (TWILIO FIX: Check cache first to prevent 404 error)
+        // 1. Verify Phone (Check cache first)
         let isPhoneValid = false;
         const cachedPhoneData = verifiedPhonesCache.get(phone);
 
@@ -133,7 +131,7 @@ exports.verifyAndRegister = async (req, res) => {
             try {
                 isPhoneValid = await notificationService.verifyPhoneOTP(phone, phoneOtp);
             } catch (err) {
-                logger.error(`Twilio fallback error: ${err.message}`);
+                logger.error(`Phone verification fallback error: ${err.message}`);
             }
         }
 
@@ -145,7 +143,7 @@ exports.verifyAndRegister = async (req, res) => {
             return res.status(401).json({ error: 'Invalid or expired Email OTP.' });
         }
 
-        // Remove from cache after successful final registration
+        // Clean up caches upon successful validation
         tempOtpCache.delete(email);
         verifiedPhonesCache.delete(phone);
 
@@ -168,7 +166,7 @@ exports.verifyAndRegister = async (req, res) => {
         }
 
         const token = authService.generateToken(newUser);
-        setTokenCookie(res, token, newUser.role); // Passed role here
+        setTokenCookie(res, token, newUser.role);
 
         res.status(201).json({ message: 'Registration complete.', user: { id: newUser.id, role: newUser.role } });
     } catch (error) {
@@ -200,7 +198,7 @@ exports.login = async (req, res) => {
         }
 
         const token = authService.generateToken(user);
-        setTokenCookie(res, token, user.role); // Passed role here
+        setTokenCookie(res, token, user.role);
 
         res.status(200).json({ user: { id: user.id, role: user.role } });
     } catch (error) {
@@ -210,7 +208,7 @@ exports.login = async (req, res) => {
 };
 
 // ==========================================
-// 2. EMAIL / PHONE VERIFICATION (LEGACY / MANUAL)
+// 2. EMAIL / PHONE VERIFICATION
 // ==========================================
 
 exports.requestEmailVerification = async (req, res) => {
@@ -251,7 +249,7 @@ exports.verifyEmailToken = async (req, res) => {
         await UserModel.updatePasswordAndClearOtp(user.id, user.password_hash);
 
         const jwtToken = authService.generateToken(user);
-        setTokenCookie(res, jwtToken, user.role); // Passed role here
+        setTokenCookie(res, jwtToken, user.role);
 
         res.status(200).json({ message: 'Email verified successfully.' });
     } catch (error) {
@@ -367,7 +365,7 @@ exports.ssoLogin = async (req, res) => {
         }
 
         const token = authService.generateToken(user);
-        setTokenCookie(res, token, user.role); // Passed role here
+        setTokenCookie(res, token, user.role);
 
         res.status(200).json({
             user: { id: user.id, role: user.role, full_name: user.full_name },
@@ -475,13 +473,15 @@ exports.updateFcmToken = async (req, res) => {
 // 4. SESSION MANAGEMENT
 // ==========================================
 
-exports.checkAuth = (req, res) => { res.status(200).json({ user: req.user }); };
+exports.checkAuth = (req, res) => {
+    res.status(200).json({ user: req.user });
+};
 
 exports.logout = (req, res) => {
     res.clearCookie('token', {
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',
-        sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax'
+        sameSite: 'strict'
     });
     res.status(200).json({ message: 'Logged out successfully.' });
 };

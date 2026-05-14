@@ -1,31 +1,39 @@
 import React from 'react';
-import { Navigate, Outlet } from 'react-router-dom';
+import { Navigate, Outlet, useLocation } from 'react-router-dom';
 
+/**
+ * Guard component for role-based frontend routing.
+ * Note: True authorization is enforced via HttpOnly cookies on the backend.
+ * This component simply handles UI redirection based on stored user state.
+ */
 const ProtectedRoute = ({ allowedRoles }) => {
-    // TODO: Replace this with your actual global auth state hook (e.g., useSelector, useContext)
-    // Example: const { isAuthenticated, userRole } = useAuth();
+    const location = useLocation();
 
-    // Mock state for demonstration:
-    const isAuthenticated = localStorage.getItem('token') !== null;
-    const userRole = localStorage.getItem('role'); // e.g., 'admin', 'doctor', 'patient'
+    // Retrieve UI state (Ideally replaced by a global Context populated via /api/auth/me)
+    const userRole = localStorage.getItem('role');
 
-    // 1. If the user is not logged in, redirect to the login page
-    if (!isAuthenticated) {
-        return <Navigate to="/login" replace />;
+    // 1. Not logged in (UI state missing)
+    if (!userRole) {
+        return <Navigate to="/login" state={{ from: location }} replace />;
     }
 
-    // 2. If the user is logged in but doesn't have the required role, redirect them
+    // 2. Role mismatch handling
     if (allowedRoles && !allowedRoles.includes(userRole)) {
-        // Redirect them to their respective dashboard based on their actual role
-        if (userRole === 'admin') return <Navigate to="/admin/dashboard" replace />;
-        if (userRole === 'doctor') return <Navigate to="/doctor/dashboard" replace />;
-        if (userRole === 'patient') return <Navigate to="/patient/dashboard" replace />;
-
-        // Fallback if role is completely unknown
-        return <Navigate to="/" replace />;
+        switch (userRole) {
+            case 'admin':
+                return <Navigate to="/admin/dashboard" replace />;
+            case 'doctor':
+                return <Navigate to="/doctor/dashboard" replace />;
+            case 'patient':
+                return <Navigate to="/patient/dashboard" replace />;
+            default:
+                // Fallback for corrupted local storage state
+                localStorage.removeItem('role');
+                return <Navigate to="/login" replace />;
+        }
     }
 
-    // 3. If authenticated and authorized, render the child routes (Outlet)
+    // 3. Authorized
     return <Outlet />;
 };
 

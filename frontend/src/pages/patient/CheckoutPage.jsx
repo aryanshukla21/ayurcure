@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Leaf, MapPin, Loader2 } from 'lucide-react';
+import { useNavigate, useLocation, Navigate } from 'react-router-dom';
+import { Leaf, Loader2 } from 'lucide-react';
 import { ecommerceApi } from '../../api/ecommerceApi';
 import { patientApi } from '../../api/patientApi';
 import { useCart } from '../../context/CartContext';
@@ -9,9 +9,11 @@ import BillingForm from '../../components/patient/checkout/BillingForm';
 import PaymentMethods from '../../components/patient/checkout/PaymentMethods';
 import CheckoutSummary from '../../components/patient/checkout/CheckoutSummary';
 
+/**
+ * Dynamically loads the Razorpay checkout script.
+ */
 const loadRazorpayScript = () => {
     return new Promise((resolve) => {
-        // Check if already loaded to avoid DOM clutter
         if (window.Razorpay) {
             return resolve(true);
         }
@@ -25,6 +27,7 @@ const loadRazorpayScript = () => {
 
 const CheckoutPage = () => {
     const navigate = useNavigate();
+    const location = useLocation();
     const { cartItems, cartTotal, clearCart } = useCart();
 
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -37,6 +40,16 @@ const CheckoutPage = () => {
 
     const tax = cartItems.length > 0 ? 5.0 : 0;
     const total = cartTotal + tax;
+
+    // Route Guard: Prevent direct URL access bypassing the standard cart flow
+    if (!location.state || !location.state.fromCart) {
+        return <Navigate to="/patient/cart" replace />;
+    }
+
+    // Route Guard: Prevent checkout processes with an empty cart
+    if (cartItems.length === 0) {
+        return <Navigate to="/patient/pharmacy-store" replace />;
+    }
 
     useEffect(() => {
         const fetchUserProfile = async () => {
@@ -71,17 +84,10 @@ const CheckoutPage = () => {
     };
 
     const handlePayNow = async () => {
-        // Cart validation
-        if (cartItems.length === 0) {
-            alert("Your cart is empty. Please add items to proceed.");
-            return;
-        }
-
-        // Mandatory Address Validation
         const { address, city, postalCode } = formData;
         if (!address?.trim() || !city?.trim() || !postalCode?.trim()) {
             alert("Please fill in all mandatory address fields (Street Address, City, and Postal Code) before paying.");
-            return; // Stops the function, prevents payment
+            return;
         }
 
         setIsSubmitting(true);
@@ -94,15 +100,13 @@ const CheckoutPage = () => {
         };
 
         try {
-            // 1. If COD, place order directly and finish
             if (selectedPayment === 'cod') {
                 await ecommerceApi.createOrder(orderPayload);
                 clearCart();
-                navigate('/patient/pharmacy-orders', { state: { success: true } });
+                navigate('/patient/pharmacy-orders', { state: { success: true }, replace: true });
                 return;
             }
 
-            // 2. For Online Payments: Load Razorpay SDK
             const res = await loadRazorpayScript();
             if (!res) {
                 alert('Razorpay SDK failed to load. Are you online?');
@@ -110,19 +114,16 @@ const CheckoutPage = () => {
                 return;
             }
 
-            // 3. Create initial pending order on backend
             const orderData = await ecommerceApi.createOrder(orderPayload);
 
-            // 4. Configure Razorpay Checkout Modal
             const options = {
                 key: import.meta.env.VITE_RAZORPAY_KEY_ID,
-                amount: orderData.amount, // amount in paise
-                currency: orderData.currency || "INR", // Dynamically use backend currency
+                amount: orderData.amount,
+                currency: orderData.currency || "INR",
                 name: "AyurCure",
                 description: "Pharmacy Order Payment",
                 order_id: orderData.razorpay_order_id,
                 handler: async function (response) {
-                    // 5. Success Handler: Verify payment signature on backend
                     try {
                         await ecommerceApi.verifyPayment({
                             razorpay_payment_id: response.razorpay_payment_id,
@@ -131,11 +132,11 @@ const CheckoutPage = () => {
                             order_id: orderData.id
                         });
                         clearCart();
-                        navigate('/patient/pharmacy-orders', { state: { success: true } });
+                        navigate('/patient/pharmacy-orders', { state: { success: true }, replace: true });
                     } catch (err) {
                         console.error(err);
                         alert("Payment verification failed! Please contact support if amount was deducted.");
-                        setIsSubmitting(false); // Reset UI so they can retry
+                        setIsSubmitting(false);
                     }
                 },
                 prefill: {
@@ -144,10 +145,9 @@ const CheckoutPage = () => {
                     contact: formData.mobile
                 },
                 theme: {
-                    color: "#52735B" // Your AyurCure theme color
+                    color: "#52735B"
                 },
                 modal: {
-                    // Handle user closing the popup manually
                     ondismiss: function () {
                         setIsSubmitting(false);
                     }
@@ -156,14 +156,12 @@ const CheckoutPage = () => {
 
             const paymentObject = new window.Razorpay(options);
 
-            // 6. Handle Payment Failure explicitly
             paymentObject.on('payment.failed', function (response) {
                 console.error("Payment Failed:", response.error);
                 alert(`Payment Failed: ${response.error.description}`);
                 setIsSubmitting(false);
             });
 
-            // 7. Open the modal
             paymentObject.open();
 
         } catch (error) {
@@ -174,7 +172,11 @@ const CheckoutPage = () => {
     };
 
     if (isLoadingProfile) {
-        return <div className="flex items-center justify-center min-h-screen bg-[#FDF9EE]"><Loader2 className="w-10 h-10 text-[#4A7C59] animate-spin" /></div>;
+        return (
+            <div className="flex items-center justify-center min-h-screen bg-[#FDF9EE]">
+                <Loader2 className="w-10 h-10 text-[#4A7C59] animate-spin" />
+            </div>
+        );
     }
 
     return (

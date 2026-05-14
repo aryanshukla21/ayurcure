@@ -1,15 +1,21 @@
 const db = require('../config/db');
 
 class UserModel {
+    /**
+     * Creates a new user record in the database.
+     */
     static async createUser(userData) {
         const { role, full_name, email, phone, auth_provider, password_hash, otp_hash, otp_expires_at, google_id } = userData;
+
         const query = `
             INSERT INTO Users (role, full_name, email, phone, auth_provider, password_hash, otp_hash, otp_expires_at, google_id)
             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
             RETURNING id, role, full_name, email, account_status;
         `;
+
         const values = [role, full_name, email, phone, auth_provider, password_hash, otp_hash, otp_expires_at, google_id || null];
         const result = await db.query(query, values);
+
         return result.rows[0];
     }
 
@@ -19,7 +25,6 @@ class UserModel {
         return result.rows[0];
     }
 
-    // ADD THIS METHOD
     static async getUserByPhone(phone) {
         const query = `SELECT * FROM Users WHERE phone = $1;`;
         const result = await db.query(query, [phone]);
@@ -38,6 +43,9 @@ class UserModel {
         return result.rows[0];
     }
 
+    /**
+     * Links an existing local account to a Google OAuth identity.
+     */
     static async linkGoogleAccount(userId, googleId) {
         const query = `UPDATE Users SET google_id = $1, is_email_verified = true WHERE id = $2 RETURNING *;`;
         const result = await db.query(query, [googleId, userId]);
@@ -59,6 +67,9 @@ class UserModel {
         await db.query(query, [newPasswordHash, userId]);
     }
 
+    /**
+     * Cleanup mechanism to remove expired OTPs from the database.
+     */
     static async clearExpiredOtps() {
         const query = `UPDATE Users SET otp_hash = NULL, otp_expires_at = NULL WHERE otp_expires_at < CURRENT_TIMESTAMP;`;
         await db.query(query);

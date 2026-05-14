@@ -11,6 +11,7 @@ const cookieParser = require('cookie-parser');
 // Import routes and error handler
 const indexRoutes = require('./src/routes/index');
 const errorHandler = require('./src/middlewares/errorHandler');
+const { requireAuth } = require('./src/middlewares/authMiddleware'); // SECURE FIX: Import auth middleware
 const { startOtpCleanupJob, startAppointmentSweepJob, startDoctorSlotMaintenanceJob } = require('./src/utils/cronJobs');
 
 const app = express();
@@ -19,16 +20,37 @@ const app = express();
 // 1. SECURITY & PERFORMANCE MIDDLEWARE
 // ==========================================
 
-// Helmet: Secures app by setting various HTTP headers
+// SECURE FIX: Hardened Helmet Configuration
 app.use(helmet({
-    crossOriginResourcePolicy: false // FIX: Allows images to be loaded by the frontend
+    crossOriginResourcePolicy: { policy: "cross-origin" }, // Securely allow images to frontend while maintaining security
+    contentSecurityPolicy: process.env.NODE_ENV === 'production' ? undefined : false,
 }));
 
-// Dynamic CORS Configuration
+// SECURE FIX: Dynamic CORS Configuration with strict methods and headers
 app.use(cors({
     origin: process.env.FRONTEND_URL || 'http://localhost:5173',
-    credentials: true
+    credentials: true, // Required for secure cookies
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization']
 }));
+
+// ==========================================
+// SECURE FIX: HTTPS ENFORCEMENT & HARDENING
+// ==========================================
+app.disable('x-powered-by'); // Hides that you are using Express from attackers
+
+if (process.env.NODE_ENV === 'production') {
+    // Trust the first proxy (e.g., Nginx, AWS ELB, Heroku, Vercel)
+    app.set('trust proxy', 1);
+
+    // Redirect HTTP to HTTPS
+    app.use((req, res, next) => {
+        if (req.headers['x-forwarded-proto'] && req.headers['x-forwarded-proto'] !== 'https') {
+            return res.redirect(`https://${req.headers.host}${req.url}`);
+        }
+        next();
+    });
+}
 
 app.use(express.json({ limit: '10mb' }));
 app.use(cookieParser());
@@ -45,7 +67,7 @@ if (process.env.NODE_ENV === 'production') {
 
 const apiLimiter = rateLimit({
     windowMs: 15 * 60 * 1000,
-    max: 10000,
+    max: 1000, // SECURE FIX: Adjusted down from 10000 to a reasonable production limit
     standardHeaders: true,
     legacyHeaders: false,
     message: { error: 'Too many requests from this IP, please try again after 15 minutes.' }
@@ -66,8 +88,8 @@ app.use('/api/auth', authLimiter);
 // 3. API ROUTES & STATIC FILES
 // ==========================================
 
-// FIX: Serve the uploads directory publicly so the frontend can read the images!
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+// SECURE FIX: Protect static uploads directory so the public cannot read sensitive health/user images!
+app.use('/uploads', requireAuth, express.static(path.join(__dirname, 'uploads')));
 
 app.use('/api', indexRoutes);
 
@@ -98,7 +120,6 @@ async function startServer() {
             console.warn('⚠️ startAppointmentSweepJob is not a valid function. Check cronJobs.js export.');
         }
 
-        // --- NEW: Initialize Doctor Slot Maintenance Job ---
         if (typeof startDoctorSlotMaintenanceJob === 'function') {
             startDoctorSlotMaintenanceJob();
             console.log('✅ Doctor Slot Maintenance Job Started Successfully');

@@ -2,32 +2,31 @@ const jwt = require('jsonwebtoken');
 const logger = require('../utils/logger');
 
 /**
- * Authenticates the request by validating the Bearer token in the Authorization header or secure cookie.
+ * Authenticates the request by validating the secure HttpOnly cookie.
  */
 const requireAuth = (req, res, next) => {
-    // 1. Checks cookies first, falls back to auth header if needed.
-    const token = req.cookies?.token || (req.headers.authorization && req.headers.authorization.split(' ')[1]);
+    // Strictly read from HttpOnly cookies to prevent XSS attacks
+    const token = req.cookies?.token;
 
     if (!token) {
         return res.status(401).json({ error: 'Authentication required. Token missing.' });
     }
 
     try {
-        // Verify token using the secret key from environment variables
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
-        // Attach decoded payload (id, role) to the request for downstream controllers
         req.user = decoded;
         next();
     } catch (error) {
         logger.error(`Auth Middleware Error: ${error.message}`);
-        return res.status(403).json({ error: 'Invalid or expired token.' });
+        res.clearCookie('token');
+        return res.status(403).json({ error: 'Invalid or expired secure token.' });
     }
 };
 
 /**
  * Enforces Role-Based Access Control (RBAC).
- * @param  {...string} roles - The roles authorized to access the route (e.g., 'admin', 'doctor').
+ * @param  {...string} roles - The roles authorized to access the route
  */
 const requireRole = (...roles) => {
     return (req, res, next) => {

@@ -4,99 +4,126 @@ import AgoraRTC from 'agora-rtc-sdk-ng';
 import { Mic, MicOff, Video, VideoOff, PhoneOff, Loader2 } from 'lucide-react';
 import { consultationApi } from '../../api/consultationApi';
 
-const client = AgoraRTC.createClient({ mode: 'rtc', codec: 'vp8' });
+// ---------------------------------------------------------
+// 1. Dedicated Remote Player Component (Fixes Race Conditions)
+// ---------------------------------------------------------
+const RemotePlayer = ({ user }) => {
+    const containerRef = useRef(null);
 
+    useEffect(() => {
+        if (user.videoTrack && containerRef.current) {
+            user.videoTrack.play(containerRef.current);
+        }
+        return () => {
+            if (user.videoTrack) {
+                user.videoTrack.stop();
+            }
+        };
+    }, [user.videoTrack]);
+
+    return (
+        <div
+            ref={containerRef}
+            className="w-full h-full rounded-3xl overflow-hidden bg-black border border-gray-800 shadow-2xl relative"
+        >
+            {/* Fallback if user turns off their camera */}
+            {!user.hasVideo && (
+                <div className="absolute inset-0 flex items-center justify-center bg-gray-900 text-gray-500 font-bold text-2xl z-10">
+                    Participant Camera Off
+                </div>
+            )}
+        </div>
+    );
+};
+
+// ---------------------------------------------------------
+// 2. Main Consultation Room Component
+// ---------------------------------------------------------
 const VideoConsultationRoom = () => {
     const { appointmentId } = useParams();
     const navigate = useNavigate();
+
+    // 🚨 FIX: Bind client to component lifecycle to prevent global leaks
+    const client = useRef(AgoraRTC.createClient({ mode: 'rtc', codec: 'vp8' })).current;
 
     const [localTracks, setLocalTracks] = useState({ videoTrack: null, audioTrack: null });
     const [remoteUsers, setRemoteUsers] = useState({});
     const [isJoined, setIsJoined] = useState(false);
     const [hasError, setHasError] = useState('');
 
-    // 🚨 Connection lock to prevent double-joining during React StrictMode remounts
     const isJoining = useRef(false);
+    const localPlayerRef = useRef(null);
 
-    // UI states
     const [micOn, setMicOn] = useState(true);
     const [videoOn, setVideoOn] = useState(true);
 
     useEffect(() => {
         let isUnmounted = false;
-        let mountedTracks = [];
+        let audioTrack = null;
+        let videoTrack = null;
 
         const initAgora = async () => {
-            // Check connection state and local lock
-            if (isJoining.current || client.connectionState !== 'DISCONNECTED') {
-                return;
-            }
-
+            if (isJoining.current || client.connectionState !== 'DISCONNECTED') return;
             isJoining.current = true;
 
             try {
-                // 1. Fetch secure RTC token from backend
                 const response = await consultationApi.getCallToken(appointmentId);
                 const { rtcToken, channelName, rtcUid, appId } = response.data || response;
 
-                // 2. Setup Remote Event Listeners
+                // Listeners
                 client.on("user-published", async (user, mediaType) => {
                     await client.subscribe(user, mediaType);
                     if (mediaType === "video") {
-                        setRemoteUsers(prev => ({ ...prev, [user.uid]: user }));
+                        setRemoteUsers(prev => ({ ...prev, [user.uid]: { ...user, hasVideo: true } }));
                     }
                     if (mediaType === "audio") {
-                        user.audioTrack.play();
+                        user.audioTrack?.play();
                     }
                 });
 
                 client.on("user-unpublished", (user, mediaType) => {
                     if (mediaType === "video") {
-                        setRemoteUsers(prev => {
-                            const newUsers = { ...prev };
-                            delete newUsers[user.uid];
-                            return newUsers;
-                        });
+                        setRemoteUsers(prev => ({ ...prev, [user.uid]: { ...user, hasVideo: false } }));
                     }
                 });
 
-                // 3. Join the Agora Channel
+                client.on("user-left", (user) => {
+                    setRemoteUsers(prev => {
+                        const newUsers = { ...prev };
+                        delete newUsers[user.uid];
+                        return newUsers;
+                    });
+                });
+
                 await client.join(appId, channelName, rtcToken, rtcUid);
 
-                // 4. Create Local Tracks with Graceful Degradation
-                let audioTrack = null;
-                let videoTrack = null;
-
+                // Hardware initialization
                 try {
-                    // Attempt Camera + Mic
                     const [aTrack, vTrack] = await AgoraRTC.createMicrophoneAndCameraTracks();
                     audioTrack = aTrack;
                     videoTrack = vTrack;
-                    mountedTracks = [audioTrack, videoTrack];
                 } catch (deviceError) {
-                    console.warn("Camera/Mic combo failed. Attempting Audio-only fallback...", deviceError);
+                    console.warn("Camera/Mic combo failed. Attempting Audio-only...", deviceError);
                     try {
-                        // Fallback: Audio Only
                         audioTrack = await AgoraRTC.createMicrophoneAudioTrack();
-                        mountedTracks = [audioTrack];
                         if (!isUnmounted) setVideoOn(false);
                     } catch (audioError) {
-                        console.error("Critical: No hardware found.", audioError);
-                        if (!isUnmounted) setHasError('No camera or microphone detected. Please check permissions.');
-                        return;
+                        throw new Error('No camera or microphone detected. Please check permissions.');
                     }
                 }
 
-                // 5. Finalize and Publish
                 if (!isUnmounted) {
                     setLocalTracks({ audioTrack, videoTrack });
-                    await client.publish(mountedTracks.filter(track => track !== null));
+                    const tracksToPublish = [audioTrack, videoTrack].filter(Boolean);
+                    if (tracksToPublish.length > 0) {
+                        await client.publish(tracksToPublish);
+                    }
                     setIsJoined(true);
                 }
 
             } catch (error) {
                 console.error("Agora Initialization Failed:", error);
-                if (!isUnmounted) setHasError('Failed to connect to the secure consultation room.');
+                if (!isUnmounted) setHasError(error.message || 'Failed to connect to the secure consultation room.');
                 isJoining.current = false;
             }
         };
@@ -107,46 +134,39 @@ const VideoConsultationRoom = () => {
             isUnmounted = true;
             isJoining.current = false;
 
-            // Stop local hardware tracks
-            mountedTracks.forEach(track => {
-                if (track) {
-                    track.stop();
-                    track.close();
-                }
-            });
+            // Safe Cleanup
+            if (audioTrack) {
+                audioTrack.stop();
+                audioTrack.close();
+            }
+            if (videoTrack) {
+                videoTrack.stop();
+                videoTrack.close();
+            }
 
-            // Cleanup client connection
+            client.removeAllListeners();
             if (client.connectionState === 'CONNECTED' || client.connectionState === 'CONNECTING') {
                 client.leave();
             }
-
-            // Remove listeners to prevent memory leaks on remount
-            client.removeAllListeners();
         };
-    }, [appointmentId]);
+    }, [appointmentId, client]);
 
-    // Attachment of Local Video to DOM
+    // Attach Local Video safely via Ref
     useEffect(() => {
-        if (localTracks.videoTrack) {
-            localTracks.videoTrack.play('local-player');
+        if (localTracks.videoTrack && localPlayerRef.current) {
+            localTracks.videoTrack.play(localPlayerRef.current);
         }
         return () => {
             if (localTracks.videoTrack) localTracks.videoTrack.stop();
         };
     }, [localTracks.videoTrack]);
 
-    // Attachment of Remote Video to DOM
-    useEffect(() => {
-        Object.values(remoteUsers).forEach(user => {
-            if (user.videoTrack) {
-                user.videoTrack.play(`remote-player-${user.uid}`);
-            }
-        });
-    }, [remoteUsers]);
-
-    // Media Controls
+    // ---------------------------------------------------------
+    // 3. Media Controls (Fixed Privacy LED Bug)
+    // ---------------------------------------------------------
     const toggleMic = async () => {
         if (localTracks.audioTrack) {
+            // setMuted is perfectly fine for audio, keeps the stream alive but silent
             await localTracks.audioTrack.setMuted(micOn);
             setMicOn(!micOn);
         }
@@ -154,18 +174,13 @@ const VideoConsultationRoom = () => {
 
     const toggleVideo = async () => {
         if (localTracks.videoTrack) {
-            await localTracks.videoTrack.setMuted(videoOn);
+            // 🚨 FIX: setEnabled actually turns off the hardware camera LED
+            await localTracks.videoTrack.setEnabled(!videoOn);
             setVideoOn(!videoOn);
         }
     };
 
     const handleEndCall = async () => {
-        mountedTracksCleanup();
-        await client.leave();
-        navigate('/patient/appointments');
-    };
-
-    const mountedTracksCleanup = () => {
         if (localTracks.audioTrack) {
             localTracks.audioTrack.stop();
             localTracks.audioTrack.close();
@@ -174,8 +189,13 @@ const VideoConsultationRoom = () => {
             localTracks.videoTrack.stop();
             localTracks.videoTrack.close();
         }
+        await client.leave();
+        navigate('/patient/appointments');
     };
 
+    // ---------------------------------------------------------
+    // UI Rendering
+    // ---------------------------------------------------------
     if (hasError) {
         return (
             <div className="h-screen flex flex-col items-center justify-center bg-gray-900 text-white font-sans p-6 text-center">
@@ -205,7 +225,7 @@ const VideoConsultationRoom = () => {
 
     return (
         <div className="h-screen bg-gray-950 flex flex-col relative font-sans overflow-hidden">
-            <div className="absolute top-0 left-0 w-full p-6 z-20 flex justify-between items-center bg-gradient-to-b from-black/60 to-transparent">
+            <div className="absolute top-0 left-0 w-full p-6 z-20 flex justify-between items-center bg-gradient-to-b from-black/60 to-transparent pointer-events-none">
                 <h1 className="text-white text-xl font-bold tracking-wide">Clinical Consultation</h1>
                 <div className="bg-red-500/20 text-red-400 px-3 py-1 rounded-full text-xs font-extrabold tracking-widest border border-red-500/30 flex items-center gap-2">
                     <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse"></div> SECURE
@@ -216,20 +236,20 @@ const VideoConsultationRoom = () => {
                 {Object.keys(remoteUsers).length === 0 ? (
                     <div className="text-center text-gray-500">
                         <div className="w-24 h-24 bg-gray-800 rounded-full mx-auto mb-4 flex items-center justify-center text-gray-600 font-bold text-2xl">Doc</div>
-                        <p>Waiting for Doctor to join...</p>
+                        <p>Waiting for the other participant to join...</p>
                     </div>
                 ) : (
                     Object.values(remoteUsers).map(user => (
-                        <div key={user.uid} id={`remote-player-${user.uid}`} className="w-full h-full rounded-3xl overflow-hidden bg-black border border-gray-800 shadow-2xl"></div>
+                        <RemotePlayer key={user.uid} user={user} />
                     ))
                 )}
 
                 <div
-                    id="local-player"
-                    className="absolute bottom-24 right-8 w-32 h-48 md:w-48 md:h-72 bg-gray-800 rounded-2xl overflow-hidden border-2 border-gray-700 shadow-2xl"
+                    ref={localPlayerRef}
+                    className="absolute bottom-24 right-8 w-32 h-48 md:w-48 md:h-72 bg-gray-800 rounded-2xl overflow-hidden border-2 border-gray-700 shadow-2xl z-10"
                 >
                     {!videoOn && (
-                        <div className="w-full h-full flex items-center justify-center bg-gray-900 text-gray-500">
+                        <div className="w-full h-full flex items-center justify-center bg-gray-900 text-gray-500 absolute inset-0 z-20">
                             <VideoOff size={32} />
                         </div>
                     )}
