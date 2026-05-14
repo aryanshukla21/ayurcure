@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const ctrl = require('../controllers/ecommerceController');
-const { requireAuth } = require('../middlewares/authMiddleware');
+const { requireAuth, requireRole } = require('../middlewares/authMiddleware');
 
 // ==========================================
 // 1. PHARMACY STORE (Publicly Accessible)
@@ -39,6 +39,7 @@ router.post('/webhook/razorpay', express.raw({ type: 'application/json' }), ctrl
 // ==========================================
 // Protect all Order and Cart routes below this line
 router.use(requireAuth);
+router.use(requireRole('patient'));
 
 // ==========================================
 // 2. PHARMACY ORDERS (Metrics & History)

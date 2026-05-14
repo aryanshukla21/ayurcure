@@ -176,23 +176,15 @@ exports.getSymptoms = async (req, res) => {
 
 exports.getPractitionerInfo = async (req, res) => {
     try {
-        // 1. THE TRACKER: Let's see what the auth middleware is actually giving us!
-        console.log("🚨 FULL REQ.USER OBJECT:", req.user);
+        const patientId = await getPatientId(req.user.id, res);
+        if (!patientId) return;
 
-        // Try to grab the ID from a few common places just in case!
-        const patientId = req.user?.id || req.user?.userId || req.user?._id || null;
-        console.log("🚨 CHECKING PATIENT ID:", patientId);
-
-        // Fetch the data
         const info = await AppointmentModel.getPractitionerInfo(req.params.id, patientId);
 
-        // 2. THE SAFETY NET: If the database finds nothing, stop here so we don't crash!
         if (!info) {
-            console.log("🚨 DB ERROR: Found 0 rows. The appointment ID or patientId is wrong!");
             return res.status(404).json({ error: 'Practitioner info not found' });
         }
 
-        // If we get here, it worked! Send the data.
         res.status(200).json({
             doctor_name: info.doctor_name,
             email: info.email,
@@ -204,7 +196,7 @@ exports.getPractitionerInfo = async (req, res) => {
             avatar: info.avatar
         });
     } catch (err) {
-        console.error(`getPractitionerInfo Error: ${err.message}`);
+        logger.error(`getPractitionerInfo Error: ${err.message}`);
         res.status(500).json({ error: 'Failed to fetch practitioner info' });
     }
 };
@@ -440,15 +432,32 @@ exports.getPrakritiAnalysis = async (req, res) => {
 
 exports.cancelAppointment = async (req, res) => {
     try {
-        const { id } = req.params;
-        const db = require('../config/db'); // Make sure this path matches your db config file
+        const appointmentId = String(req.params.id || '').trim();
+        if (!/^[a-zA-Z0-9-]{8,}$/.test(appointmentId)) {
+            return res.status(400).json({ error: 'Invalid appointment id' });
+        }
 
-        // Update the status to 'Cancelled' in PostgreSQL
-        await db.query(`UPDATE Appointments SET status = 'Cancelled' WHERE id = $1`, [id]);
+        const patientId = await getPatientId(req.user.id, res);
+        if (!patientId) return;
+
+        const appointment = await AppointmentModel.getById(appointmentId);
+        if (!appointment || appointment.patient_id !== patientId) {
+            return res.status(404).json({ error: 'Appointment not found' });
+        }
+
+        if (['Cancelled', 'Completed'].includes(appointment.status)) {
+            return res.status(400).json({ error: `Appointment cannot be cancelled from status ${appointment.status}` });
+        }
+
+        const db = require('../config/db');
+        await db.query(
+            `UPDATE Appointments SET status = 'Cancelled' WHERE id = $1 AND patient_id = $2`,
+            [appointmentId, patientId]
+        );
 
         res.status(200).json({ success: true, message: 'Appointment cancelled successfully' });
     } catch (err) {
-        console.error("Cancel Error:", err);
+        logger.error(`cancelAppointment Error: ${err.message}`);
         res.status(500).json({ error: 'Failed to cancel appointment' });
     }
 };

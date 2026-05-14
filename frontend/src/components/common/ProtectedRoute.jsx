@@ -1,5 +1,6 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Navigate, Outlet, useLocation } from 'react-router-dom';
+import { authApi } from '../../api/authApi';
 
 /**
  * Guard component for role-based frontend routing.
@@ -8,18 +9,48 @@ import { Navigate, Outlet, useLocation } from 'react-router-dom';
  */
 const ProtectedRoute = ({ allowedRoles }) => {
     const location = useLocation();
+    const [authState, setAuthState] = useState({ loading: true, role: null });
 
-    // Retrieve UI state (Ideally replaced by a global Context populated via /api/auth/me)
-    const userRole = localStorage.getItem('role');
+    useEffect(() => {
+        let isMounted = true;
+
+        const verifySession = async () => {
+            try {
+                const data = await authApi.checkAuth();
+                const role = data?.user?.role || null;
+                if (isMounted) {
+                    if (role) {
+                        localStorage.setItem('role', role);
+                    } else {
+                        localStorage.removeItem('role');
+                    }
+                    setAuthState({ loading: false, role });
+                }
+            } catch (error) {
+                if (isMounted) {
+                    localStorage.removeItem('role');
+                    setAuthState({ loading: false, role: null });
+                }
+            }
+        };
+
+        verifySession();
+
+        return () => {
+            isMounted = false;
+        };
+    }, []);
+
+    if (authState.loading) return null;
 
     // 1. Not logged in (UI state missing)
-    if (!userRole) {
+    if (!authState.role) {
         return <Navigate to="/login" state={{ from: location }} replace />;
     }
 
     // 2. Role mismatch handling
-    if (allowedRoles && !allowedRoles.includes(userRole)) {
-        switch (userRole) {
+    if (allowedRoles && !allowedRoles.includes(authState.role)) {
+        switch (authState.role) {
             case 'admin':
                 return <Navigate to="/admin/dashboard" replace />;
             case 'doctor':

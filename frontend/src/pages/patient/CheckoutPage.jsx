@@ -38,18 +38,15 @@ const CheckoutPage = () => {
         fullName: '', email: '', mobile: '', address: '', city: '', postalCode: ''
     });
 
+    const flowTokenFromState = location.state?.flowToken;
+    const flowTokenFromSession = sessionStorage.getItem('checkoutFlowToken');
+    const hasValidCheckoutFlow =
+        location.state?.fromCart === true &&
+        Boolean(flowTokenFromState) &&
+        flowTokenFromState === flowTokenFromSession;
+
     const tax = cartItems.length > 0 ? 5.0 : 0;
     const total = cartTotal + tax;
-
-    // Route Guard: Prevent direct URL access bypassing the standard cart flow
-    if (!location.state || !location.state.fromCart) {
-        return <Navigate to="/patient/cart" replace />;
-    }
-
-    // Route Guard: Prevent checkout processes with an empty cart
-    if (cartItems.length === 0) {
-        return <Navigate to="/patient/pharmacy-store" replace />;
-    }
 
     useEffect(() => {
         const fetchUserProfile = async () => {
@@ -103,6 +100,7 @@ const CheckoutPage = () => {
             if (selectedPayment === 'cod') {
                 await ecommerceApi.createOrder(orderPayload);
                 clearCart();
+                sessionStorage.removeItem('checkoutFlowToken');
                 navigate('/patient/pharmacy-orders', { state: { success: true }, replace: true });
                 return;
             }
@@ -132,6 +130,7 @@ const CheckoutPage = () => {
                             order_id: orderData.id
                         });
                         clearCart();
+                        sessionStorage.removeItem('checkoutFlowToken');
                         navigate('/patient/pharmacy-orders', { state: { success: true }, replace: true });
                     } catch (err) {
                         console.error(err);
@@ -177,6 +176,14 @@ const CheckoutPage = () => {
                 <Loader2 className="w-10 h-10 text-[#4A7C59] animate-spin" />
             </div>
         );
+    }
+
+    if (!hasValidCheckoutFlow) {
+        return <Navigate to="/patient/cart" replace />;
+    }
+
+    if (cartItems.length === 0) {
+        return <Navigate to="/patient/pharmacy-store" replace />;
     }
 
     return (

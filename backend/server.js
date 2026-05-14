@@ -26,9 +26,19 @@ app.use(helmet({
     contentSecurityPolicy: process.env.NODE_ENV === 'production' ? undefined : false,
 }));
 
+const allowedOrigins = (process.env.FRONTEND_URL || 'http://localhost:5173')
+    .split(',')
+    .map((origin) => origin.trim())
+    .filter(Boolean);
+
 // SECURE FIX: Dynamic CORS Configuration with strict methods and headers
 app.use(cors({
-    origin: process.env.FRONTEND_URL || 'http://localhost:5173',
+    origin: (origin, callback) => {
+        if (!origin || allowedOrigins.includes(origin)) {
+            return callback(null, true);
+        }
+        return callback(new Error('CORS policy does not allow this origin.'));
+    },
     credentials: true, // Required for secure cookies
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization']
@@ -81,8 +91,26 @@ const authLimiter = rateLimit({
     message: { error: 'Too many authentication attempts, please try again later.' }
 });
 
+const appointmentMutationLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 30,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { error: 'Too many appointment update requests. Please try again later.' }
+});
+
+const paymentVerifyLimiter = rateLimit({
+    windowMs: 5 * 60 * 1000,
+    max: 20,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { error: 'Too many payment verification attempts. Please try again later.' }
+});
+
 app.use('/api', apiLimiter);
 app.use('/api/auth', authLimiter);
+app.use('/api/appointment/:id/cancel', appointmentMutationLimiter);
+app.use('/api/ecommerce/orders/verify', paymentVerifyLimiter);
 
 // ==========================================
 // 3. API ROUTES & STATIC FILES

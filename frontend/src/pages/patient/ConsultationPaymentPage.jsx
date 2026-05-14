@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { ShieldCheck, CreditCard, ChevronLeft, Loader2, AlertCircle } from 'lucide-react';
 import AppointmentSuccessModal from '../../components/patient/book-appointment/AppointmentSuccessModal';
@@ -8,19 +8,33 @@ const ConsultationPaymentPage = () => {
     const location = useLocation();
     const navigate = useNavigate();
 
-    const [paymentData, setPaymentData] = useState(null);
     const [isProcessing, setIsProcessing] = useState(false);
     const [paymentStatus, setPaymentStatus] = useState(null);
 
+    const paymentData = useMemo(() => {
+        if (location.state?.bookingData && location.state?.financials) {
+            return location.state;
+        }
+        try {
+            const saved = sessionStorage.getItem('pendingAppointment');
+            return saved ? JSON.parse(saved) : null;
+        } catch (error) {
+            return null;
+        }
+    }, [location.state]);
+
+    const hasValidFlowToken = useMemo(() => {
+        const stateToken = location.state?.flowToken || paymentData?.flowToken;
+        const sessionToken = sessionStorage.getItem('consultationPaymentFlowToken');
+        return Boolean(stateToken) && stateToken === sessionToken;
+    }, [location.state, paymentData]);
+
     // STRICT ROUTING PROTECTION
     useEffect(() => {
-        // 1. Block direct access, refresh, or missing data
-        if (!location.state || !location.state.bookingData) {
+        if (!paymentData?.bookingData || !paymentData?.financials || !hasValidFlowToken) {
             navigate('/patient/book-appointment', { replace: true });
             return;
         }
-
-        setPaymentData(location.state);
 
         // 2. Prevent browser 'Back' button abuse
         const handlePopState = () => {
@@ -30,7 +44,7 @@ const ConsultationPaymentPage = () => {
         window.addEventListener('popstate', handlePopState);
 
         return () => window.removeEventListener('popstate', handlePopState);
-    }, [location.state, navigate]);
+    }, [hasValidFlowToken, navigate, paymentData]);
 
     // LOAD RAZORPAY SDK
     const loadRazorpay = () => {
@@ -54,10 +68,16 @@ const ConsultationPaymentPage = () => {
         }
 
         const { bookingData, financials } = paymentData;
+        const razorpayKey = import.meta.env.VITE_RAZORPAY_KEY_ID;
+        if (!razorpayKey) {
+            alert('Secure payment configuration is unavailable. Please try again later.');
+            setIsProcessing(false);
+            return;
+        }
 
         // Razorpay Options
         const options = {
-            key: import.meta.env.VITE_RAZORPAY_KEY_ID || 'rzp_test_YOUR_TEST_KEY', // Use your actual Razorpay Key
+            key: razorpayKey,
             amount: Math.round(parseFloat(financials.total) * 100), // Amount in paise
             currency: 'INR',
             name: 'AyurCure Consultation',
@@ -78,6 +98,8 @@ const ConsultationPaymentPage = () => {
 
                     setIsProcessing(false);
                     setPaymentStatus('success');
+                    sessionStorage.removeItem('pendingAppointment');
+                    sessionStorage.removeItem('consultationPaymentFlowToken');
 
                     // Clear the history state to completely invalidate the current page
                     window.history.replaceState({}, document.title);
@@ -104,6 +126,8 @@ const ConsultationPaymentPage = () => {
 
     const handleCancelPayment = () => {
         setPaymentStatus('cancelled');
+        sessionStorage.removeItem('pendingAppointment');
+        sessionStorage.removeItem('consultationPaymentFlowToken');
     };
 
     if (!paymentData) {

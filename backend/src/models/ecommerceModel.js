@@ -330,6 +330,16 @@ class EcommerceModel {
         }
     }
 
+    static async getOrderForPaymentVerification(orderId, patientId) {
+        const query = `
+            SELECT id, patient_id, razorpay_order_id, payment_status
+            FROM Orders
+            WHERE id = $1 AND patient_id = $2;
+        `;
+        const { rows } = await db.query(query, [orderId, patientId]);
+        return rows[0];
+    }
+
     static async updatePaymentStatusByRazorpayOrderId(razorpayOrderId, status, razorpayPaymentId = null) {
         const client = await db.connect();
         try {

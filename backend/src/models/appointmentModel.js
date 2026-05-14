@@ -157,26 +157,18 @@ class AppointmentModel {
     }
 
     static async getPractitionerInfo(appointmentId, patientId) {
-        // 1. THE DIAGNOSTIC: Look at the raw appointment before any joins
-        const debugQuery = `SELECT id, patient_id, doctor_id FROM Appointments WHERE id = $1`;
-        const debugRes = await db.query(debugQuery, [appointmentId]);
-        console.log("🚨 RAW APPOINTMENT IN DB:", debugRes.rows[0]);
-
-        // 2. THE FORCED QUERY: We removed the strict patient_id check to force it through.
-        // We also linked Users on BOTH possible doctor_id matches just in case!
         const query = `
             SELECT 
                 u.full_name AS doctor_name, u.email, u.phone,
                 d.specialization, d.experience_years, d.qualifications, d.bio,
                 d.avatar  
             FROM Appointments a
-            LEFT JOIN DoctorProfiles d ON a.doctor_id = d.id
-            LEFT JOIN Users u ON (d.user_id = u.id OR a.doctor_id = u.id)
-            WHERE a.id = $1; 
+            JOIN DoctorProfiles d ON a.doctor_id = d.id
+            JOIN Users u ON d.user_id = u.id
+            WHERE a.id = $1 AND a.patient_id = $2; 
         `;
 
-        const { rows } = await db.query(query, [appointmentId]);
-        console.log("🚨 FINAL JOINED RESULT:", rows[0]);
+        const { rows } = await db.query(query, [appointmentId, patientId]);
 
         return rows[0];
     }

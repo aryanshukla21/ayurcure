@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import AgoraRTC from 'agora-rtc-sdk-ng';
 import { Mic, MicOff, Video, VideoOff, PhoneOff, Loader2 } from 'lucide-react';
 import { consultationApi } from '../../api/consultationApi';
@@ -42,6 +42,7 @@ const RemotePlayer = ({ user }) => {
 const VideoConsultationRoom = () => {
     const { appointmentId } = useParams();
     const navigate = useNavigate();
+    const location = useLocation();
 
     // 🚨 FIX: Bind client to component lifecycle to prevent global leaks
     const client = useRef(AgoraRTC.createClient({ mode: 'rtc', codec: 'vp8' })).current;
@@ -56,8 +57,37 @@ const VideoConsultationRoom = () => {
 
     const [micOn, setMicOn] = useState(true);
     const [videoOn, setVideoOn] = useState(true);
+    const [isFlowValidated, setIsFlowValidated] = useState(false);
 
     useEffect(() => {
+        let storedAccess = null;
+        try {
+            const raw = sessionStorage.getItem('consultationRoomAccess');
+            storedAccess = raw ? JSON.parse(raw) : null;
+        } catch (error) {
+            storedAccess = null;
+        }
+
+        const isFromSecureFlow =
+            location.state?.fromAppointmentAction === true &&
+            String(location.state?.appointmentId) === String(appointmentId);
+
+        const isStoredAccessValid =
+            storedAccess &&
+            String(storedAccess.appointmentId) === String(appointmentId) &&
+            Date.now() - Number(storedAccess.issuedAt || 0) < 30 * 60 * 1000;
+
+        if (!isFromSecureFlow && !isStoredAccessValid) {
+            navigate('/patient/appointments', { replace: true });
+            return;
+        }
+
+        setIsFlowValidated(true);
+    }, [appointmentId, location.state, navigate]);
+
+    useEffect(() => {
+        if (!isFlowValidated) return;
+
         let isUnmounted = false;
         let audioTrack = null;
         let videoTrack = null;
@@ -149,7 +179,7 @@ const VideoConsultationRoom = () => {
                 client.leave();
             }
         };
-    }, [appointmentId, client]);
+    }, [appointmentId, client, isFlowValidated]);
 
     // Attach Local Video safely via Ref
     useEffect(() => {
@@ -190,6 +220,7 @@ const VideoConsultationRoom = () => {
             localTracks.videoTrack.close();
         }
         await client.leave();
+        sessionStorage.removeItem('consultationRoomAccess');
         navigate('/patient/appointments');
     };
 

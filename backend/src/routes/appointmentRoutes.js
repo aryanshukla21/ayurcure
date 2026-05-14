@@ -1,13 +1,14 @@
 const express = require('express');
 const router = express.Router();
 const ctrl = require('../controllers/appointmentController');
-const { requireAuth } = require('../middlewares/authMiddleware');
+const { requireAuth, requireRole } = require('../middlewares/authMiddleware');
 
 // ==========================================
 // AUTHENTICATION MIDDLEWARE
 // ==========================================
 // Protect all appointment and prescription routes
 router.use(requireAuth);
+router.use(requireRole('patient'));
 
 // ==========================================
 // 1. APPOINTMENT LISTS 
