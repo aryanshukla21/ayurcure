@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { ShieldCheck, CreditCard, ChevronLeft, Loader2, AlertCircle } from 'lucide-react';
 import AppointmentSuccessModal from '../../components/patient/book-appointment/AppointmentSuccessModal';
@@ -7,13 +7,15 @@ import { appointmentApi } from '../../api/appointmentApi';
 const ConsultationPaymentPage = () => {
     const location = useLocation();
     const navigate = useNavigate();
+    const locationState = location.state;
+    const locationFlowToken = locationState?.flowToken;
 
     const [isProcessing, setIsProcessing] = useState(false);
     const [paymentStatus, setPaymentStatus] = useState(null);
 
-    const paymentData = useMemo(() => {
-        if (location.state?.bookingData && location.state?.financials) {
-            return location.state;
+    const paymentData = (() => {
+        if (locationState?.bookingData && locationState?.financials) {
+            return locationState;
         }
         try {
             const saved = sessionStorage.getItem('pendingAppointment');
@@ -21,13 +23,13 @@ const ConsultationPaymentPage = () => {
         } catch (error) {
             return null;
         }
-    }, [location.state]);
+    })();
 
-    const hasValidFlowToken = useMemo(() => {
-        const stateToken = location.state?.flowToken || paymentData?.flowToken;
+    const hasValidFlowToken = (() => {
+        const stateToken = locationFlowToken || paymentData?.flowToken;
         const sessionToken = sessionStorage.getItem('consultationPaymentFlowToken');
         return Boolean(stateToken) && stateToken === sessionToken;
-    }, [location.state, paymentData]);
+    })();
 
     // STRICT ROUTING PROTECTION
     useEffect(() => {

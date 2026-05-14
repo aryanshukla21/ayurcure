@@ -45,6 +45,8 @@ const VideoConsultationRoom = () => {
     const { appointmentId } = useParams();
     const navigate = useNavigate();
     const location = useLocation();
+    const fromAppointmentAction = location.state?.fromAppointmentAction;
+    const stateAppointmentId = location.state?.appointmentId;
 
     // 🚨 FIX: Bind client to component lifecycle to prevent global leaks
     const client = useRef(AgoraRTC.createClient({ mode: 'rtc', codec: 'vp8' })).current;
@@ -71,8 +73,8 @@ const VideoConsultationRoom = () => {
         }
 
         const isFromSecureFlow =
-            location.state?.fromAppointmentAction === true &&
-            String(location.state?.appointmentId) === String(appointmentId);
+            fromAppointmentAction === true &&
+            String(stateAppointmentId) === String(appointmentId);
 
         const isStoredAccessValid =
             storedAccess &&
@@ -85,7 +87,7 @@ const VideoConsultationRoom = () => {
         }
 
         setIsFlowValidated(true);
-    }, [appointmentId, location.state, navigate]);
+    }, [appointmentId, fromAppointmentAction, navigate, stateAppointmentId]);
 
     useEffect(() => {
         if (!isFlowValidated) return;
