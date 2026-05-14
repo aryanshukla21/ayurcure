@@ -26,9 +26,19 @@ app.use(helmet({
     contentSecurityPolicy: process.env.NODE_ENV === 'production' ? undefined : false,
 }));
 
+const allowedOrigins = (process.env.FRONTEND_URL || 'http://localhost:5173')
+    .split(',')
+    .map((origin) => origin.trim())
+    .filter(Boolean);
+
 // SECURE FIX: Dynamic CORS Configuration with strict methods and headers
 app.use(cors({
-    origin: process.env.FRONTEND_URL || 'http://localhost:5173',
+    origin: (origin, callback) => {
+        if (!origin || allowedOrigins.includes(origin)) {
+            return callback(null, true);
+        }
+        return callback(new Error('CORS policy does not allow this origin.'));
+    },
     credentials: true, // Required for secure cookies
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization']
@@ -54,6 +64,24 @@ if (process.env.NODE_ENV === 'production') {
 
 app.use(express.json({ limit: '10mb' }));
 app.use(cookieParser());
+
+const unsafeMethods = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
+const isTrustedOrigin = (headerValue = '') =>
+    allowedOrigins.some((origin) => headerValue.startsWith(origin));
+
+// CSRF hardening for cookie-authenticated state-changing requests.
+app.use('/api', (req, res, next) => {
+    if (!unsafeMethods.has(req.method)) return next();
+    if (!req.cookies?.token) return next();
+
+    const origin = req.get('origin') || '';
+    const referer = req.get('referer') || '';
+    if (isTrustedOrigin(origin) || isTrustedOrigin(referer)) {
+        return next();
+    }
+
+    return res.status(403).json({ error: 'Forbidden: CSRF validation failed.' });
+});
 
 if (process.env.NODE_ENV === 'production') {
     app.use(morgan('short'));
@@ -81,8 +109,17 @@ const authLimiter = rateLimit({
     message: { error: 'Too many authentication attempts, please try again later.' }
 });
 
+const paymentVerifyLimiter = rateLimit({
+    windowMs: 5 * 60 * 1000,
+    max: 20,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { error: 'Too many payment verification attempts. Please try again later.' }
+});
+
 app.use('/api', apiLimiter);
 app.use('/api/auth', authLimiter);
+app.use('/api/ecommerce/orders/verify', paymentVerifyLimiter);
 
 // ==========================================
 // 3. API ROUTES & STATIC FILES

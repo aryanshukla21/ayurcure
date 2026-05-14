@@ -1,13 +1,23 @@
 const express = require('express');
 const router = express.Router();
+const rateLimit = require('express-rate-limit');
 const ctrl = require('../controllers/appointmentController');
-const { requireAuth } = require('../middlewares/authMiddleware');
+const { requireAuth, requireRole } = require('../middlewares/authMiddleware');
+
+const cancelAppointmentLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 30,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { error: 'Too many appointment update requests. Please try again later.' }
+});
 
 // ==========================================
 // AUTHENTICATION MIDDLEWARE
 // ==========================================
 // Protect all appointment and prescription routes
 router.use(requireAuth);
+router.use(requireRole('patient'));
 
 // ==========================================
 // 1. APPOINTMENT LISTS 
@@ -30,7 +40,7 @@ router.get('/appointment/prepare-for-your-next-visit', ctrl.getPrepInstructions)
 router.get('/appointment/:id/actions', ctrl.getActions);
 router.get('/appointment/:id/your-symptoms-and-notes', ctrl.getSymptoms);
 router.get('/appointment/:id/practitioner-info', ctrl.getPractitionerInfo);
-router.put('/appointment/:id/cancel', ctrl.cancelAppointment);
+router.put('/appointment/:id/cancel', cancelAppointmentLimiter, ctrl.cancelAppointment);
 
 // Documents mapping
 router.get('/appointment/:id/related-documents', ctrl.getDocuments);

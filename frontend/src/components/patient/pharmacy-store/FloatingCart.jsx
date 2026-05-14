@@ -5,6 +5,11 @@ import { useNavigate } from 'react-router-dom';
 // Added cartCount to the destructured props
 const FloatingCart = ({ cartTotal, cartCount }) => {
     const navigate = useNavigate();
+    const startCheckoutFlow = () => {
+        const flowToken = `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+        sessionStorage.setItem('checkoutFlowToken', flowToken);
+        navigate('/patient/checkout', { state: { fromCart: true, flowToken } });
+    };
 
     // Do not render the cart widget if the cart is empty
     if (cartCount === 0) return null;
@@ -35,7 +40,7 @@ const FloatingCart = ({ cartTotal, cartCount }) => {
             <button
                 onClick={(e) => {
                     e.stopPropagation(); // Prevent triggering the cart navigation above
-                    navigate('/patient/checkout');
+                    startCheckoutFlow();
                 }}
                 className="bg-[#2D5A27] hover:bg-[#1E4620] px-5 py-2.5 rounded-xl text-sm font-medium transition-colors"
             >

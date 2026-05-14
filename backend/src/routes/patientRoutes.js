@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const ctrl = require('../controllers/patientController');
-const { requireAuth } = require('../middlewares/authMiddleware');
+const { requireAuth, requireRole } = require('../middlewares/authMiddleware');
 // Change this:
 // const upload = require('../middlewares/uploadMiddleware');
 
@@ -13,6 +13,7 @@ const { upload, uploadToS3 } = require('../middlewares/uploadMiddleware');
 // ==========================================
 // Ensure all patient routes require a valid session/token
 router.use(requireAuth);
+router.use(requireRole('patient'));
 
 // ==========================================
 // 1. DASHBOARD

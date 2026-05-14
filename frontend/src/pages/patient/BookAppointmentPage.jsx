@@ -92,11 +92,15 @@ const BookAppointmentPage = () => {
       }
     };
 
+    const flowToken = `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+    const payloadWithToken = { ...payload, flowToken };
+
     // 2. Fail-safe: Store in sessionStorage in case the router drops the state object
-    sessionStorage.setItem('pendingAppointment', JSON.stringify(payload));
+    sessionStorage.setItem('pendingAppointment', JSON.stringify(payloadWithToken));
+    sessionStorage.setItem('consultationPaymentFlowToken', flowToken);
 
     // 3. Navigate
-    navigate('/patient/consultation/payment', { state: payload });
+    navigate('/patient/consultation/payment', { state: payloadWithToken });
   };
 
   if (loading) return <div className="flex items-center justify-center min-h-screen bg-[#FDF9EE]"><Loader2 className="w-10 h-10 text-green-700 animate-spin" /></div>;

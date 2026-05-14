@@ -34,7 +34,11 @@ const PatientActionSidebar = ({ actions, onCancelClick }) => {
 
   const handleJoinCall = () => {
     if (isJoinable) {
-      navigate(`/patient/consultation/room/${id}`);
+      const accessData = { appointmentId: String(id), issuedAt: Date.now() };
+      sessionStorage.setItem('consultationRoomAccess', JSON.stringify(accessData));
+      navigate(`/patient/consultation/room/${id}`, {
+        state: { fromAppointmentAction: true, appointmentId: String(id) }
+      });
     }
   };
 

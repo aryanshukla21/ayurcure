@@ -5,6 +5,7 @@ const fs = require('fs');
 const path = require('path');
 const { generateInvoicePdf } = require('../utils/generatePdf');
 const paymentService = require('../services/paymentService');
+const { isValidResourceId } = require('../utils/idValidation');
 
 // ==========================================
 // UTILITY HELPERS
@@ -507,10 +508,31 @@ exports.verifyPayment = async (req, res) => {
     try {
         const { razorpay_payment_id, razorpay_order_id, razorpay_signature, order_id } = req.body;
 
-        // FIXED: Validate presence of gateway keys to prevent server crash during HMAC generation
+        const parsedOrderId = String(order_id || '').trim();
+        if (!isValidResourceId(parsedOrderId)) {
+            return res.status(400).json({ error: 'Invalid order id received.' });
+        }
+
         if (!razorpay_payment_id || !razorpay_order_id || !razorpay_signature) {
-            await EcommerceModel.updatePaymentStatus(order_id, 'Failed');
+            await EcommerceModel.updatePaymentStatus(parsedOrderId, 'Failed');
             return res.status(400).json({ error: 'Incomplete payment payload received.' });
+        }
+
+        const patientId = await getPatientId(req.user.id, res);
+        if (!patientId) return;
+
+        const order = await EcommerceModel.getOrderForPaymentVerification(parsedOrderId, patientId);
+        if (!order) {
+            return res.status(403).json({ error: 'You are not authorized to verify payment for this order.' });
+        }
+
+        if (order.razorpay_order_id !== razorpay_order_id) {
+            return res.status(400).json({ error: 'Payment order mismatch detected.' });
+        }
+
+        if (order.payment_status === 'Paid') {
+            logger.warn(`Replay verification attempt rejected for already-paid order ${parsedOrderId}`);
+            return res.status(200).json({ success: true, message: 'Payment already verified.' });
         }
 
         const isValid = paymentService.verifyPaymentSignature(
@@ -520,11 +542,11 @@ exports.verifyPayment = async (req, res) => {
         );
 
         if (!isValid) {
-            await EcommerceModel.updatePaymentStatus(order_id, 'Failed');
+            await EcommerceModel.updatePaymentStatus(parsedOrderId, 'Failed');
             return res.status(400).json({ error: 'Payment verification failed' });
         }
 
-        await EcommerceModel.updatePaymentStatus(order_id, 'Paid', razorpay_payment_id);
+        await EcommerceModel.updatePaymentStatus(parsedOrderId, 'Paid', razorpay_payment_id);
         res.status(200).json({ success: true, message: 'Payment verified successfully' });
     } catch (err) {
         logger.error(`verifyPayment Error: ${err.message}`);

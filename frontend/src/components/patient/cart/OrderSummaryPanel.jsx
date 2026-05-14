@@ -4,6 +4,11 @@ import { ArrowRight, Tag } from 'lucide-react';
 
 const OrderSummaryPanel = ({ subtotal, taxes, total, isLoading }) => {
     const navigate = useNavigate();
+    const startCheckoutFlow = () => {
+        const flowToken = `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+        sessionStorage.setItem('checkoutFlowToken', flowToken);
+        navigate('/patient/checkout', { state: { fromCart: true, flowToken } });
+    };
 
     if (isLoading) {
         return (
@@ -64,7 +69,7 @@ const OrderSummaryPanel = ({ subtotal, taxes, total, isLoading }) => {
             </div>
 
             <button
-                onClick={() => navigate('/patient/checkout')}
+                onClick={startCheckoutFlow}
                 disabled={safeTotal <= 0}
                 className={`w-full font-bold py-4 rounded-2xl flex items-center justify-center gap-2 shadow-md transition-colors ${safeTotal > 0
                         ? 'bg-[#3A6447] hover:bg-[#2C4D36] text-white'
