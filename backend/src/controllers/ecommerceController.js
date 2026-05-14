@@ -531,6 +531,7 @@ exports.verifyPayment = async (req, res) => {
         }
 
         if (order.payment_status === 'Paid') {
+            logger.warn(`Replay verification attempt rejected for already-paid order ${parsedOrderId}`);
             return res.status(200).json({ success: true, message: 'Payment already verified.' });
         }
 

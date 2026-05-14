@@ -65,6 +65,24 @@ if (process.env.NODE_ENV === 'production') {
 app.use(express.json({ limit: '10mb' }));
 app.use(cookieParser());
 
+const unsafeMethods = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
+const isTrustedOrigin = (headerValue = '') =>
+    allowedOrigins.some((origin) => headerValue.startsWith(origin));
+
+// CSRF hardening for cookie-authenticated state-changing requests.
+app.use('/api', (req, res, next) => {
+    if (!unsafeMethods.has(req.method)) return next();
+    if (!req.cookies?.token) return next();
+
+    const origin = req.get('origin') || '';
+    const referer = req.get('referer') || '';
+    if (isTrustedOrigin(origin) || isTrustedOrigin(referer)) {
+        return next();
+    }
+
+    return res.status(403).json({ error: 'Forbidden: CSRF validation failed.' });
+});
+
 if (process.env.NODE_ENV === 'production') {
     app.use(morgan('short'));
 } else {

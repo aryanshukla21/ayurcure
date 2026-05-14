@@ -447,7 +447,7 @@ exports.cancelAppointment = async (req, res) => {
         }
 
         if (['Cancelled', 'Completed'].includes(appointment.status)) {
-            return res.status(400).json({ error: `Appointment cannot be cancelled from status ${appointment.status}` });
+            return res.status(400).json({ error: 'This appointment cannot be cancelled because it is already completed or cancelled.' });
         }
 
         const db = require('../config/db');
