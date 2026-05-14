@@ -64,11 +64,11 @@ const OrderSummaryPanel = ({ subtotal, taxes, total, isLoading }) => {
             </div>
 
             <button
-                onClick={() => navigate('/patient/checkout')}
+                onClick={() => navigate('/patient/checkout', { state: { fromCart: true } })}
                 disabled={safeTotal <= 0}
                 className={`w-full font-bold py-4 rounded-2xl flex items-center justify-center gap-2 shadow-md transition-colors ${safeTotal > 0
-                        ? 'bg-[#3A6447] hover:bg-[#2C4D36] text-white'
-                        : 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                    ? 'bg-[#3A6447] hover:bg-[#2C4D36] text-white'
+                    : 'bg-gray-200 text-gray-400 cursor-not-allowed'
                     }`}
             >
                 Proceed to Checkout <ArrowRight size={18} />

@@ -2,6 +2,7 @@ import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 
 import ProtectedRoute from './components/common/ProtectedRoute';
+import StrictFlowRoute from './components/common/StrictFlowRoute';
 import ScrollToTop from './components/ScrollToTop';
 import { CartProvider } from './context/CartContext';
 import StickyLogo from './components/common/StickyLogo';
@@ -155,14 +156,18 @@ function App() {
               <Route path="pharmacy-store" element={<PharmacyStore />} />
               <Route path="pharmacy-store/:id" element={<ProductDetails />} />
               <Route path="cart" element={<CartSummary />} />
-              <Route path="checkout" element={<CheckoutPage />} />
+              <Route element={<StrictFlowRoute requiredStateKey="fromCart" fallbackRoute="/patient/cart" />}>
+                <Route path="checkout" element={<CheckoutPage />} />
+              </Route>
               <Route path="pharmacy-orders" element={<PharmacyOrdersPage />} />
               <Route path="pharmacy-orders/:id" element={<PatientOrderDetailsPage />} />
               <Route path="prescriptions" element={<PatientPrescriptionsPage />} />
               <Route path="health-records" element={<PatientHealthReportsPage />} />
               <Route path="profile" element={<PatientProfilePage />} />
               <Route path="settings" element={<PatientSettingsPage />} />
-              <Route path="consultation/payment" element={<ConsultationPaymentPage />} />
+              <Route element={<StrictFlowRoute requiredStateKey="fromAppointmentSetup" fallbackRoute="/patient/dashboard" />}>
+                <Route path="consultation/payment" element={<ConsultationPaymentPage />} />
+              </Route>
             </Route>
             <Route path="/patient/consultation/room/:appointmentId" element={<VideoConsultationRoom />} />
           </Route>

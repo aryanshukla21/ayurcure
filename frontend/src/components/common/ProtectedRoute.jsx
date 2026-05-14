@@ -1,39 +1,40 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Navigate, Outlet, useLocation } from 'react-router-dom';
+import axios from '../api/axiosConfig'; // Your axios instance with withCredentials: true
 
-/**
- * Guard component for role-based frontend routing.
- * Note: True authorization is enforced via HttpOnly cookies on the backend.
- * This component simply handles UI redirection based on stored user state.
- */
 const ProtectedRoute = ({ allowedRoles }) => {
     const location = useLocation();
+    const [authState, setAuthState] = useState({ isLoading: true, role: null, isAuthenticated: false });
 
-    // Retrieve UI state (Ideally replaced by a global Context populated via /api/auth/me)
-    const userRole = localStorage.getItem('role');
+    useEffect(() => {
+        const verifySession = async () => {
+            try {
+                // Securely verify the HttpOnly cookie with the backend
+                const response = await axios.get('/api/auth/verify');
+                setAuthState({
+                    isLoading: false,
+                    role: response.data.role,
+                    isAuthenticated: true
+                });
+            } catch (error) {
+                setAuthState({ isLoading: false, role: null, isAuthenticated: false });
+            }
+        };
+        verifySession();
+    }, []);
 
-    // 1. Not logged in (UI state missing)
-    if (!userRole) {
+    if (authState.isLoading) {
+        return <div>Loading secure environment...</div>; // Prevent flashing unauthorized content
+    }
+
+    if (!authState.isAuthenticated) {
         return <Navigate to="/login" state={{ from: location }} replace />;
     }
 
-    // 2. Role mismatch handling
-    if (allowedRoles && !allowedRoles.includes(userRole)) {
-        switch (userRole) {
-            case 'admin':
-                return <Navigate to="/admin/dashboard" replace />;
-            case 'doctor':
-                return <Navigate to="/doctor/dashboard" replace />;
-            case 'patient':
-                return <Navigate to="/patient/dashboard" replace />;
-            default:
-                // Fallback for corrupted local storage state
-                localStorage.removeItem('role');
-                return <Navigate to="/login" replace />;
-        }
+    if (allowedRoles && !allowedRoles.includes(authState.role)) {
+        return <Navigate to="/unauthorized" replace />; // Redirect to a safe fallback
     }
 
-    // 3. Authorized
     return <Outlet />;
 };
 

@@ -3,10 +3,12 @@ import { Leaf } from 'lucide-react';
 import CartItem from '../../components/patient/cart/CartItem';
 import OrderSummaryPanel from '../../components/patient/cart/OrderSummaryPanel';
 import { useCart } from '../../context/CartContext';
+import { useNavigate } from 'react-router-dom';
 
 const CartSummary = () => {
     // Pulling strictly dynamic data from the Context Provider
     const { cartItems, updateQuantity, removeFromCart, cartTotal } = useCart();
+    const navigate = useNavigate();
 
     // Dynamic tax calculation (e.g., 5% of the total, or 0 if cart is empty)
     const taxes = cartItems.length > 0 ? (cartTotal * 0.05) : 0;
