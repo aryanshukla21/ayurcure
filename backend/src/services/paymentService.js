@@ -23,7 +23,7 @@ class PaymentService {
     async createOrder(amountInRupees, receiptId) {
         try {
             const options = {
-                amount: Math.round(amountInRupees * 100), // FIXED: Prevents JS floating point crashes
+                amount: Math.round(amountInRupees * 100),
                 currency: 'INR',
                 receipt: receiptId.toString(),
                 payment_capture: 1

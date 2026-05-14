@@ -13,6 +13,7 @@ const AppointmentSuccessModal = ({ isOpen, appointmentDetails, onViewAppointment
     return name.replace(/^Dr\.\s*/i, '').charAt(0).toUpperCase();
   };
 
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
       <div className="bg-[#FDF9EE] w-full max-w-[420px] rounded-[32px] shadow-2xl p-8 md:p-10 flex flex-col items-center text-center animate-in fade-in zoom-in-95 duration-200">
@@ -37,14 +38,14 @@ const AppointmentSuccessModal = ({ isOpen, appointmentDetails, onViewAppointment
 
           {/* Doctor Info */}
           <div className="flex items-center gap-4 mb-6">
-            
+
             {/* FIX: Render the Avatar or the exact Initial */}
             {avatarUrl ? (
-                <img src={avatarUrl} alt="Doctor" className="w-12 h-12 rounded-xl object-cover border border-[#EFEBE1] shrink-0" />
+              <img src={avatarUrl} alt="Doctor" className="w-12 h-12 rounded-xl object-cover border border-[#EFEBE1] shrink-0" />
             ) : (
-                <div className="w-12 h-12 rounded-xl bg-[#EAE5D9] text-[#4A7C59] flex items-center justify-center text-xl font-bold shrink-0 border border-[#EFEBE1]">
-                  {getInitial(appointmentDetails?.doctorName)}
-                </div>
+              <div className="w-12 h-12 rounded-xl bg-[#EAE5D9] text-[#4A7C59] flex items-center justify-center text-xl font-bold shrink-0 border border-[#EFEBE1]">
+                {getInitial(appointmentDetails?.doctorName)}
+              </div>
             )}
 
             <div>

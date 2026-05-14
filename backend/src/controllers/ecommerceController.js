@@ -6,13 +6,6 @@ const path = require('path');
 const { generateInvoicePdf } = require('../utils/generatePdf');
 const paymentService = require('../services/paymentService');
 
-// ==========================================
-// UTILITY HELPERS
-// ==========================================
-
-/**
- * Resolves the authenticated User ID to their specific Patient Profile ID.
- */
 const getPatientId = async (userId, res) => {
     try {
         const profile = await PatientModel.getProfileByUserId(userId);
@@ -191,7 +184,6 @@ exports.getRefillReminder = async (req, res) => {
 
 exports.getAssistanceInfo = async (req, res) => {
     try {
-        // Returns static/mock data for pharmacy assistance
         const assistanceInfo = {
             support_email: "pharmacy@ayurcure.com",
             support_phone: "+91-1800-AYUR-CARE",
