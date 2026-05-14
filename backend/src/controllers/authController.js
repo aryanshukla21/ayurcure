@@ -8,12 +8,6 @@ const { OAuth2Client } = require('google-auth-library');
 
 const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
-// ==========================================
-// IN-MEMORY CACHES
-// ==========================================
-const tempOtpCache = new Map(); // Stores generated Email OTPs
-const verifiedPhonesCache = new Map(); // Stores successful Phone verifications
-
 /**
  * Issues a secure, HttpOnly JWT cookie.
  * @param {Object} res - Express response object
@@ -50,7 +44,11 @@ exports.sendSignupOtps = async (req, res) => {
         }
 
         const emailOtp = authService.generateOTP();
-        tempOtpCache.set(email, { otp: emailOtp, expiresAt: Date.now() + 5 * 60000 });
+        const otpHash = await authService.hashData(emailOtp);
+        const expiryDate = new Date(Date.now() + 5 * 60000);
+
+        // SECURE FIX: Replaced volatile in-memory cache with DB storage for deployment readiness
+        await UserModel.upsertTempVerification(email, phone, otpHash, expiryDate);
 
         await Promise.all([
             notificationService.sendPhoneOTP(phone).catch(err => {

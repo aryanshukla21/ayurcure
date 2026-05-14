@@ -55,6 +55,14 @@ if (process.env.NODE_ENV === 'production') {
 app.use(express.json({ limit: '1mb' }));
 app.use(express.urlencoded({ extended: true, limit: '1mb' }));
 
+// SECURE FIX: Catch malformed JSON payloads to prevent DoS crashes
+app.use((err, req, res, next) => {
+    if (err instanceof SyntaxError && err.status === 400 && 'body' in err) {
+        return res.status(400).json({ error: 'Invalid JSON payload received.' });
+    }
+    next();
+});
+
 app.use(cookieParser());
 
 if (process.env.NODE_ENV === 'production') {

@@ -14,6 +14,11 @@ const CartSummary = () => {
     const taxes = cartItems.length > 0 ? (cartTotal * 0.05) : 0;
     const total = cartTotal + taxes;
 
+    // Pass the strict flow state key to securely enter the checkout page
+    const handleProceedToCheckout = () => {
+        navigate('/patient/checkout', { state: { fromCart: true } });
+    };
+
     return (
         <div className="min-h-screen bg-[#FDF9EE] p-4 md:p-8 font-sans pb-24">
             <div className="mb-10">
@@ -58,6 +63,7 @@ const CartSummary = () => {
                         subtotal={cartTotal}
                         taxes={taxes}
                         total={total}
+                        onCheckout={handleProceedToCheckout}
                     />
                 </div>
             </div>

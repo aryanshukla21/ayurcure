@@ -1,9 +1,7 @@
 import React from 'react';
-import { useNavigate } from 'react-router-dom';
 import { ArrowRight, Tag } from 'lucide-react';
 
-const OrderSummaryPanel = ({ subtotal, taxes, total, isLoading }) => {
-    const navigate = useNavigate();
+const OrderSummaryPanel = ({ subtotal, taxes, total, isLoading, onCheckout }) => {
 
     if (isLoading) {
         return (
@@ -64,7 +62,7 @@ const OrderSummaryPanel = ({ subtotal, taxes, total, isLoading }) => {
             </div>
 
             <button
-                onClick={() => navigate('/patient/checkout', { state: { fromCart: true } })}
+                onClick={onCheckout}
                 disabled={safeTotal <= 0}
                 className={`w-full font-bold py-4 rounded-2xl flex items-center justify-center gap-2 shadow-md transition-colors ${safeTotal > 0
                     ? 'bg-[#3A6447] hover:bg-[#2C4D36] text-white'
