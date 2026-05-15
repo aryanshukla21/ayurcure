@@ -2,10 +2,12 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Save, X, Loader2, UploadCloud, Image as ImageIcon } from 'lucide-react';
 import { adminApi } from '../../../api/adminApi';
+import imageCompression from 'browser-image-compression'; // 🚨 IMPORT ADDED
 
 const AddProductForm = () => {
     const navigate = useNavigate();
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [isCompressing, setIsCompressing] = useState(false); // Track compression state
     const [imagePreview, setImagePreview] = useState(null);
 
     const [formData, setFormData] = useState({
@@ -14,11 +16,29 @@ const AddProductForm = () => {
 
     const handleChange = (e) => setFormData({ ...formData, [e.target.name]: e.target.value });
 
-    const handleImageUpload = (e) => {
+    // 🚨 THE FIX: Compress the image instantly on the frontend
+    const handleImageUpload = async (e) => {
         const file = e.target.files[0];
         if (file) {
-            setFormData({ ...formData, imageFile: file });
-            setImagePreview(URL.createObjectURL(file));
+            setIsCompressing(true);
+            try {
+                // Compression settings: Max 200KB, Max 1080p resolution
+                const options = {
+                    maxSizeMB: 0.2,
+                    maxWidthOrHeight: 1080,
+                    useWebWorker: true,
+                };
+
+                const compressedFile = await imageCompression(file, options);
+
+                setFormData({ ...formData, imageFile: compressedFile });
+                setImagePreview(URL.createObjectURL(compressedFile));
+            } catch (error) {
+                console.error("Compression Error:", error);
+                alert("Failed to process image. Try a different file.");
+            } finally {
+                setIsCompressing(false);
+            }
         }
     };
 
@@ -43,12 +63,12 @@ const AddProductForm = () => {
             formDataToSend.append('benefits', '');
             formDataToSend.append('usage_instructions', '');
 
-            // 🚨 THE FIX: The key MUST be 'image' to match upload.single('image') in backend
+            // The compressed image is attached here
             if (formData.imageFile) {
                 formDataToSend.append('image', formData.imageFile);
             }
 
-            // Send the FormData instead of the old JSON payload
+            // Send the FormData
             const res = await adminApi.addNewProduct(formDataToSend);
 
             if (res) {
@@ -64,25 +84,30 @@ const AddProductForm = () => {
         }
     };
 
+    // Calculate total loading state
+    const isLoading = isSubmitting || isCompressing;
+
     return (
         <div className="bg-white rounded-[32px] p-8 border border-[#EFEBE1] shadow-sm">
             <form onSubmit={handleSubmit} className="space-y-6">
                 <div className="mb-8">
                     <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-3">Product Image</label>
                     <div className="flex items-center gap-6">
-                        <div className="w-24 h-24 rounded-2xl border border-[#EFEBE1] overflow-hidden bg-gray-50 flex-shrink-0 flex items-center justify-center shadow-inner">
-                            {imagePreview ? (
+                        <div className="w-24 h-24 rounded-2xl border border-[#EFEBE1] overflow-hidden bg-gray-50 flex-shrink-0 flex items-center justify-center shadow-inner relative">
+                            {isCompressing ? (
+                                <Loader2 className="animate-spin text-[#3A6447]" size={24} />
+                            ) : imagePreview ? (
                                 <img src={imagePreview} alt="Preview" className="w-full h-full object-cover" />
                             ) : (
                                 <ImageIcon className="text-gray-400" size={32} />
                             )}
                         </div>
                         <div className="flex-1">
-                            <input type="file" id="productImage" className="hidden" accept="image/*" onChange={handleImageUpload} />
-                            <label htmlFor="productImage" className="inline-flex items-center gap-2 px-5 py-2.5 bg-white border border-[#EFEBE1] hover:bg-gray-50 text-gray-700 text-sm font-bold rounded-full transition-colors cursor-pointer shadow-sm">
-                                <UploadCloud size={16} /> Choose Image
+                            <input type="file" id="productImage" className="hidden" accept="image/*" onChange={handleImageUpload} disabled={isLoading} />
+                            <label htmlFor="productImage" className={`inline-flex items-center gap-2 px-5 py-2.5 bg-white border border-[#EFEBE1] hover:bg-gray-50 text-gray-700 text-sm font-bold rounded-full transition-colors cursor-pointer shadow-sm ${isLoading ? 'opacity-50 pointer-events-none' : ''}`}>
+                                <UploadCloud size={16} /> {isCompressing ? 'Processing...' : 'Choose Image'}
                             </label>
-                            <p className="text-xs font-medium text-gray-400 mt-2">PNG, JPG, or WEBP. Max size 2MB.</p>
+                            <p className="text-xs font-medium text-gray-400 mt-2">PNG, JPG, or WEBP. Max size 2MB (Auto-compressed).</p>
                         </div>
                     </div>
                 </div>
@@ -124,12 +149,12 @@ const AddProductForm = () => {
                 </div>
 
                 <div className="flex justify-end gap-4 mt-8 pt-6 border-t border-[#EFEBE1]">
-                    <button type="button" disabled={isSubmitting} onClick={() => navigate('/admin/inventory')} className="px-6 py-3 bg-white border border-[#EFEBE1] text-gray-700 hover:bg-gray-50 disabled:opacity-50 text-sm font-bold rounded-full transition-colors flex items-center gap-2 cursor-pointer shadow-sm">
+                    <button type="button" disabled={isLoading} onClick={() => navigate('/admin/inventory')} className="px-6 py-3 bg-white border border-[#EFEBE1] text-gray-700 hover:bg-gray-50 disabled:opacity-50 text-sm font-bold rounded-full transition-colors flex items-center gap-2 cursor-pointer shadow-sm">
                         <X size={16} /> Cancel
                     </button>
-                    <button type="submit" disabled={isSubmitting} className="min-w-[160px] px-8 py-3 bg-[#3A6447] text-white hover:bg-[#2C4D36] disabled:bg-[#3A6447]/70 text-sm font-bold rounded-full transition-colors shadow-sm flex items-center justify-center gap-2 cursor-pointer">
-                        {isSubmitting ? <Loader2 className="animate-spin" size={16} /> : <Save size={16} />}
-                        {isSubmitting ? 'Adding...' : 'Add Product'}
+                    <button type="submit" disabled={isLoading} className="min-w-[160px] px-8 py-3 bg-[#3A6447] text-white hover:bg-[#2C4D36] disabled:bg-[#3A6447]/70 text-sm font-bold rounded-full transition-colors shadow-sm flex items-center justify-center gap-2 cursor-pointer">
+                        {isLoading ? <Loader2 className="animate-spin" size={16} /> : <Save size={16} />}
+                        {isLoading ? 'Saving...' : 'Add Product'}
                     </button>
                 </div>
             </form>

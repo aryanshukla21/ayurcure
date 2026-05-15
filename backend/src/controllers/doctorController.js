@@ -157,10 +157,7 @@ exports.getApptMedicalInfo = async (req, res) => {
 
 exports.startVideoConsultation = async (req, res) => {
     try {
-        // 🚨 FIX: Return the internal React route instead of the external "meet.ayurcure.com" domain
-        // Update this string if your actual route in App.jsx is slightly different!
         const internalRoomRoute = `/doctor/consultation-room/${req.params.appointmentId}`;
-
         res.status(200).json({ success: true, link: internalRoomRoute });
     } catch (error) {
         console.error("🔥 ERROR in startVideoConsultation:", error.message);
@@ -302,7 +299,6 @@ exports.getSettingsPersonalInfo = async (req, res) => {
 
 exports.updateSettingsPersonalInfo = async (req, res) => {
     try {
-        // 🚨 FIX: Change req.file.location to req.file.s3Url
         if (req.file && req.file.s3Url) {
             req.body.avatar = req.file.s3Url;
         }

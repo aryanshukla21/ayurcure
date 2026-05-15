@@ -1,11 +1,11 @@
 import React, { useState } from 'react';
 // THE FIX: Added Image as ImageIcon to your imports
 import { Search, Plus, Edit2, Trash2, Image as ImageIcon } from 'lucide-react';
-import { useNavigate } from 'react-router-dom'; 
-import { adminApi } from '../../../api/adminApi'; 
+import { useNavigate } from 'react-router-dom';
+import { adminApi } from '../../../api/adminApi';
 
 const InventoryTable = ({ products = [], categories = [] }) => {
-    const navigate = useNavigate(); 
+    const navigate = useNavigate();
     const [searchTerm, setSearchTerm] = useState('');
     const [catFilter, setCatFilter] = useState('All');
 
@@ -28,7 +28,7 @@ const InventoryTable = ({ products = [], categories = [] }) => {
         if (window.confirm("Are you sure you want to delete this product?")) {
             try {
                 await adminApi.deleteProduct(productId);
-                window.location.reload(); 
+                window.location.reload();
             } catch (error) {
                 console.error("Failed to delete product:", error);
                 alert("Failed to delete. Check your backend console.");
@@ -56,9 +56,9 @@ const InventoryTable = ({ products = [], categories = [] }) => {
                         {categories.map((cat, i) => <option key={i} value={cat}>{cat}</option>)}
                     </select>
                 </div>
-                
-                <button 
-                    onClick={() => navigate('/admin/inventory/add')} 
+
+                <button
+                    onClick={() => navigate('/admin/inventory/add')}
                     className="bg-[#3A6447] text-white px-5 py-2.5 rounded-2xl text-sm font-bold flex items-center gap-2 hover:bg-[#2C4D36] transition-colors"
                 >
                     <Plus size={16} /> Add Product
@@ -84,9 +84,9 @@ const InventoryTable = ({ products = [], categories = [] }) => {
                                 <td className="px-6 py-4 flex items-center gap-3">
                                     <div className="w-10 h-10 rounded-lg border border-gray-100 overflow-hidden bg-white flex-shrink-0 flex items-center justify-center">
                                         {product.image_url ? (
-                                            <img 
-                                                src={`${BACKEND_URL}${product.image_url}`} 
-                                                alt={product.name} 
+                                            <img
+                                                src={product.image_url}
+                                                alt={product.name}
                                                 className="w-full h-full object-cover"
                                                 onError={(e) => { e.target.style.display = 'none'; }}
                                             />
@@ -105,13 +105,13 @@ const InventoryTable = ({ products = [], categories = [] }) => {
                                     </span>
                                 </td>
                                 <td className="px-6 py-4 text-right whitespace-nowrap">
-                                    <button 
+                                    <button
                                         onClick={() => navigate(`/admin/inventory/edit/${product.id}`)}
                                         className="text-blue-500 hover:bg-blue-50 p-2 rounded-lg transition-colors mr-2"
                                     >
                                         <Edit2 size={16} />
                                     </button>
-                                    <button 
+                                    <button
                                         onClick={() => handleDelete(product.id)}
                                         className="text-red-500 hover:bg-red-50 p-2 rounded-lg transition-colors"
                                     >

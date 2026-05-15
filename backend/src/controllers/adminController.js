@@ -50,11 +50,9 @@ exports.getAllDoctors = async (req, res) => {
 exports.addDoctor = async (req, res) => {
     try {
         const { full_name, email, phone, password, specialization, experience_years, qualifications, registration_number, consultation_fee, about } = req.body;
-
-        // 🚨 THE FIX: Capture the AWS S3 URL for Doctor Avatars!
-        let avatar = null;
+        let profile_image_url = null;
         if (req.file) {
-            avatar = req.file.s3Url || `/uploads/${req.file.filename}`;
+            profile_image_url = req.file.s3Url || `/uploads/${req.file.filename}`;
         }
 
         const salt = await bcrypt.genSalt(10);
@@ -62,7 +60,7 @@ exports.addDoctor = async (req, res) => {
 
         const doctorId = await adminModel.createDoctorTransaction(
             { full_name, email, phone, password_hash },
-            { specialization, experience_years, qualifications, registration_number, consultation_fee, about, avatar }
+            { specialization, experience_years, qualifications, registration_number, consultation_fee, about, profile_image_url }
         );
 
         res.status(201).json({ success: true, message: "Doctor onboarded successfully", doctorId });
@@ -98,9 +96,9 @@ exports.updateDoctorDetails = async (req, res) => {
     try {
         const data = req.body;
 
-        // 🚨 THE FIX: Capture the AWS S3 URL!
+        // 🚨 THE FIX: Capture the AWS S3 URL and map it to the correct schema column!
         if (req.file) {
-            data.avatar = req.file.s3Url || `/uploads/${req.file.filename}`;
+            data.profile_image_url = req.file.s3Url || `/uploads/${req.file.filename}`;
         }
 
         await adminModel.updateDoctorDetails(req.params.id, data);
@@ -230,7 +228,6 @@ exports.addNewProduct = async (req, res) => {
     try {
         const productData = { ...req.body };
 
-        // 🚨 THE FIX: Capture the AWS S3 URL!
         if (req.file) {
             productData.image_url = req.file.s3Url || `/uploads/${req.file.filename}`;
         }
@@ -245,17 +242,14 @@ exports.addNewProduct = async (req, res) => {
     }
 };
 
-
 exports.getAllProductsPagination = async (req, res) => {
     try {
-        // req.query is safer than req.params for pagination (e.g., ?page=2)
         const page = parseInt(req.query.page) || parseInt(req.params.page) || 1;
-        const limit = 10; // Loading 10 items per page is standard and fast
+        const limit = 10;
         const offset = (page - 1) * limit;
 
         const data = await adminModel.getAllProductsPagination(limit, offset);
 
-        // Calculate total pages for the frontend
         const totalPages = Math.ceil(data.totalCount / limit);
 
         res.status(200).json({
@@ -272,7 +266,6 @@ exports.getAllProductsPagination = async (req, res) => {
         res.status(500).json({ success: false, message: error.message });
     }
 };
-
 
 exports.filterInventory = async (req, res) => {
     try { res.status(200).json({ success: true, products: await adminModel.filterInventory(req.body) }); }
@@ -295,7 +288,6 @@ exports.updateProduct = async (req, res) => {
     try {
         const productData = req.body;
 
-        // 🚨 THE FIX: Capture the AWS S3 URL!
         if (req.file) {
             productData.image_url = req.file.s3Url || `/uploads/${req.file.filename}`;
         }
@@ -316,6 +308,7 @@ exports.deleteProduct = async (req, res) => {
         res.status(500).json({ success: false, message: error.message });
     }
 };
+
 // ==========================================
 // BLOGS
 // ==========================================
@@ -324,12 +317,10 @@ exports.getAllBlogs = async (req, res) => {
     catch (error) { res.status(500).json({ success: false, message: error.message }); }
 };
 
-// Add image support to addNewBlog
 exports.addNewBlog = async (req, res) => {
     try {
-        // 🚨 FIX: Capture the S3 URL for blog thumbnails
         if (req.file && req.file.s3Url) {
-            req.body.image_url = req.file.s3Url; // Adjust property name to match your DB column
+            req.body.image_url = req.file.s3Url;
         }
 
         const blogId = await adminModel.addNewBlog(req.body, req.user.id);
@@ -339,12 +330,10 @@ exports.addNewBlog = async (req, res) => {
     }
 };
 
-// Add image support to updateBlog
 exports.updateBlog = async (req, res) => {
     try {
-        // 🚨 FIX: Capture the S3 URL for blog thumbnails
         if (req.file && req.file.s3Url) {
-            req.body.image_url = req.file.s3Url; // Adjust property name to match your DB column
+            req.body.image_url = req.file.s3Url;
         }
 
         await adminModel.updateBlog(req.params.id, req.body);
@@ -488,6 +477,7 @@ exports.addAdmin = async (req, res) => {
         res.status(500).json({ success: false, message: error.message });
     }
 };
+
 exports.getAllAdmins = async (req, res) => {
     try {
         const admins = await adminModel.getAllAdmins();
@@ -498,7 +488,6 @@ exports.getAllAdmins = async (req, res) => {
     }
 };
 
-// You will also need this one so your "Edit Admin" button doesn't crash!
 exports.getAdminDetails = async (req, res) => {
     try {
         const data = await adminModel.getAdminDetails(req.params.id);

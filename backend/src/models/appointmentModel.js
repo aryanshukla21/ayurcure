@@ -35,7 +35,7 @@ class AppointmentModel {
                 u.full_name AS "doctorName", 
                 d.specialization AS specialty, 
                 d.average_rating,
-                d.avatar  -- ADDED AVATAR
+                d.profile_image_url AS avatar  -- 🚨 FIXED SCHEMA REFERENCE
             FROM Appointments a
             JOIN DoctorProfiles d ON a.doctor_id = d.id
             JOIN Users u ON d.user_id = u.id
@@ -168,7 +168,7 @@ class AppointmentModel {
             SELECT 
                 u.full_name AS doctor_name, u.email, u.phone,
                 d.specialization, d.experience_years, d.qualifications, d.bio,
-                d.avatar  
+                d.profile_image_url AS avatar  -- 🚨 FIXED SCHEMA REFERENCE
             FROM Appointments a
             LEFT JOIN DoctorProfiles d ON a.doctor_id = d.id
             LEFT JOIN Users u ON (d.user_id = u.id OR a.doctor_id = u.id)
@@ -245,7 +245,7 @@ class AppointmentModel {
                 d.consultation_fee, 
                 d.average_rating, 
                 d.languages,
-                d.avatar -- ADDED AVATAR
+                d.profile_image_url AS avatar -- 🚨 FIXED SCHEMA REFERENCE
             FROM DoctorProfiles d
             JOIN Users u ON d.user_id = u.id
             WHERE u.account_status = 'Active'
@@ -265,7 +265,7 @@ class AppointmentModel {
                 d.consultation_fee, 
                 d.average_rating, 
                 d.languages,
-                d.avatar
+                d.profile_image_url AS avatar -- 🚨 FIXED SCHEMA REFERENCE
             FROM DoctorProfiles d
             JOIN Users u ON d.user_id = u.id
             WHERE u.account_status = 'Active'
@@ -292,7 +292,7 @@ class AppointmentModel {
                 d.experience_years, 
                 d.consultation_fee, 
                 d.average_rating,
-                d.avatar
+                d.profile_image_url AS avatar -- 🚨 FIXED SCHEMA REFERENCE
             FROM DoctorProfiles d
             JOIN Users u ON d.user_id = u.id
             WHERE u.account_status = 'Active' AND u.full_name ILIKE $1
@@ -314,7 +314,7 @@ class AppointmentModel {
                 d.total_reviews, 
                 d.bio, 
                 d.education_details,
-                d.avatar -- ADDED AVATAR
+                d.profile_image_url AS avatar -- 🚨 FIXED SCHEMA REFERENCE
             FROM DoctorProfiles d
             JOIN Users u ON d.user_id = u.id
             WHERE d.id = $1;

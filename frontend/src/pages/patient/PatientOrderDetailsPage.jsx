@@ -17,7 +17,12 @@ const PatientOrderDetailsPage = () => {
   const [wellnessTip, setWellnessTip] = useState(null);
 
   useEffect(() => {
-    if (!id) return;
+    // 🚨 FIX: Fail-fast security check. Block requests if ID is missing or literally the string "undefined"
+    if (!id || id === 'undefined' || id === 'null') {
+      console.warn("Invalid Order ID detected in URL. Aborting API calls.");
+      return;
+    }
+
     ecommerceApi.getOrderDetails(id).then(setOrderDetails).catch(console.error);
     ecommerceApi.getOrderedProducts(id).then(setProducts).catch(console.error);
     ecommerceApi.getDeliveryStatus(id).then(setDelivery).catch(console.error);

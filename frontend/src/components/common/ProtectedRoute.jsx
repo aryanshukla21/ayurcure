@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Navigate, Outlet, useLocation } from 'react-router-dom';
-import axios from '../api/axiosConfig'; // Your axios instance with withCredentials: true
+import { authApi } from '../../api/authApi';
 
 const ProtectedRoute = ({ allowedRoles }) => {
     const location = useLocation();
@@ -9,11 +9,13 @@ const ProtectedRoute = ({ allowedRoles }) => {
     useEffect(() => {
         const verifySession = async () => {
             try {
-                // Securely verify the HttpOnly cookie with the backend
-                const response = await axios.get('/api/auth/verify');
+                // authApi already unwraps axios response.data
+                // Backend returns: { user: { id: 1, role: 'patient' } }
+                const data = await authApi.checkAuth();
+
                 setAuthState({
                     isLoading: false,
-                    role: response.data.role,
+                    role: data.user.role, // FIX: Extract role from the 'user' object
                     isAuthenticated: true
                 });
             } catch (error) {
@@ -24,7 +26,12 @@ const ProtectedRoute = ({ allowedRoles }) => {
     }, []);
 
     if (authState.isLoading) {
-        return <div>Loading secure environment...</div>; // Prevent flashing unauthorized content
+        // Prevent flashing unauthorized content with a nice spinner
+        return (
+            <div className="flex h-screen items-center justify-center bg-[#FAF7F2]">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#3A6447]"></div>
+            </div>
+        );
     }
 
     if (!authState.isAuthenticated) {
@@ -32,7 +39,8 @@ const ProtectedRoute = ({ allowedRoles }) => {
     }
 
     if (allowedRoles && !allowedRoles.includes(authState.role)) {
-        return <Navigate to="/unauthorized" replace />; // Redirect to a safe fallback
+        // Redirect to home if they are logged in but lack permissions for this specific route
+        return <Navigate to="/" replace />;
     }
 
     return <Outlet />;

@@ -8,21 +8,15 @@ const { OAuth2Client } = require('google-auth-library');
 
 const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
-/**
- * Issues a secure, HttpOnly JWT cookie.
- * @param {Object} res - Express response object
- * @param {string} token - JWT token
- * @param {string} role - User role (determines session duration)
- */
 const setTokenCookie = (res, token, role) => {
     const maxAgeMs = role === 'admin'
-        ? 10 * 365 * 24 * 60 * 60 * 1000 // 10 Years for Admin
-        : 7 * 24 * 60 * 60 * 1000;       // 7 Days for Patient/Doctor
+        ? 10 * 365 * 24 * 60 * 60 * 1000
+        : 7 * 24 * 60 * 60 * 1000;
 
     res.cookie('token', token, {
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',
-        sameSite: 'strict',
+        sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
         maxAge: maxAgeMs
     });
 };
@@ -44,20 +38,22 @@ exports.sendSignupOtps = async (req, res) => {
         }
 
         const emailOtp = authService.generateOTP();
-        const otpHash = await authService.hashData(emailOtp);
+        const phoneOtp = authService.generateOTP();
+        const emailOtpHash = await authService.hashData(emailOtp);
+        const phoneOtpHash = await authService.hashData(phoneOtp);
         const expiryDate = new Date(Date.now() + 5 * 60000);
 
-        // SECURE FIX: Replaced volatile in-memory cache with DB storage for deployment readiness
-        await UserModel.upsertTempVerification(email, phone, otpHash, expiryDate);
+        // Store generated OTPs securely in the DB
+        await UserModel.upsertTempVerification(email, phone, emailOtpHash, phoneOtpHash, expiryDate);
 
         await Promise.all([
-            notificationService.sendPhoneOTP(phone).catch(err => {
+            notificationService.sendPhoneOTP(phone, phoneOtp).catch(err => {
                 logger.error(`SMS Error: ${err.message}`);
                 throw new Error('Failed to send SMS OTP.');
             }),
             notificationService.sendEmailVerification(email, emailOtp).catch(err => {
                 logger.error(`Email Error: ${err.message}`);
-                throw new Error('Failed to send Email OTP. Check SendGrid/SMTP config.');
+                throw new Error('Failed to send Email OTP.');
             })
         ]);
 
@@ -71,39 +67,36 @@ exports.sendSignupOtps = async (req, res) => {
 exports.verifyOtp = async (req, res) => {
     try {
         let { email, phone, otp } = req.body;
-
         if (!otp) return res.status(400).json({ error: 'OTP is required.' });
 
         if (email) {
             email = email.toLowerCase().trim();
-
             const user = await UserModel.getUserByEmail(email);
             if (user) {
                 req.body.token = otp;
                 return await exports.verifyEmailToken(req, res);
             }
 
-            if (!tempOtpCache.has(email)) {
-                return res.status(400).json({ error: 'OTP expired or server restarted. Please click resend.' });
-            }
+            const temp = await UserModel.getTempVerification(email);
+            if (!temp) return res.status(400).json({ error: 'Session expired or not found. Please sign up again.' });
+            if (new Date() > new Date(temp.expires_at)) return res.status(400).json({ error: 'Email OTP has expired. Please resend.' });
 
-            const cachedData = tempOtpCache.get(email);
-            if (cachedData.otp !== otp) return res.status(400).json({ error: 'Invalid Email OTP.' });
-            if (Date.now() > cachedData.expiresAt) {
-                tempOtpCache.delete(email);
-                return res.status(400).json({ error: 'Email OTP has expired. Please resend.' });
-            }
+            const isValid = await authService.verifyHash(otp, temp.email_otp_hash);
+            if (!isValid) return res.status(400).json({ error: 'Invalid Email OTP.' });
 
+            await UserModel.markTempEmailVerified(email);
             return res.status(200).json({ message: 'Email OTP verified successfully.' });
         }
 
-        if (phone && !email) {
-            const isApproved = await notificationService.verifyPhoneOTP(phone, otp);
-            if (!isApproved) return res.status(400).json({ error: 'Invalid or expired phone OTP.' });
+        if (phone) {
+            const temp = await UserModel.getTempVerificationByPhone(phone);
+            if (!temp) return res.status(400).json({ error: 'Session expired. Please sign up again.' });
+            if (new Date() > new Date(temp.expires_at)) return res.status(400).json({ error: 'Phone OTP has expired. Please resend.' });
 
-            // Cache the approval to prevent redundant third-party API calls during final registration
-            verifiedPhonesCache.set(phone, { verified: true, expiresAt: Date.now() + 15 * 60000 });
+            const isValid = await authService.verifyHash(otp, temp.phone_otp_hash);
+            if (!isValid) return res.status(400).json({ error: 'Invalid Phone OTP.' });
 
+            await UserModel.markTempPhoneVerified(phone);
             return res.status(200).json({ message: 'Phone OTP verified successfully.' });
         }
 
@@ -119,33 +112,24 @@ exports.verifyAndRegister = async (req, res) => {
         let { role, full_name, email, phone, password, emailOtp, phoneOtp } = req.body;
         email = email.toLowerCase().trim();
 
-        // 1. Verify Phone (Check cache first)
-        let isPhoneValid = false;
-        const cachedPhoneData = verifiedPhonesCache.get(phone);
+        const temp = await UserModel.getTempVerification(email);
+        if (!temp) return res.status(401).json({ error: 'Signup session expired. Please start over.' });
 
-        if (cachedPhoneData && Date.now() <= cachedPhoneData.expiresAt) {
-            isPhoneValid = true;
-        } else {
-            try {
-                isPhoneValid = await notificationService.verifyPhoneOTP(phone, phoneOtp);
-            } catch (err) {
-                logger.error(`Phone verification fallback error: ${err.message}`);
-            }
+        let isEmailValid = temp.is_email_verified;
+        let isPhoneValid = temp.is_phone_verified;
+
+        // Perform final verification if passed in body, otherwise check if verified in previous steps
+        if (!isEmailValid && emailOtp && temp.email_otp_hash) {
+            isEmailValid = await authService.verifyHash(emailOtp, temp.email_otp_hash);
+        }
+        if (!isPhoneValid && phoneOtp && temp.phone_otp_hash) {
+            isPhoneValid = await authService.verifyHash(phoneOtp, temp.phone_otp_hash);
         }
 
-        if (!isPhoneValid) return res.status(401).json({ error: 'Invalid, expired, or previously consumed Phone OTP.' });
-
-        // 2. Verify Email
-        const cachedEmailData = tempOtpCache.get(email);
-        if (!cachedEmailData || cachedEmailData.otp !== emailOtp || Date.now() > cachedEmailData.expiresAt) {
-            return res.status(401).json({ error: 'Invalid or expired Email OTP.' });
+        if (!isEmailValid || !isPhoneValid) {
+            return res.status(401).json({ error: 'Invalid or expired OTPs. Please complete verification.' });
         }
 
-        // Clean up caches upon successful validation
-        tempOtpCache.delete(email);
-        verifiedPhonesCache.delete(phone);
-
-        // 3. Create User
         const password_hash = await authService.hashData(password);
         const newUser = await UserModel.createUser({
             role: role || 'patient',
@@ -156,6 +140,9 @@ exports.verifyAndRegister = async (req, res) => {
 
         await UserModel.updateVerificationStatus(newUser.id, true, 'email');
         await UserModel.updateVerificationStatus(newUser.id, true, 'phone');
+
+        // Wipe temporary data upon successful registration
+        await UserModel.deleteTempVerification(email);
 
         if (role === 'doctor') {
             await DoctorModel.createProfile({ user_id: newUser.id });
@@ -191,7 +178,7 @@ exports.login = async (req, res) => {
             return res.status(403).json({ error: `You are registered as an admin.` });
         }
 
-        if (user.account_status !== 'Active') {
+        if (user.account_status && user.account_status.toLowerCase() !== 'active') {
             return res.status(403).json({ error: `Account is ${user.account_status}.` });
         }
 
@@ -206,7 +193,7 @@ exports.login = async (req, res) => {
 };
 
 // ==========================================
-// 2. EMAIL / PHONE VERIFICATION
+// 2. EMAIL / PHONE VERIFICATION (Existing Users)
 // ==========================================
 
 exports.requestEmailVerification = async (req, res) => {
@@ -232,7 +219,6 @@ exports.requestEmailVerification = async (req, res) => {
 exports.verifyEmailToken = async (req, res) => {
     try {
         const { email, token } = req.body;
-
         const user = await UserModel.getUserByEmail(email);
         if (!user) return res.status(404).json({ error: 'User not found.' });
 
@@ -261,7 +247,13 @@ exports.requestPhoneOTP = async (req, res) => {
         const { phone } = req.body;
         if (!phone) return res.status(400).json({ error: 'Phone number required.' });
 
-        await notificationService.sendPhoneOTP(phone);
+        const otp = authService.generateOTP();
+        const otpHash = await authService.hashData(otp);
+        const expiryDate = new Date(Date.now() + 5 * 60000);
+
+        await UserModel.updateOtp(req.user.id, otpHash, expiryDate);
+        await notificationService.sendPhoneOTP(phone, otp);
+
         res.status(200).json({ message: 'Verification code sent to your phone.' });
     } catch (error) {
         logger.error(`Phone OTP Request Error: ${error.message}`);
@@ -272,13 +264,18 @@ exports.requestPhoneOTP = async (req, res) => {
 exports.verifyPhoneOTP = async (req, res) => {
     try {
         const { phone, otp } = req.body;
-        const isApproved = await notificationService.verifyPhoneOTP(phone, otp);
+        const user = await UserModel.getUserById(req.user.id);
 
-        if (!isApproved) {
-            return res.status(401).json({ error: 'Invalid or expired phone OTP.' });
+        if (!user.otp_hash || new Date() > user.otp_expires_at) {
+            return res.status(401).json({ error: 'OTP expired or invalid.' });
         }
 
+        const isValid = await authService.verifyHash(otp, user.otp_hash);
+        if (!isValid) return res.status(401).json({ error: 'Invalid or expired phone OTP.' });
+
         await UserModel.updateVerificationStatus(req.user.id, true, 'phone');
+        await UserModel.updatePasswordAndClearOtp(req.user.id, user.password_hash);
+
         res.status(200).json({ message: 'Phone number verified successfully.' });
     } catch (error) {
         logger.error(`Phone OTP Verify Error: ${error.message}`);
@@ -296,20 +293,38 @@ exports.resendOtp = async (req, res) => {
             const user = await UserModel.getUserByEmail(email);
 
             if (user) {
+                // Resend to existing user
                 const otp = authService.generateOTP();
                 const otpHash = await authService.hashData(otp);
                 await UserModel.updateOtp(user.id, otpHash, new Date(Date.now() + 5 * 60000));
                 await notificationService.sendEmailVerification(email, otp);
             } else {
+                // Overwrite Temp Verification record with fresh OTP
                 const emailOtp = authService.generateOTP();
-                tempOtpCache.set(email, { otp: emailOtp, expiresAt: Date.now() + 5 * 60000 });
+                const emailOtpHash = await authService.hashData(emailOtp);
+                await UserModel.upsertTempVerification(email, phone || null, emailOtpHash, null, new Date(Date.now() + 5 * 60000));
                 await notificationService.sendEmailVerification(email, emailOtp);
             }
             messages.push('email');
         }
 
         if (phone) {
-            await notificationService.sendPhoneOTP(phone);
+            const user = await UserModel.getUserByPhone(phone);
+            if (user) {
+                // Resend to existing user
+                const otp = authService.generateOTP();
+                const otpHash = await authService.hashData(otp);
+                await UserModel.updateOtp(user.id, otpHash, new Date(Date.now() + 5 * 60000));
+                await notificationService.sendPhoneOTP(phone, otp);
+            } else {
+                // Overwrite Temp Verification record with fresh OTP
+                const phoneOtp = authService.generateOTP();
+                const phoneOtpHash = await authService.hashData(phoneOtp);
+                const temp = await UserModel.getTempVerificationByPhone(phone);
+
+                await UserModel.upsertTempVerification(temp ? temp.email : email, phone, null, phoneOtpHash, new Date(Date.now() + 5 * 60000));
+                await notificationService.sendPhoneOTP(phone, phoneOtp);
+            }
             messages.push('phone');
         }
 
@@ -404,15 +419,13 @@ exports.forgotPassword = async (req, res) => {
         if (!user) return res.status(404).json({ error: 'No account found with this information.' });
 
         if (user.auth_provider === 'local') {
-            if (email) {
-                const otp = authService.generateOTP();
-                const otpHash = await authService.hashData(otp);
-                const expiryDate = new Date(Date.now() + 5 * 60000);
-                await UserModel.updateOtp(user.id, otpHash, expiryDate);
-                await notificationService.sendEmailVerification(email, otp);
-            } else if (phone) {
-                await notificationService.sendPhoneOTP(phone);
-            }
+            const otp = authService.generateOTP();
+            const otpHash = await authService.hashData(otp);
+            const expiryDate = new Date(Date.now() + 5 * 60000);
+            await UserModel.updateOtp(user.id, otpHash, expiryDate);
+
+            if (email) await notificationService.sendEmailVerification(email, otp);
+            else if (phone) await notificationService.sendPhoneOTP(phone, otp);
         }
 
         res.status(200).json({ message: 'If registered, a reset code has been sent.' });
@@ -433,18 +446,12 @@ exports.resetPassword = async (req, res) => {
 
         if (!user) return res.status(404).json({ error: 'User not found.' });
 
-        if (email) {
-            if (!user.otp_hash || new Date() > user.otp_expires_at) {
-                return res.status(401).json({ error: 'OTP expired or invalid.' });
-            }
-            const isValid = await authService.verifyHash(otp, user.otp_hash);
-            if (!isValid) return res.status(401).json({ error: 'Invalid verification code.' });
-        } else if (phone) {
-            const isApproved = await notificationService.verifyPhoneOTP(phone, otp);
-            if (!isApproved) {
-                return res.status(401).json({ error: 'Invalid or expired phone OTP.' });
-            }
+        if (!user.otp_hash || new Date() > user.otp_expires_at) {
+            return res.status(401).json({ error: 'OTP expired or invalid.' });
         }
+
+        const isValid = await authService.verifyHash(otp, user.otp_hash);
+        if (!isValid) return res.status(401).json({ error: 'Invalid verification code.' });
 
         const new_password_hash = await authService.hashData(newPassword);
         await UserModel.updatePasswordAndClearOtp(user.id, new_password_hash);

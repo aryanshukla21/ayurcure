@@ -389,7 +389,6 @@ const doctorModel = {
 
             const fullName = `${data.first_name || ''} ${data.last_name || ''}`.trim();
 
-            // 🚨 FIX: Added profile_image_url to the SET clause and passed data.avatar as $3
             const profileQuery = `
                 UPDATE DoctorProfiles 
                 SET bio = COALESCE($1, bio),

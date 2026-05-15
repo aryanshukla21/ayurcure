@@ -117,7 +117,7 @@ const AdminEditBlogPage = () => {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 flex-1">
         <div className="lg:col-span-2 flex flex-col gap-10">
-          <BlogInfoSection formData={formData} onChange={handleInputChange} />
+          <BlogInfoSection formData={formData} onChange={handleInputChange} setFormData={setFormData} />
           <ContentEditorSection formData={formData} onChange={handleInputChange} />
         </div>
         <div className="lg:col-span-1">

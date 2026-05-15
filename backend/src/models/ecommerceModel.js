@@ -7,7 +7,7 @@ class EcommerceModel {
 
     static async getAllProducts() {
         const query = `
-            SELECT id, name, category, brand, price, stock_quantity 
+            SELECT id, name, category, brand, price, stock_quantity, image_url 
             FROM Products 
             WHERE stock_quantity > 0 
             ORDER BY name ASC;
@@ -18,7 +18,7 @@ class EcommerceModel {
 
     static async getProductsByCategory(categoryName) {
         const query = `
-            SELECT id, name, category, brand, price, stock_quantity 
+            SELECT id, name, category, brand, price, stock_quantity, image_url
             FROM Products 
             WHERE category ILIKE $1 AND stock_quantity > 0 
             ORDER BY name ASC;
@@ -32,7 +32,7 @@ class EcommerceModel {
             SELECT 
                 id, name, category, brand, ingredients, benefits, 
                 usage_instructions, certifications, prakriti_suitability, 
-                price, stock_quantity 
+                price, stock_quantity, image_url
             FROM Products 
             WHERE id = $1;
         `;

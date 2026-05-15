@@ -28,7 +28,7 @@ CREATE TYPE banner_status AS ENUM ('Draft', 'Active', 'Archived');
 CREATE TYPE article_status AS ENUM ('Pending Review', 'Published');
 
 -- ==========================================
--- 2. CORE AUTHENTICATION
+-- 2. CORE AUTHENTICATION & VERIFICATION
 -- ==========================================
 CREATE TABLE Users (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -52,14 +52,23 @@ CREATE TABLE Users (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
+CREATE TABLE TempVerifications (
+    email VARCHAR(255) PRIMARY KEY,
+    phone VARCHAR(20),
+    email_otp_hash VARCHAR(255),
+    phone_otp_hash VARCHAR(255),
+    expires_at TIMESTAMP NOT NULL,
+    is_email_verified BOOLEAN DEFAULT false,
+    is_phone_verified BOOLEAN DEFAULT false,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
 -- ==========================================
 -- 3. PATIENT MODULE
 -- ==========================================
 CREATE TABLE PatientProfiles (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id UUID UNIQUE NOT NULL REFERENCES Users(id) ON DELETE CASCADE,
-    
-    -- Basic Core Info
     age INT,
     gender VARCHAR(50),
     health_history TEXT,
@@ -67,8 +76,6 @@ CREATE TABLE PatientProfiles (
     prakriti_report_url VARCHAR(500),
     referral_code VARCHAR(50) UNIQUE,
     wallet_credits DECIMAL(10, 2) DEFAULT 0.00,
-    
-    -- Detailed Clinical & Personal Info
     patient_display_id VARCHAR(50) UNIQUE,
     clinical_status VARCHAR(50) DEFAULT 'Active',
     dob DATE,
@@ -80,13 +87,9 @@ CREATE TABLE PatientProfiles (
     address TEXT,
     diet_preference VARCHAR(100),
     allergies TEXT,
-    
-    -- Emergency Contact
     emergency_contact_name VARCHAR(100),
     emergency_contact_relation VARCHAR(50),
     emergency_contact_phone VARCHAR(20),
-    
-    -- Medical Notes & Assignments
     chief_complaints TEXT,
     medical_history TEXT,
     current_medications JSONB,
@@ -94,8 +97,6 @@ CREATE TABLE PatientProfiles (
     treatment_plan TEXT,
     doctor_notes TEXT,
     primary_doctor_id UUID REFERENCES Users(id) ON DELETE SET NULL,
-    
-    -- Application Settings
     settings JSONB DEFAULT '{}',
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
@@ -170,30 +171,20 @@ CREATE TABLE DoctorProfiles (
     experience_years INT,
     verification_status verification_enum DEFAULT 'Pending',
     consultation_fee DECIMAL(10, 2),
-    
-    -- Contact & Location
     location VARCHAR(255),
     languages TEXT[], 
-    
-    -- Consultation & Availability
     consultation_duration_mins INT DEFAULT 30,
     availability_summary VARCHAR(255), 
-    
-    -- Professional Stats
     publications_count INT DEFAULT 0,
     average_rating DECIMAL(3, 2) DEFAULT 0.00,
     total_reviews INT DEFAULT 0,
-    
-    -- Bio & Detailed Background
     bio TEXT,
     education_details JSONB, 
     sub_specializations TEXT[], 
     certifications TEXT[],
-
     philosophy_of_care TEXT,
     preferences JSONB DEFAULT '{}',
     profile_image_url VARCHAR(255),
-    
     total_earnings DECIMAL(12, 2) DEFAULT 0.00,
     admin_comments TEXT,
     verified_by_admin_id UUID REFERENCES Users(id) ON DELETE SET NULL
@@ -268,7 +259,8 @@ CREATE TABLE Products (
     certifications VARCHAR(255),
     prakriti_suitability VARCHAR(100),
     price DECIMAL(10, 2) NOT NULL,
-    stock_quantity INT NOT NULL DEFAULT 0
+    stock_quantity INT NOT NULL DEFAULT 0,
+    image_url VARCHAR(500)
 );
 
 CREATE TABLE Wishlists (
@@ -372,7 +364,8 @@ CREATE TABLE Blogs (
     content TEXT NOT NULL,
     category VARCHAR(100),
     author_id UUID REFERENCES Users(id) ON DELETE SET NULL,
-    status VARCHAR(50) DEFAULT 'Draft', -- Draft, Published
+    status VARCHAR(50) DEFAULT 'Draft',
     views INT DEFAULT 0,
+    image_url VARCHAR(500),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );

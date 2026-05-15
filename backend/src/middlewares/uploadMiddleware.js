@@ -111,4 +111,4 @@ const uploadToS3 = async (req, res, next) => {
     }
 };
 
-module.exports = { upload: safeUpload, uploadToS3 };
+module.exports = { upload: uploadConfig, uploadToS3 };

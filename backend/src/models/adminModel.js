@@ -38,7 +38,7 @@ const adminModel = {
     // ==========================================
     getRecentDoctors: async () => {
         const query = `
-            SELECT d.id, u.full_name as name, d.specialization, d.verification_status as status, u.created_at, d.avatar 
+            SELECT d.id, u.full_name as name, d.specialization, d.verification_status as status, u.created_at, d.profile_image_url as avatar 
             FROM DoctorProfiles d 
             JOIN Users u ON d.user_id = u.id 
             ORDER BY u.created_at DESC LIMIT 5
@@ -83,7 +83,7 @@ const adminModel = {
                 d.average_rating as rating, 
                 d.experience_years as experience, 
                 d.consultation_fee, 
-                d.avatar
+                d.profile_image_url as avatar
             FROM DoctorProfiles d 
             INNER JOIN Users u ON d.user_id = u.id
             ORDER BY u.created_at DESC
@@ -105,9 +105,10 @@ const adminModel = {
             ]);
             const newUserId = userRes.rows[0].id;
 
+            // 🚨 FIX: Updated 'avatar' to 'profile_image_url' and 'clinic_address' to 'location' to match schema
             const profileQuery = `
                 INSERT INTO DoctorProfiles 
-                (user_id, specialization, experience_years, qualifications, registration_number, consultation_fee, bio, avatar, clinic_address, verification_status) 
+                (user_id, specialization, experience_years, qualifications, registration_number, consultation_fee, bio, profile_image_url, location, verification_status) 
                 VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'Verified') RETURNING id
             `;
             const profileRes = await client.query(profileQuery, [
@@ -118,13 +119,12 @@ const adminModel = {
                 profileData.registration_number,
                 profileData.consultation_fee,
                 profileData.about,
-                profileData.avatar,
+                profileData.profile_image_url,
                 profileData.clinic_address
             ]);
 
             const newDoctorId = profileRes.rows[0].id;
 
-            // FIX: DYNAMIC 30-MINUTE SLOT GENERATOR (TIMEZONE SAFE)
             const slotInsertQuery = `
                 INSERT INTO DoctorSlots (doctor_id, start_time, end_time, is_booked)
                 VALUES ($1, $2, $3, false)
@@ -133,12 +133,10 @@ const adminModel = {
             const startStr = profileData.startTime || '09:00';
             const endStr = profileData.endTime || '17:00';
 
-            // Extract exact hours and minutes
             const [startHour, startMinute] = startStr.split(':').map(Number);
             const [endHour, endMinute] = endStr.split(':').map(Number);
 
             for (let i = 0; i < 14; i++) {
-                // Initialize clean local date
                 const currentDay = new Date();
                 currentDay.setDate(currentDay.getDate() + i);
                 currentDay.setHours(0, 0, 0, 0);
@@ -149,7 +147,6 @@ const adminModel = {
                 const endTimeObj = new Date(currentDay);
                 endTimeObj.setHours(endHour, endMinute, 0, 0);
 
-                // Generate strictly 30-minute blocks
                 while (currentTime < endTimeObj) {
                     const slotStartTime = new Date(currentTime);
                     currentTime.setMinutes(currentTime.getMinutes() + 30);
@@ -207,15 +204,10 @@ const adminModel = {
                     WHERE appointment_id IN (SELECT id FROM Appointments WHERE doctor_id = $1)
                 `, [doctorId]);
 
-                // Delete the slots tied to this doctor to maintain referential integrity
                 await client.query(`DELETE FROM DoctorSlots WHERE doctor_id = $1`, [doctorId]);
-
                 await client.query(`DELETE FROM Appointments WHERE doctor_id = $1`, [doctorId]);
-
                 await client.query(`UPDATE Blogs SET author_id = NULL WHERE author_id = $1`, [userId]);
-
                 await client.query(`DELETE FROM DoctorProfiles WHERE id = $1`, [doctorId]);
-
                 await client.query(`DELETE FROM Users WHERE id = $1`, [userId]);
             }
 
@@ -270,6 +262,7 @@ const adminModel = {
             const aboutText = data.about || data.bio;
             const addressText = data.clinical_address || data.clinic_address || data.address;
 
+            // 🚨 FIX: Updated 'avatar' to 'profile_image_url' and 'clinic_address' to 'location' to match schema
             const profileQuery = `
                 UPDATE DoctorProfiles 
                 SET specialization = COALESCE($1, specialization), 
@@ -277,8 +270,8 @@ const adminModel = {
                     consultation_fee = COALESCE($3, consultation_fee),
                     verification_status = COALESCE($4, verification_status),
                     bio = COALESCE($5, bio),
-                    clinic_address = COALESCE($6, clinic_address),
-                    avatar = COALESCE($7, avatar)
+                    location = COALESCE($6, location),
+                    profile_image_url = COALESCE($7, profile_image_url)
                 WHERE id = $8 RETURNING id
             `;
 
@@ -289,7 +282,7 @@ const adminModel = {
                 data.verification_status,
                 aboutText,
                 addressText,
-                data.avatar,
+                data.profile_image_url || data.avatar,
                 doctorId
             ]);
 
@@ -490,7 +483,6 @@ const adminModel = {
     // INVENTORY DYNAMIC FILTERING
     // ==========================================
     addNewProduct: async (data) => {
-        // THE FIX: Removed created_at and NOW() from the query
         const query = `
         INSERT INTO Products (name, category, brand, price, stock_quantity, ingredients, benefits, usage_instructions, image_url) 
         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING id
@@ -510,7 +502,6 @@ const adminModel = {
     },
 
     getAllProductsPagination: async (limit, offset) => {
-        // THE FIX: Changed 'ORDER BY created_at' to 'ORDER BY id'
         const query = `
             SELECT id, name, category, stock_quantity as stock, price, image_url, 
             CASE WHEN stock_quantity > 10 THEN 'In Stock' WHEN stock_quantity > 0 THEN 'Low Stock' ELSE 'Out of Stock' END as status 
@@ -549,7 +540,7 @@ const adminModel = {
             query += ` AND name ILIKE $${values.length}`;
         }
 
-        query += ` ORDER BY created_at DESC`;
+        query += ` ORDER BY id DESC`;
         return (await db.query(query, values)).rows;
     },
 

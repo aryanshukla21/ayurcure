@@ -35,16 +35,21 @@ const OrderHistoryList = ({ orders = [] }) => {
   };
 
   // Map Database objects to UI representation
-  let processedOrders = orders.map(order => ({
-    id: `AC-${order.id}`,
-    rawId: order.id,
-    date: new Date(order.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
-    rawDate: new Date(order.created_at),
-    status: (order.order_status || 'Pending').toUpperCase(),
-    amount: `₹${parseFloat(order.total_amount).toFixed(2)}`,
-    rawAmount: parseFloat(order.total_amount),
-    statusColor: getStatusColor(order.order_status)
-  }));
+  let processedOrders = orders.map(order => {
+    // 🚨 FIX: Safely fallback to order_id or orderId if id is undefined
+    const actualId = order.id || order.order_id || order.orderId;
+
+    return {
+      id: `AC-${actualId}`,
+      rawId: actualId,
+      date: new Date(order.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+      rawDate: new Date(order.created_at),
+      status: (order.order_status || 'Pending').toUpperCase(),
+      amount: `₹${parseFloat(order.total_amount).toFixed(2)}`,
+      rawAmount: parseFloat(order.total_amount),
+      statusColor: getStatusColor(order.order_status)
+    };
+  });
 
   // Filtering
   processedOrders = processedOrders.filter(order => {
