@@ -4,14 +4,48 @@ import { Lock, Timer } from 'lucide-react';
 const ConsultationFeeCard = ({ logistics }) => {
     if (!logistics) return null;
 
-    // A simple helper to format availability if it's stored as JSON
+    // Helper to format availability and show ONLY active days matching the DB schema
     const formatAvailability = (schedule) => {
-        if (!schedule) return 'Schedule not set';
-        // Basic fallback if stringified
-        if (typeof schedule === 'string') return schedule;
+        if (!schedule) return <span className="text-white/70 text-sm">Schedule not set</span>;
 
-        // If it's an object with days
-        return "Check schedule in settings";
+        let parsedSchedule = schedule;
+        
+        // Parse if the database sent it as a stringified JSON
+        if (typeof schedule === 'string') {
+            try {
+                parsedSchedule = JSON.parse(schedule);
+            } catch (e) {
+                // If it's a regular string, just display it
+                return <span className="text-white text-sm block truncate max-w-[200px]">{schedule}</span>;
+            }
+        }
+
+        // MUST match the exact keys stored in the database / settings form
+        const dbDays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+
+        // Filter to keep ONLY the days that are set to true in the parsed data
+        const activeDays = dbDays.filter((day) => {
+            const val = parsedSchedule[day];
+            return val === true || val === 'true';
+        });
+
+        // Fallback if no days are active
+        if (activeDays.length === 0) {
+            return <span className="text-white/70 text-sm font-semibold mt-1 block">No active days</span>;
+        }
+
+        return (
+            <div className="flex flex-wrap gap-2 mt-1">
+                {activeDays.map((day) => (
+                    <span 
+                        key={day} 
+                        className="text-xs font-bold text-white bg-white/20 px-2 py-0.5 rounded"
+                    >
+                        {day}
+                    </span>
+                ))}
+            </div>
+        );
     };
 
     return (
@@ -31,9 +65,9 @@ const ConsultationFeeCard = ({ logistics }) => {
 
                 <div className="flex items-center gap-3 bg-[#4A7C59] p-3 rounded-2xl">
                     <div className="p-2 rounded-lg"><Timer size={16} /></div>
-                    <div>
-                        <p className="text-sm text-white/70 font-bold uppercase tracking-wider">Availability</p>
-                        <p className="font-semibold text-sm">{formatAvailability(logistics.availability_schedule)}</p>
+                    <div className="w-full">
+                        <p className="text-sm text-white/70 font-bold uppercase tracking-wider mb-1">Availability</p>
+                        {formatAvailability(logistics.availability_schedule)}
                     </div>
                 </div>
             </div>

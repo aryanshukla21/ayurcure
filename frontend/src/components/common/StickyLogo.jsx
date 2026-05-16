@@ -13,7 +13,8 @@ const StickyLogo = () => {
         if (location.pathname === '/') {
             window.scrollTo({ top: 0, behavior: 'smooth' });
         } else {
-            navigate('/');
+            // PASS STATE HERE to let LandingPage know we clicked the logo
+            navigate('/', { state: { fromStickyLogo: true } });
             setTimeout(() => {
                 window.scrollTo({ top: 0, behavior: 'smooth' });
             }, 100);

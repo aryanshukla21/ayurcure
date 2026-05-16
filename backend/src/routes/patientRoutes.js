@@ -2,10 +2,6 @@ const express = require('express');
 const router = express.Router();
 const ctrl = require('../controllers/patientController');
 const { requireAuth } = require('../middlewares/authMiddleware');
-// Change this:
-// const upload = require('../middlewares/uploadMiddleware');
-
-// To this:
 const { upload, uploadToS3 } = require('../middlewares/uploadMiddleware');
 
 // ==========================================

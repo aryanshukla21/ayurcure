@@ -29,9 +29,9 @@ const LoginPage = () => {
             const response = await authApi.login(payload);
 
             if (response.user.role === 'doctor') {
-                navigate('/doctor/dashboard');
+                navigate('/doctor/dashboard', { replace: true });
             } else {
-                navigate('/patient/dashboard');
+                navigate('/patient/dashboard', { replace: true });
             }
         } catch (err) {
             const errorMsg = err.response?.data?.error || '';
@@ -42,7 +42,7 @@ const LoginPage = () => {
                 try {
                     const adminPayload = { ...payload, role: 'admin' };
                     await authApi.login(adminPayload);
-                    navigate('/admin/dashboard'); // Success! Send to admin panel.
+                    navigate('/admin/dashboard', { replace: true }); // Success! Send to admin panel.
                     return; 
                 } catch (adminErr) {
                     setError('Invalid admin credentials.');

@@ -27,6 +27,7 @@ backend/logs/
 backend/*.log
 backend/database/dump/
 backend/HelperCode.js
+backend/makeAdmin.js
 
 # IDE Specific
 .vscode/

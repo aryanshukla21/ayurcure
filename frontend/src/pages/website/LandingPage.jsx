@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { websiteBlogs } from '../../data/websiteBlogs';
 import globe from '../../images/globe-removebg-preview.jpeg'
@@ -61,6 +61,8 @@ const checkAuthStatus = () => {
 
 const LandingPage = ({ isLoggedIn: propIsLoggedIn, userRole: propUserRole, onLogout }) => {
   const navigate = useNavigate();
+  const location = useLocation();
+  const fromStickyLogo = location.state?.fromStickyLogo; // Check if user came from sticky logo
 
   // Initialize with our robust auth checker
   const [isLoggedIn, setIsLoggedIn] = useState(() => propIsLoggedIn || checkAuthStatus().loggedIn);
@@ -76,9 +78,7 @@ const LandingPage = ({ isLoggedIn: propIsLoggedIn, userRole: propUserRole, onLog
 
     updateAuth(); // Run immediately on mount
 
-    // Listen for storage changes across tabs or fast routing
     window.addEventListener('storage', updateAuth);
-    // Listen for window focus to refresh state if they navigated back
     window.addEventListener('focus', updateAuth);
 
     return () => {
@@ -94,7 +94,7 @@ const LandingPage = ({ isLoggedIn: propIsLoggedIn, userRole: propUserRole, onLog
     localStorage.removeItem('token');
     localStorage.removeItem('user');
     setIsLoggedIn(false);
-    navigate('/');
+    navigate('/', { replace: true }); // Clear state flag
   };
 
   const handleDashboardClick = () => {
@@ -103,12 +103,23 @@ const LandingPage = ({ isLoggedIn: propIsLoggedIn, userRole: propUserRole, onLog
     else navigate('/patient/dashboard');
   };
 
-  // Smart Routing for all CTA Buttons
+  // Smart Routing for all CTA Buttons + Bypass Logic
   const handleHeroAction = () => {
+    if (fromStickyLogo) {
+      // THE BYPASS LOGIC: Inject dummy tokens to bypass the ProtectedRoute checks
+      localStorage.setItem('token', 'bypass-token');
+      localStorage.setItem('role', 'patient');
+      localStorage.setItem('user', JSON.stringify({ role: 'patient', name: 'Bypass User' }));
+      setIsLoggedIn(true);
+      setUserRole('patient');
+      navigate('/patient/dashboard');
+      return;
+    }
+
     if (isLoggedIn) {
       if (userRole === 'admin') navigate('/admin/dashboard');
       else if (userRole === 'doctor') navigate('/doctor/dashboard');
-      else navigate('/patient/book-appointment');
+      else navigate('/patient/dashboard');
     } else {
       navigate('/login');
     }
@@ -191,7 +202,7 @@ const LandingPage = ({ isLoggedIn: propIsLoggedIn, userRole: propUserRole, onLog
               <span className="text-[8px] md:text-[10px] text-[#C8A96A] font-medium tracking-wide uppercase opacity-90">First consultation at a guided fee</span>
             </div>
 
-            {isLoggedIn ? (
+            {isLoggedIn || fromStickyLogo ? (
               <div className="flex gap-2">
                 <button onClick={handleDashboardClick} className="bg-[#2F6F4E] hover:bg-[#2F6F4E]/90 text-white px-4 md:px-6 py-2 md:py-3 rounded-full font-['Noto_Serif'] text-xs md:text-sm tracking-tight shadow-sm hover:shadow-md transition-all active:scale-95 font-bold whitespace-nowrap">
                   Dashboard
@@ -274,7 +285,7 @@ const LandingPage = ({ isLoggedIn: propIsLoggedIn, userRole: propUserRole, onLog
           </div>
           <ScrollReveal>
             <button onClick={handleHeroAction} className="bg-[#2F6F4E] text-white px-8 md:px-12 py-4 md:py-5 rounded-full font-['Noto_Serif'] text-lg shadow-lg hover:shadow-xl transition-all active:scale-95 font-bold">
-              {isLoggedIn ? (userRole === 'patient' ? 'Book Your Consultation' : 'Go to Dashboard') : 'Book Your Consultation'}
+              {fromStickyLogo ? 'Go to Dashboard' : (isLoggedIn ? 'Go to Dashboard' : 'Book Your Consultation')}
             </button>
           </ScrollReveal>
         </div>
@@ -428,7 +439,7 @@ const LandingPage = ({ isLoggedIn: propIsLoggedIn, userRole: propUserRole, onLog
                     <p className="font-['Inter'] text-lg mb-8 opacity-90 font-medium">Speak with certified practitioners who listen to your story, not just your symptoms.</p>
                   </div>
                   <button onClick={handleHeroAction} className="bg-[#F5F3EA] text-[#2F6F4E] self-start px-8 py-3 rounded-full font-bold hover:bg-white transition-all flex items-center gap-2">
-                    {isLoggedIn && userRole !== 'patient' ? 'Go to Dashboard' : 'Book Now'} <span className="material-symbols-outlined text-sm">arrow_forward</span>
+                    {fromStickyLogo ? 'Go to Dashboard' : (isLoggedIn ? 'Go to Dashboard' : 'Book Now')} <span className="material-symbols-outlined text-sm">arrow_forward</span>
                   </button>
                 </div>
               </ScrollReveal>
@@ -477,11 +488,11 @@ const LandingPage = ({ isLoggedIn: propIsLoggedIn, userRole: propUserRole, onLog
           </div>
           <ScrollReveal>
             <div className="flex flex-col items-center gap-8">
-              <Link to="/about" className="inline-flex items-center gap-2 text-[#2F6F4E] font-bold text-lg md:text-xl hover:underline underline-offset-4">
+              {/* <Link to="/about" className="inline-flex items-center gap-2 text-[#2F6F4E] font-bold text-lg md:text-xl hover:underline underline-offset-4">
                 View all conditions <span className="material-symbols-outlined">arrow_forward</span>
-              </Link>
+              </Link> */}
               <button onClick={handleHeroAction} className="bg-[#2F6F4E] text-white px-8 py-4 rounded-xl font-['Noto_Serif'] font-bold text-xl shadow-lg hover:scale-105 transition-transform">
-                {isLoggedIn && userRole !== 'patient' ? 'Go to Dashboard' : 'Start Healing for Your Condition'}
+                {fromStickyLogo ? 'Go to Dashboard' : (isLoggedIn ? 'Go to Dashboard' : 'Start Healing for Your Condition')}
               </button>
             </div>
           </ScrollReveal>
@@ -508,7 +519,7 @@ const LandingPage = ({ isLoggedIn: propIsLoggedIn, userRole: propUserRole, onLog
                   </div>
                 </div>
                 <button onClick={handleHeroAction} className="inline-flex items-center gap-2 text-[#2F6F4E] font-bold text-lg md:text-xl hover:underline underline-offset-4">
-                  {isLoggedIn && userRole !== 'patient' ? 'Return to Dashboard' : 'Meet all doctors'} <span className="material-symbols-outlined">arrow_forward</span>
+                  {fromStickyLogo ? 'Go to Dashboard' : (isLoggedIn ? 'Go to Dashboard' : 'Meet all doctors')} <span className="material-symbols-outlined">arrow_forward</span>
                 </button>
               </div>
             </ScrollReveal>
@@ -628,7 +639,7 @@ const LandingPage = ({ isLoggedIn: propIsLoggedIn, userRole: propUserRole, onLog
             <p className="font-['Inter'] text-base md:text-xl mb-6 md:mb-8 text-white font-bold max-w-2xl">Talk to a doctor who understands your body — not just your symptoms.</p>
             <div className="flex flex-col items-center gap-4 mb-8 md:mb-10 w-full">
               <button onClick={handleHeroAction} className="bg-[#F5F3EA] text-[#1E1E1E] hover:bg-white w-full sm:w-auto px-8 md:px-12 py-4 md:py-5 rounded-xl font-['Noto_Serif'] text-lg md:text-2xl shadow-2xl transition-all transform hover:-translate-y-1 active:scale-95 font-bold border-2 border-transparent">
-                {isLoggedIn ? (userRole === 'patient' ? 'Book My Consultation' : 'Go to Dashboard') : 'Book My Consultation'}
+                {fromStickyLogo ? 'Go to Dashboard' : (isLoggedIn ? 'Go to Dashboard' : 'Book My Consultation')}
               </button>
               <p className="text-[10px] md:text-xs font-bold uppercase tracking-widest text-white/80">Limited consultation slots available</p>
             </div>
@@ -663,7 +674,7 @@ const LandingPage = ({ isLoggedIn: propIsLoggedIn, userRole: propUserRole, onLog
           {/* Navigation Links */}
           <nav className="flex flex-wrap justify-center gap-x-6 md:gap-x-12 gap-y-4 mb-8">
             <Link to="/blogs" className="text-[#376645] font-['Inter'] text-sm md:text-base font-medium hover:opacity-70 transition-opacity">The Herbarium</Link>
-            <Link to="/about" className="text-[#376645] font-['Inter'] text-sm md:text-base font-medium hover:opacity-70 transition-opacity">Dosha Quiz</Link>
+            {/* <Link to="/about" className="text-[#376645] font-['Inter'] text-sm md:text-base font-medium hover:opacity-70 transition-opacity">Dosha Quiz</Link> */}
             <Link to="/privacy" className="text-[#376645] font-['Inter'] text-sm md:text-base font-medium hover:opacity-70 transition-opacity">Privacy Policy</Link>
             <Link to="/login" className="text-[#376645] font-['Inter'] text-sm md:text-base font-medium hover:opacity-70 transition-opacity">Practitioner Login</Link>
           </nav>
@@ -672,7 +683,7 @@ const LandingPage = ({ isLoggedIn: propIsLoggedIn, userRole: propUserRole, onLog
           <div className="flex justify-center gap-6 mb-10">
             <a href="https://www.facebook.com/share/18TNZK4jCS/?mibextid=wwXIfr" target="_blank" rel="noopener noreferrer" aria-label="Facebook" className="text-[#376645] hover:opacity-70 transition-opacity">
               <svg className="w-6 h-6 fill-current" viewBox="0 0 24 24">
-                <path fillRule="evenodd" d="M22 12c0-5.523-4.477-10-10-10S2 6.477 2 12c0 4.991 3.657 9.128 8.438 9.878v-6.987h-2.54V12h2.54V9.797c0-2.506 1.492-3.89 3.777-3.89 1.094 0 2.238.195 2.238.195v2.46h-1.26c-1.243 0-1.63.771-1.63 1.562V12h2.773l-.443 2.89h-2.33v6.988C18.343 21.128 22 16.991 22 12z" clipRule="evenodd" />
+                <path fillRule="evenodd" d="M22 12c0-5.523-4.477-10-10-10S2 6.477 2 12c0 4.991 3.657 9.128 8.438 9.878v-6.987h-2.54V12h2.54V9.797c0-2.506 1.492-3.89 3.777-3.89 1.094 0 2.238.195 2.238.195v2.46h-1.26c-1.243 0-1.63 1.562V12h2.773l-.443 2.89h-2.33v6.988C18.343 21.128 22 16.991 22 12z" clipRule="evenodd" />
               </svg>
             </a>
 
